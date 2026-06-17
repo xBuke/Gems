@@ -16,6 +16,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A2E1F' } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="auth" />
+        <Stack.Screen name="add-gem" options={{ headerShown: false }} />
+        <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="light" />
     </View>

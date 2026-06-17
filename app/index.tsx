@@ -28,8 +28,9 @@ const COLORS = {
 const CATEGORIES = ['All', 'Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
 
 const GEMS = [
-  { id: '1', name: 'Secret Cove Beach', category: 'Beach' },
-  { id: '2', name: 'Rooftop Mural Lookout', category: 'Viewpoint' },
+  { id: '1', name: 'Secret Cove Beach', category: 'Beach', rating: '4.8', distance: '1.2 km' },
+  { id: '2', name: 'Rooftop Mural Lookout', category: 'Viewpoint', rating: '4.8', distance: '1.2 km' },
+  { id: '3', name: 'Hidden Waterfall Mostar', category: 'Nature', rating: '4.9', distance: '45 km' },
 ];
 
 const TABS = [
@@ -83,6 +84,19 @@ export default function HomeScreen() {
             placeholderTextColor={COLORS.searchPlaceholder}
           />
 
+          <TouchableOpacity
+            style={styles.gemOfTheDayCard}
+            onPress={() => console.log('Gem of the day')}
+            activeOpacity={0.7}>
+            <Ionicons name="location" size={28} color="#1D9E75" />
+            <View style={styles.gemOfTheDayContent}>
+              <Text style={styles.gemOfTheDayLabel}>GEM OF THE DAY</Text>
+              <Text style={styles.gemOfTheDayName}>Stiniva Beach, Vis</Text>
+              <Text style={styles.gemOfTheDayMeta}>87 km away · Beach</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#1D9E75" />
+          </TouchableOpacity>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -109,18 +123,22 @@ export default function HomeScreen() {
         <View style={styles.gemsList}>
           {GEMS.map((gem) => (
             <View key={gem.id} style={styles.gemCard}>
-              <View style={styles.photoPlaceholder} />
+              <View style={styles.photoPlaceholder}>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText}>{gem.category}</Text>
+                </View>
+              </View>
               <View style={styles.gemInfo}>
                 <Text style={styles.gemName}>{gem.name}</Text>
                 <View style={styles.gemMeta}>
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{gem.category}</Text>
-                  </View>
                   <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={14} color={COLORS.star} />
-                    <Text style={styles.ratingText}>4.8</Text>
+                    <Ionicons name="star" size={14} color="#FFD700" />
+                    <Text style={styles.ratingText}>{gem.rating}</Text>
                   </View>
-                  <Text style={styles.distanceText}>1.2 km</Text>
+                  <View style={styles.distanceRow}>
+                    <Ionicons name="location-outline" size={14} color="#A8D5BA" />
+                    <Text style={styles.distanceText}>{gem.distance}</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -135,7 +153,14 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={tab.key}
               style={styles.tabItem}
-              onPress={() => setActiveTab(tab.key)}
+              onPress={() => {
+                if (tab.key === 'map') {
+                  router.push('/map');
+                } else if (tab.key === 'add') {
+                  router.push('/add-gem');
+                }
+                setActiveTab(tab.key);
+              }}
               activeOpacity={0.7}>
               <Ionicons
                 name={isActive ? tab.activeIcon : tab.icon}
@@ -199,6 +224,34 @@ const styles = StyleSheet.create({
     color: '#333333',
     marginBottom: 20,
   },
+  gemOfTheDayCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F3D25',
+    borderWidth: 1,
+    borderColor: '#1D9E75',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+    gap: 12,
+  },
+  gemOfTheDayContent: {
+    flex: 1,
+  },
+  gemOfTheDayLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#1D9E75',
+  },
+  gemOfTheDayName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  gemOfTheDayMeta: {
+    fontSize: 12,
+    color: '#A8D5BA',
+  },
   categoryRow: {
     gap: 10,
     paddingBottom: 4,
@@ -232,25 +285,21 @@ const styles = StyleSheet.create({
   },
   gemCard: {
     backgroundColor: '#0F3D25',
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 16,
     overflow: 'hidden',
     marginHorizontal: 16,
     marginBottom: 12,
   },
   photoPlaceholder: {
-    height: 160,
-    maxHeight: 160,
-    flexShrink: 0,
+    height: 140,
     width: '100%',
-    backgroundColor: COLORS.photoPlaceholder,
-    opacity: 0.6,
+    backgroundColor: '#1A5C3A',
   },
   gemInfo: {
-    paddingTop: 8,
+    padding: 12,
   },
   gemName: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '600',
     color: COLORS.white,
     marginBottom: 6,
@@ -258,16 +307,19 @@ const styles = StyleSheet.create({
   gemMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
   },
   categoryBadge: {
-    backgroundColor: COLORS.cardBadge,
-    paddingHorizontal: 10,
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: '#1D9E75',
     paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    borderRadius: 20,
   },
   categoryBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: COLORS.white,
   },
@@ -277,14 +329,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   ratingText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.white,
+    fontSize: 13,
+    color: '#A8D5BA',
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   distanceText: {
-    fontSize: 14,
-    color: COLORS.muted,
-    marginLeft: 'auto',
+    fontSize: 13,
+    color: '#A8D5BA',
   },
   tabBar: {
     flexDirection: 'row',
