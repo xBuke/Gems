@@ -1,0 +1,23 @@
+import { supabase } from '@/lib/supabase';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import { View } from 'react-native';
+
+export default function RootLayout() {
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {});
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#0A2E1F' }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A2E1F' } }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth" />
+      </Stack>
+      <StatusBar style="light" />
+    </View>
+  );
+}
