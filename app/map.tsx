@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Callout, MapType, Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,10 +31,21 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const getCategoryColor = (category: string) => CATEGORY_COLORS[category] ?? '#1D9E75';
 
+const CATEGORIES = ['All', 'Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
+
+type Gem = {
+  id: string;
+  latitude: number;
+  longitude: number;
+  title: string;
+  category: string;
+};
+
 export default function MapScreen() {
   const router = useRouter();
   const [mapTypeIndex, setMapTypeIndex] = useState(0);
-  const [gems, setGems] = useState([]);
+  const [gems, setGems] = useState<Gem[]>([]);
+  const [activeCategory, setActiveCategory] = useState('All');
 
   useEffect(() => {
     Location.requestForegroundPermissionsAsync();
@@ -53,6 +64,9 @@ export default function MapScreen() {
 
   const currentMapType = MAP_TYPES[mapTypeIndex];
 
+  const visibleGems =
+    activeCategory === 'All' ? gems : gems.filter((g) => g.category === activeCategory);
+
   const cycleMapType = () => {
     setMapTypeIndex((prev) => (prev + 1) % MAP_TYPES.length);
   };
@@ -66,7 +80,7 @@ export default function MapScreen() {
         showsUserLocation
         showsMyLocationButton
         followsUserLocation>
-        {gems.map((gem: { id: string; latitude: number; longitude: number; title: string; category: string }) => (
+        {visibleGems.map((gem) => (
           <Marker
             key={gem.id}
             coordinate={{ latitude: gem.latitude, longitude: gem.longitude }}>
@@ -91,7 +105,7 @@ export default function MapScreen() {
       </MapView>
 
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
-        <Ionicons name="arrow-back" size={24} color="#000000" />
+        <Ionicons name="arrow-back" size={24} color="#F5F5F5" />
       </TouchableOpacity>
 
       <SafeAreaView style={styles.controls} edges={['top']} pointerEvents="box-none">
@@ -99,6 +113,27 @@ export default function MapScreen() {
           <Text style={styles.layerButtonText}>{currentMapType.label}</Text>
         </TouchableOpacity>
       </SafeAreaView>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoryBar}
+        contentContainerStyle={styles.categoryRow}>
+        {CATEGORIES.map((category) => {
+          const isActive = activeCategory === category;
+          return (
+            <TouchableOpacity
+              key={category}
+              style={[styles.categoryPill, isActive && styles.categoryPillActive]}
+              onPress={() => setActiveCategory(category)}
+              activeOpacity={0.7}>
+              <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -122,7 +157,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#141414',
+    borderWidth: 0.5,
+    borderColor: '#222222',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -130,14 +167,48 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 60,
     right: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 8,
+    backgroundColor: '#141414',
+    borderWidth: 0.5,
+    borderColor: '#222222',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   layerButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#F5F5F5',
+  },
+  categoryBar: {
+    position: 'absolute',
+    top: 110,
+    left: 0,
+    right: 0,
+  },
+  categoryRow: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  categoryPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: '#222222',
+    backgroundColor: '#141414',
+  },
+  categoryPillActive: {
+    backgroundColor: '#1D9E75',
+    borderColor: '#1D9E75',
+  },
+  categoryText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#F5F5F5',
+  },
+  categoryTextActive: {
+    fontWeight: '600',
+    color: '#F5F5F5',
   },
   marker: {
     width: 28,

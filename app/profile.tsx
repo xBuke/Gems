@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -11,6 +11,18 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const COLORS = {
+  bg: '#0D0D0D',
+  card: '#141414',
+  accent: '#1D9E75',
+  accentSubtle: '#0F3D25',
+  text: '#F5F5F5',
+  textMuted: '#888888',
+  textDim: '#555555',
+  border: '#222222',
+  danger: '#FF4444',
+};
 
 type Profile = {
   id: string;
@@ -26,36 +38,111 @@ type Gem = {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { userId: userIdParam } = useLocalSearchParams<{ userId?: string }>();
+  const targetUserId = typeof userIdParam === 'string' ? userIdParam : null;
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [gems, setGems] = useState<Gem[]>([]);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  const isOwnProfile = !targetUserId || targetUserId === currentUserId;
+  const isOtherProfile = !!targetUserId && targetUserId !== currentUserId;
+
+  const fetchFollowCounts = useCallback(async (uid: string) => {
+    const { count: followers } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', uid);
+
+    const { count: following } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', uid);
+
+    setFollowersCount(followers ?? 0);
+    setFollowingCount(following ?? 0);
+  }, []);
+
+  const checkFollowing = useCallback(async (myId: string, theirId: string) => {
+    const { data } = await supabase
+      .from('follows')
+      .select('*')
+      .eq('follower_id', myId)
+      .eq('following_id', theirId);
+
+    setIsFollowing(!!data && data.length > 0);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      setCurrentUserId(user?.id ?? null);
 
-      setEmail(user.email ?? null);
+      if (isOwnProfile && user) {
+        setEmail(user.email ?? null);
+      } else {
+        setEmail(null);
+      }
+
+      const uid = targetUserId ?? user?.id;
+      if (!uid) return;
 
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', uid)
         .single();
       if (profileData) setProfile(profileData);
 
       const { data: gemsData } = await supabase
         .from('gems')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', uid);
       if (gemsData) setGems(gemsData);
+
+      await fetchFollowCounts(uid);
+
+      if (targetUserId && user && targetUserId !== user.id) {
+        await checkFollowing(user.id, targetUserId);
+      } else {
+        setIsFollowing(false);
+      }
     };
 
     fetchData();
-  }, []);
+  }, [targetUserId, checkFollowing, fetchFollowCounts, isOwnProfile]);
 
   const username = profile?.username ?? 'User';
   const initials = username.charAt(0).toUpperCase();
+
+  const handleFollow = async () => {
+    if (!currentUserId || !targetUserId) return;
+
+    await supabase.from('follows').insert({
+      follower_id: currentUserId,
+      following_id: targetUserId,
+    });
+
+    setIsFollowing(true);
+    await fetchFollowCounts(targetUserId);
+  };
+
+  const handleUnfollow = async () => {
+    if (!currentUserId || !targetUserId) return;
+
+    await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', currentUserId)
+      .eq('following_id', targetUserId);
+
+    setIsFollowing(false);
+    await fetchFollowCounts(targetUserId);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -66,12 +153,16 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => console.log('settings')} activeOpacity={0.7}>
-          <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        {isOwnProfile ? (
+          <TouchableOpacity onPress={() => console.log('settings')} activeOpacity={0.7}>
+            <Ionicons name="settings-outline" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       <ScrollView
@@ -83,7 +174,18 @@ export default function ProfileScreen() {
             <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
           <Text style={styles.username}>{username}</Text>
-          {email ? <Text style={styles.email}>{email}</Text> : null}
+          {isOwnProfile && email ? <Text style={styles.email}>{email}</Text> : null}
+
+          {targetUserId && currentUserId && targetUserId !== currentUserId && (
+            <TouchableOpacity
+              style={isFollowing ? styles.followingButton : styles.followButton}
+              onPress={isFollowing ? handleUnfollow : handleFollow}
+              activeOpacity={0.8}>
+              <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.statsRow}>
@@ -93,28 +195,30 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>4.8</Text>
-            <Text style={styles.statLabel}>Rating</Text>
+            <Text style={styles.statValue}>{followingCount}</Text>
+            <Text style={styles.statLabel}>Following</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>0</Text>
-            <Text style={styles.statLabel}>Visits</Text>
+            <Text style={styles.statValue}>{followersCount}</Text>
+            <Text style={styles.statLabel}>Followers</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>My Gems</Text>
+        <Text style={styles.sectionTitle}>{isOwnProfile ? 'My Gems' : 'Gems'}</Text>
 
         {gems.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="location-outline" size={48} color="#1D9E75" />
+            <Ionicons name="location-outline" size={48} color={COLORS.textDim} />
             <Text style={styles.emptyText}>No gems yet</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => router.push('/add-gem')}
-              activeOpacity={0.7}>
-              <Text style={styles.addButtonText}>Add your first gem</Text>
-            </TouchableOpacity>
+            {isOwnProfile && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => router.push('/add-gem')}
+                activeOpacity={0.7}>
+                <Text style={styles.addButtonText}>Add your first gem</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <View style={styles.gemsGrid}>
@@ -142,9 +246,11 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.7}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </TouchableOpacity>
+        {isOwnProfile && (
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.7}>
+            <Text style={styles.logoutText}>Log out</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -153,7 +259,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A2E1F',
+    backgroundColor: COLORS.bg,
   },
   header: {
     flexDirection: 'row',
@@ -161,16 +267,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#0A2E1F',
   },
   headerTitle: {
     position: 'absolute',
     left: 0,
     right: 0,
     textAlign: 'center',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.text,
+  },
+  headerSpacer: {
+    width: 24,
   },
   scrollView: {
     flex: 1,
@@ -188,32 +296,61 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#1D9E75',
+    backgroundColor: COLORS.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
     fontSize: 32,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.bg,
   },
   username: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: COLORS.text,
     marginTop: 12,
   },
   email: {
     fontSize: 13,
-    color: '#A8D5BA',
+    color: COLORS.textMuted,
     marginTop: 4,
+  },
+  followButton: {
+    marginTop: 16,
+    backgroundColor: COLORS.accent,
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 10,
+  },
+  followButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.bg,
+  },
+  followingButton: {
+    marginTop: 16,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 10,
+  },
+  followingButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textMuted,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    marginBottom: 8,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginBottom: 24,
   },
   statItem: {
     flex: 1,
@@ -221,23 +358,23 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: COLORS.text,
   },
   statLabel: {
     fontSize: 12,
-    color: '#A8D5BA',
+    color: COLORS.textMuted,
     marginTop: 4,
   },
   statDivider: {
-    width: 1,
+    width: 0.5,
     height: 32,
-    backgroundColor: 'rgba(168, 213, 186, 0.3)',
+    backgroundColor: COLORS.border,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.text,
     marginBottom: 16,
   },
   gemsGrid: {
@@ -251,7 +388,9 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#0F3D25',
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
   },
   gemImage: {
     ...StyleSheet.absoluteFillObject,
@@ -260,13 +399,15 @@ const styles = StyleSheet.create({
   },
   gemPlaceholder: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0F3D25',
+    backgroundColor: '#1A1A1A',
   },
   categoryBadge: {
     position: 'absolute',
     bottom: 36,
     left: 8,
-    backgroundColor: '#1D9E75',
+    backgroundColor: COLORS.accentSubtle,
+    borderWidth: 0.5,
+    borderColor: COLORS.accent,
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: 10,
@@ -274,7 +415,7 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.accent,
   },
   gemTitleContainer: {
     position: 'absolute',
@@ -284,12 +425,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingBottom: 8,
     paddingTop: 4,
-    backgroundColor: 'rgba(10, 46, 31, 0.75)',
+    backgroundColor: 'rgba(13, 13, 13, 0.8)',
   },
   gemTitle: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: COLORS.text,
   },
   emptyState: {
     alignItems: 'center',
@@ -297,20 +438,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#A8D5BA',
+    fontSize: 14,
+    color: COLORS.textMuted,
   },
   addButton: {
     marginTop: 8,
-    backgroundColor: '#1D9E75',
+    backgroundColor: COLORS.accent,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   addButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.bg,
   },
   logoutButton: {
     alignItems: 'center',
@@ -318,8 +459,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#FF6B6B',
+    color: COLORS.danger,
   },
 });

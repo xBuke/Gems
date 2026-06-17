@@ -18,6 +18,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const COLORS = {
+  bg: '#0D0D0D',
+  card: '#141414',
+  accent: '#1D9E75',
+  accentSubtle: '#0F3D25',
+  text: '#F5F5F5',
+  textMuted: '#888888',
+  border: '#222222',
+};
+
 const CATEGORIES = ['Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
 
 const uploadImage = async (uri: string) => {
@@ -170,7 +180,7 @@ export default function AddGemScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add a Gem</Text>
         <View style={styles.headerSpacer} />
@@ -186,7 +196,7 @@ export default function AddGemScreen() {
             <Image source={{ uri: imageUri }} style={styles.selectedImage} resizeMode="cover" />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Ionicons name="camera" size={40} color="#1D9E75" />
+              <Ionicons name="camera" size={36} color={COLORS.textMuted} />
               <Text style={styles.imagePlaceholderText}>Tap to add photo</Text>
             </View>
           )}
@@ -195,7 +205,7 @@ export default function AddGemScreen() {
         <TextInput
           style={styles.input}
           placeholder="Give your gem a name..."
-          placeholderTextColor="#888888"
+          placeholderTextColor={COLORS.textMuted}
           value={name}
           onChangeText={setName}
         />
@@ -203,7 +213,7 @@ export default function AddGemScreen() {
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="What makes this place special?"
-          placeholderTextColor="#888888"
+          placeholderTextColor={COLORS.textMuted}
           value={description}
           onChangeText={setDescription}
           multiline
@@ -247,7 +257,7 @@ export default function AddGemScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A2E1F',
+    backgroundColor: COLORS.bg,
   },
   header: {
     flexDirection: 'row',
@@ -257,9 +267,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.text,
   },
   headerSpacer: {
     width: 24,
@@ -273,10 +283,10 @@ const styles = StyleSheet.create({
   },
   imagePicker: {
     height: 200,
-    backgroundColor: '#0F3D25',
+    backgroundColor: COLORS.card,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1D9E75',
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
     borderStyle: 'dashed',
     overflow: 'hidden',
     marginBottom: 12,
@@ -289,19 +299,21 @@ const styles = StyleSheet.create({
   },
   imagePlaceholderText: {
     fontSize: 14,
-    color: '#1D9E75',
+    color: COLORS.textMuted,
   },
   selectedImage: {
     width: '100%',
     height: '100%',
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 10,
     padding: 12,
     marginBottom: 12,
-    fontSize: 16,
-    color: '#333333',
+    fontSize: 14,
+    color: COLORS.text,
   },
   textArea: {
     height: 80,
@@ -309,47 +321,48 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.text,
     marginBottom: 12,
   },
   categoryRow: {
-    gap: 10,
+    gap: 8,
     marginBottom: 20,
   },
   categoryPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#1D9E75',
-    backgroundColor: '#0F3D25',
+    borderWidth: 0.5,
+    borderColor: COLORS.accent,
+    backgroundColor: COLORS.accentSubtle,
   },
   categoryPillSelected: {
-    backgroundColor: '#1D9E75',
-    borderColor: '#1D9E75',
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: COLORS.accent,
   },
   categoryTextSelected: {
-    color: '#FFFFFF',
+    color: COLORS.bg,
+    fontWeight: '600',
   },
   locationText: {
     fontSize: 14,
-    color: '#A8D5BA',
+    color: COLORS.textMuted,
     marginBottom: 24,
   },
   submitButton: {
-    backgroundColor: '#1D9E75',
-    borderRadius: 25,
+    backgroundColor: COLORS.accent,
+    borderRadius: 10,
     padding: 16,
     alignItems: 'center',
   },
   submitButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.bg,
   },
 });

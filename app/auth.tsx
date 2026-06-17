@@ -16,13 +16,13 @@ import { Stack, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 const COLORS = {
-  background: '#0A2E1F',
-  primary: '#1D9E75',
-  white: '#FFFFFF',
-  subtitle: '#A8D5BA',
-  inputText: '#333333',
-  error: '#FF6B6B',
-  muted: '#B0C4B8',
+  bg: '#0D0D0D',
+  card: '#141414',
+  accent: '#1D9E75',
+  text: '#F5F5F5',
+  textMuted: '#888888',
+  border: '#222222',
+  error: '#FF4444',
 };
 
 type AuthMode = 'login' | 'register';
@@ -108,7 +108,7 @@ export default function AuthScreen() {
 
             <View style={styles.tabRow}>
               <TouchableOpacity
-                style={[styles.tab, mode === 'login' && styles.tabActive]}
+                style={[styles.tab, mode === 'login' ? styles.tabActive : styles.tabInactive]}
                 onPress={() => switchMode('login')}
                 activeOpacity={0.7}>
                 <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>
@@ -116,7 +116,7 @@ export default function AuthScreen() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.tab, mode === 'register' && styles.tabActive]}
+                style={[styles.tab, mode === 'register' ? styles.tabActive : styles.tabInactive]}
                 onPress={() => switchMode('register')}
                 activeOpacity={0.7}>
                 <Text style={[styles.tabText, mode === 'register' && styles.tabTextActive]}>
@@ -129,7 +129,7 @@ export default function AuthScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Username"
-                placeholderTextColor={COLORS.muted}
+                placeholderTextColor={COLORS.textMuted}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -140,7 +140,7 @@ export default function AuthScreen() {
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor={COLORS.muted}
+              placeholderTextColor={COLORS.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -151,7 +151,7 @@ export default function AuthScreen() {
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor={COLORS.muted}
+              placeholderTextColor={COLORS.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -167,7 +167,7 @@ export default function AuthScreen() {
               disabled={loading}
               activeOpacity={0.8}>
               {loading ? (
-                <ActivityIndicator color={COLORS.white} />
+                <ActivityIndicator color={COLORS.bg} />
               ) : (
                 <Text style={styles.buttonText}>{mode === 'login' ? 'Login' : 'Register'}</Text>
               )}
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.bg,
   },
   scrollContent: {
     flexGrow: 1,
@@ -194,49 +194,55 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: COLORS.white,
+    fontSize: 24,
+    fontWeight: '600',
+    color: COLORS.text,
   },
   subtitle: {
-    fontSize: 15,
-    color: COLORS.subtitle,
+    fontSize: 14,
+    color: COLORS.textMuted,
     marginTop: 4,
     marginBottom: 32,
   },
   tabRow: {
     flexDirection: 'row',
-    gap: 10,
+    backgroundColor: '#141414',
+    borderRadius: 10,
+    padding: 4,
     marginBottom: 24,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.white,
+    padding: 10,
+    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: '#1D9E75',
+  },
+  tabInactive: {
+    backgroundColor: 'transparent',
   },
   tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.white,
+    fontSize: 14,
+    color: '#888888',
+    textAlign: 'center',
   },
   tabTextActive: {
-    color: COLORS.white,
+    color: '#0D0D0D',
+    fontWeight: '600',
   },
   input: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
-    color: COLORS.inputText,
-    marginBottom: 16,
+    fontSize: 14,
+    color: COLORS.text,
+    marginBottom: 12,
   },
   errorText: {
     color: COLORS.error,
@@ -244,8 +250,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
+    backgroundColor: COLORS.accent,
+    borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
@@ -254,8 +260,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
-    color: COLORS.white,
-    fontSize: 16,
+    color: COLORS.bg,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

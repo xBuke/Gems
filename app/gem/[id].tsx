@@ -28,6 +28,8 @@ type Gem = {
   image_url: string | null;
   rating_avg: number | null;
   rating_count: number | null;
+  user_id: string;
+  profiles: { username: string } | null;
 };
 
 type Comment = {
@@ -48,20 +50,12 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 export default function GemDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams();
   const [gem, setGem] = useState<Gem | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [userRating, setUserRating] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  const fetchGem = async () => {
-    if (!id) return;
-
-    const { data } = await supabase.from('gems').select('*').eq('id', id).single();
-    if (data) setGem(data);
-    setLoading(false);
-  };
 
   const fetchComments = async () => {
     if (!id) return;
@@ -78,8 +72,30 @@ export default function GemDetailScreen() {
   useEffect(() => {
     if (!id) return;
 
+    const fetchGem = async () => {
+      const gemId = Array.isArray(id) ? id[0] : id;
+      console.log('Fetching gem with id:', gemId);
+
+      const { data, error } = await supabase
+        .from('gems')
+        .select('*, profiles!gems_user_id_fkey(username)')
+        .eq('id', gemId)
+        .single();
+
+      console.log('Gem data:', data);
+      console.log('Gem error:', error);
+
+      if (data) setGem(data);
+      if (error) console.log('Error details:', JSON.stringify(error));
+      setLoading(false);
+    };
+
     fetchGem();
-    fetchComments();
+  }, [id]);
+
+  useEffect(() => {
+    const gemId = Array.isArray(id) ? id[0] : id;
+    if (gemId) fetchComments();
   }, [id]);
 
   const openMaps = () => {
@@ -145,23 +161,22 @@ export default function GemDetailScreen() {
     }
 
     Alert.alert('Rating saved!');
-    fetchGem();
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1D9E75" />
+      <View style={{ flex: 1, backgroundColor: '#0D0D0D', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator color="#1D9E75" size="large" />
       </View>
     );
   }
 
   if (!gem) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Gem not found</Text>
+      <View style={{ flex: 1, backgroundColor: '#0D0D0D', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#F5F5F5' }}>Gem not found</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backLink}>Go back</Text>
+          <Text style={{ color: '#1D9E75', marginTop: 12 }}>Go back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -196,15 +211,29 @@ export default function GemDetailScreen() {
         <View style={styles.content}>
           <Text style={styles.title}>{gem.title}</Text>
 
+          {gem.profiles?.username && (
+            <TouchableOpacity
+              style={styles.authorRow}
+              onPress={() => router.push('/profile?userId=' + gem.user_id)}
+              activeOpacity={0.7}>
+              <View style={styles.authorAvatar}>
+                <Text style={styles.authorAvatarText}>
+                  {gem.profiles.username.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.authorName}>{gem.profiles.username}</Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color="#A8D5BA" />
+            <Ionicons name="location-outline" size={14} color="#888888" />
             <Text style={styles.locationText}>
               {gem.latitude}, {gem.longitude}
             </Text>
           </View>
 
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
+            <View style={styles.statCard}>
               <Ionicons name="star" size={16} color="#FFD700" />
               <Text style={styles.statText}>
                 {gem.rating_avg != null && gem.rating_avg > 0
@@ -212,12 +241,12 @@ export default function GemDetailScreen() {
                   : 'No ratings'}
               </Text>
             </View>
-            <View style={styles.statItem}>
-              <Ionicons name="eye-outline" size={16} color="#A8D5BA" />
+            <View style={styles.statCard}>
+              <Ionicons name="eye-outline" size={16} color="#888888" />
               <Text style={styles.statText}>{gem.rating_count ?? 0}</Text>
             </View>
-            <View style={styles.statItem}>
-              <Ionicons name="heart-outline" size={16} color="#A8D5BA" />
+            <View style={styles.statCard}>
+              <Ionicons name="heart-outline" size={16} color="#888888" />
               <Text style={styles.statText}>0</Text>
             </View>
           </View>
@@ -233,7 +262,7 @@ export default function GemDetailScreen() {
                   <Ionicons
                     name={star <= userRating ? 'star' : 'star-outline'}
                     size={32}
-                    color={star <= userRating ? '#FFD700' : '#A8D5BA'}
+                    color={star <= userRating ? '#FFD700' : '#555555'}
                   />
                 </TouchableOpacity>
               ))}
@@ -253,7 +282,7 @@ export default function GemDetailScreen() {
           <Text style={styles.description}>{gem.description || 'No description provided.'}</Text>
 
           <TouchableOpacity style={styles.navigateButton} onPress={openMaps} activeOpacity={0.8}>
-            <Ionicons name="navigate" size={20} color="#FFFFFF" />
+            <Ionicons name="navigate" size={20} color="#0D0D0D" />
             <Text style={styles.navigateButtonText}>Navigate</Text>
           </TouchableOpacity>
 
@@ -270,7 +299,7 @@ export default function GemDetailScreen() {
                       {username.charAt(0).toUpperCase()}
                     </Text>
                   </View>
-                  <View style={styles.commentBody}>
+                  <View style={styles.commentBubble}>
                     <Text style={styles.commentUsername}>{username}</Text>
                     <Text style={styles.commentContent}>{comment.content}</Text>
                     <Text style={styles.commentTime}>
@@ -305,7 +334,7 @@ export default function GemDetailScreen() {
           onChangeText={setCommentText}
         />
         <TouchableOpacity style={styles.sendButton} onPress={handleSendComment} activeOpacity={0.8}>
-          <Ionicons name="send" size={20} color="#FFFFFF" />
+          <Ionicons name="send" size={18} color="#0D0D0D" />
         </TouchableOpacity>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -315,18 +344,35 @@ export default function GemDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A2E1F',
+    backgroundColor: '#0D0D0D',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0A2E1F',
+    backgroundColor: '#0D0D0D',
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorText: {
-    color: '#FFFFFF',
+    color: '#F5F5F5',
     fontSize: 16,
-    marginBottom: 12,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  notFoundBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#141414',
+    borderWidth: 0.5,
+    borderColor: '#222222',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  notFoundBackText: {
+    color: '#F5F5F5',
+    fontSize: 14,
+    fontWeight: '600',
   },
   backLink: {
     color: '#1D9E75',
@@ -349,13 +395,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: 'rgba(20, 20, 20, 0.85)',
+    borderWidth: 0.5,
+    borderColor: '#222222',
     alignItems: 'center',
     justifyContent: 'center',
   },
   hero: {
     height: 280,
-    backgroundColor: '#1A5C3A',
+    backgroundColor: '#1A1A1A',
   },
   heroImage: {
     width: '100%',
@@ -370,7 +418,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     left: 10,
-    backgroundColor: '#1D9E75',
+    backgroundColor: '#0F3D25',
+    borderWidth: 0.5,
+    borderColor: '#1D9E75',
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 20,
@@ -378,7 +428,7 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1D9E75',
   },
   saveButton: {
     position: 'absolute',
@@ -387,7 +437,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: 'rgba(20, 20, 20, 0.85)',
+    borderWidth: 0.5,
+    borderColor: '#222222',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -396,11 +448,34 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   title: {
-    color: '#FFFFFF',
+    color: '#F5F5F5',
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '600',
     marginTop: 16,
     marginBottom: 8,
+  },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  authorAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1D9E75',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorAvatarText: {
+    color: '#0D0D0D',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  authorName: {
+    color: '#888888',
+    fontSize: 13,
   },
   locationRow: {
     flexDirection: 'row',
@@ -409,30 +484,39 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   locationText: {
-    color: '#A8D5BA',
+    color: '#888888',
     fontSize: 13,
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 20,
   },
-  statItem: {
+  statCard: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
+    backgroundColor: '#141414',
+    borderWidth: 0.5,
+    borderColor: '#222222',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
   },
   statText: {
-    color: '#A8D5BA',
+    color: '#888888',
     fontSize: 13,
   },
   ratingSection: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   ratingLabel: {
-    color: '#FFFFFF',
+    color: '#F5F5F5',
     fontSize: 14,
-    marginBottom: 8,
+    fontWeight: '600',
+    marginBottom: 10,
   },
   starsRow: {
     flexDirection: 'row',
@@ -441,23 +525,23 @@ const styles = StyleSheet.create({
   submitRatingButton: {
     alignSelf: 'flex-start',
     backgroundColor: '#1D9E75',
-    borderRadius: 20,
+    borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginTop: 12,
   },
   submitRatingText: {
-    color: '#FFFFFF',
+    color: '#0D0D0D',
     fontSize: 14,
     fontWeight: '600',
   },
   divider: {
-    height: 1,
-    backgroundColor: '#1D9E75',
+    height: 0.5,
+    backgroundColor: '#222222',
     marginBottom: 16,
   },
   description: {
-    color: '#A8D5BA',
+    color: '#888888',
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 20,
@@ -468,23 +552,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: '#1D9E75',
-    borderRadius: 25,
+    borderRadius: 10,
     paddingVertical: 14,
     marginBottom: 24,
   },
   navigateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: '#0D0D0D',
+    fontSize: 14,
     fontWeight: '600',
   },
   commentsTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
+    color: '#F5F5F5',
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
   },
   emptyComments: {
-    color: '#A8D5BA',
+    color: '#888888',
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 16,
@@ -492,7 +576,7 @@ const styles = StyleSheet.create({
   commentItem: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   commentAvatar: {
     width: 36,
@@ -503,28 +587,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   commentAvatarText: {
-    color: '#FFFFFF',
+    color: '#0D0D0D',
     fontSize: 14,
     fontWeight: '600',
   },
-  commentBody: {
+  commentBubble: {
     flex: 1,
+    backgroundColor: '#141414',
+    borderWidth: 0.5,
+    borderColor: '#222222',
+    borderRadius: 12,
+    padding: 12,
   },
   commentUsername: {
-    color: '#FFFFFF',
+    color: '#F5F5F5',
     fontSize: 13,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   commentContent: {
-    color: '#A8D5BA',
+    color: '#888888',
     fontSize: 13,
     lineHeight: 18,
   },
   commentTime: {
-    color: '#666666',
+    color: '#555555',
     fontSize: 11,
-    marginTop: 4,
+    marginTop: 6,
   },
   commentInputBar: {
     flexDirection: 'row',
@@ -532,19 +621,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 8,
-    backgroundColor: '#0A2E1F',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#0D0D0D',
+    borderTopWidth: 0.5,
+    borderTopColor: '#222222',
     gap: 8,
   },
   commentInput: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#141414',
+    borderWidth: 0.5,
+    borderColor: '#222222',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#333333',
+    color: '#F5F5F5',
   },
   sendButton: {
     width: 40,

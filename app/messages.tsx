@@ -10,7 +10,7 @@ export default function MessagesScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color="#F5F5F5" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Messages</Text>
         <View style={styles.headerSpacer} />
@@ -26,7 +26,7 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A2E1F',
+    backgroundColor: '#0D0D0D',
   },
   header: {
     flexDirection: 'row',
@@ -36,9 +36,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#F5F5F5',
   },
   headerSpacer: {
     width: 24,
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   comingSoon: {
-    fontSize: 16,
-    color: '#A8D5BA',
+    fontSize: 14,
+    color: '#888888',
   },
 });
