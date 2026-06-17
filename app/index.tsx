@@ -45,6 +45,7 @@ export default function HomeScreen() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [activeTab, setActiveTab] = useState<string>('map');
   const [hasSession, setHasSession] = useState(false);
+  const [gemOfTheDay, setGemOfTheDay] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -56,6 +57,23 @@ export default function HomeScreen() {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const fetchGemOfTheDay = async () => {
+      const { data } = await supabase
+        .from('gems')
+        .select('*')
+        .eq('is_private', false)
+        .limit(10);
+
+      if (data && data.length > 0) {
+        const random = data[Math.floor(Math.random() * data.length)];
+        setGemOfTheDay(random);
+      }
+    };
+
+    fetchGemOfTheDay();
   }, []);
 
   return (
@@ -84,18 +102,24 @@ export default function HomeScreen() {
             placeholderTextColor={COLORS.searchPlaceholder}
           />
 
-          <TouchableOpacity
-            style={styles.gemOfTheDayCard}
-            onPress={() => console.log('Gem of the day')}
-            activeOpacity={0.7}>
-            <Ionicons name="location" size={28} color="#1D9E75" />
-            <View style={styles.gemOfTheDayContent}>
-              <Text style={styles.gemOfTheDayLabel}>GEM OF THE DAY</Text>
-              <Text style={styles.gemOfTheDayName}>Stiniva Beach, Vis</Text>
-              <Text style={styles.gemOfTheDayMeta}>87 km away · Beach</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#1D9E75" />
-          </TouchableOpacity>
+          {gemOfTheDay && (
+            <TouchableOpacity
+              style={styles.gemOfTheDayCard}
+              onPress={() => router.push('/gem/' + gemOfTheDay.id)}
+              activeOpacity={0.7}>
+              <Ionicons name="location" size={28} color="#1D9E75" />
+              <View style={styles.gemOfTheDayContent}>
+                <Text style={styles.gemOfTheDayLabel}>GEM OF THE DAY</Text>
+                <Text style={styles.gemOfTheDayName}>
+                  {gemOfTheDay?.title || 'No gems yet'}
+                </Text>
+                <Text style={styles.gemOfTheDayMeta}>
+                  {gemOfTheDay?.category + ' · Tap to explore'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#1D9E75" />
+            </TouchableOpacity>
+          )}
 
           <ScrollView
             horizontal

@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -25,7 +26,7 @@ type Gem = {
   latitude: number;
   longitude: number;
   image_url: string | null;
-  average_rating: number | null;
+  rating_avg: number | null;
   rating_count: number | null;
 };
 
@@ -51,24 +52,31 @@ export default function GemDetailScreen() {
   const [gem, setGem] = useState<Gem | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
+  const [userRating, setUserRating] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const fetchGem = async () => {
+    if (!id) return;
+
+    const { data } = await supabase.from('gems').select('*').eq('id', id).single();
+    if (data) setGem(data);
+    setLoading(false);
+  };
+
+  const fetchComments = async () => {
+    if (!id) return;
+
+    const { data: commentsData } = await supabase
+      .from('comments')
+      .select('*, profiles(username)')
+      .eq('gem_id', id)
+      .order('created_at', { ascending: true });
+
+    if (commentsData) setComments(commentsData);
+  };
 
   useEffect(() => {
     if (!id) return;
-
-    const fetchGem = async () => {
-      const { data } = await supabase.from('gems').select('*').eq('id', id).single();
-      if (data) setGem(data);
-      setLoading(false);
-    };
-
-    const fetchComments = async () => {
-      const { data } = await supabase
-        .from('comments')
-        .select('*, profiles(username)')
-        .eq('gem_id', id);
-      if (data) setComments(data);
-    };
 
     fetchGem();
     fetchComments();
@@ -88,21 +96,56 @@ export default function GemDetailScreen() {
   };
 
   const handleSendComment = async () => {
-    if (!commentText.trim() || !id) return;
+    const text = commentText.trim();
+    if (!text || !id) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('comments')
-      .insert({ gem_id: id, user_id: user.id, content: commentText.trim() })
-      .select('*, profiles(username)')
-      .single();
+      .insert({ gem_id: id, user_id: user.id, content: text });
 
-    if (!error && data) {
-      setComments((prev) => [...prev, data]);
+    if (!error) {
       setCommentText('');
+      fetchComments();
     }
+  };
+
+  const handleSubmitRating = async () => {
+    if (!userRating || !id) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase.from('ratings').upsert(
+      {
+        gem_id: id,
+        user_id: user.id,
+        rating: userRating,
+      },
+      { onConflict: 'gem_id,user_id' }
+    );
+
+    if (error) return;
+
+    const { data: ratingsData } = await supabase
+      .from('ratings')
+      .select('rating')
+      .eq('gem_id', id);
+
+    if (ratingsData && ratingsData.length > 0) {
+      const count = ratingsData.length;
+      const average = ratingsData.reduce((sum, r) => sum + r.rating, 0) / count;
+
+      await supabase
+        .from('gems')
+        .update({ rating_avg: average, rating_count: count })
+        .eq('id', id);
+    }
+
+    Alert.alert('Rating saved!');
+    fetchGem();
   };
 
   if (loading) {
@@ -164,7 +207,9 @@ export default function GemDetailScreen() {
             <View style={styles.statItem}>
               <Ionicons name="star" size={16} color="#FFD700" />
               <Text style={styles.statText}>
-                {gem.average_rating != null ? gem.average_rating.toFixed(1) : 'No ratings yet'}
+                {gem.rating_avg != null && gem.rating_avg > 0
+                  ? gem.rating_avg.toFixed(1)
+                  : 'No ratings'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -175,6 +220,32 @@ export default function GemDetailScreen() {
               <Ionicons name="heart-outline" size={16} color="#A8D5BA" />
               <Text style={styles.statText}>0</Text>
             </View>
+          </View>
+
+          <View style={styles.ratingSection}>
+            <Text style={styles.ratingLabel}>Rate this gem</Text>
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setUserRating(star)}
+                  activeOpacity={0.7}>
+                  <Ionicons
+                    name={star <= userRating ? 'star' : 'star-outline'}
+                    size={32}
+                    color={star <= userRating ? '#FFD700' : '#A8D5BA'}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            {userRating > 0 && (
+              <TouchableOpacity
+                style={styles.submitRatingButton}
+                onPress={handleSubmitRating}
+                activeOpacity={0.8}>
+                <Text style={styles.submitRatingText}>Submit rating</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.divider} />
@@ -190,14 +261,25 @@ export default function GemDetailScreen() {
           {comments.length === 0 ? (
             <Text style={styles.emptyComments}>Be the first to comment!</Text>
           ) : (
-            comments.map((comment) => (
-              <View key={comment.id} style={styles.commentItem}>
-                <Text style={styles.commentUsername}>
-                  {comment.profiles?.username ?? 'Anonymous'}
-                </Text>
-                <Text style={styles.commentContent}>{comment.content}</Text>
-              </View>
-            ))
+            comments.map((comment) => {
+              const username = comment.profiles?.username ?? 'Anonymous';
+              return (
+                <View key={comment.id} style={styles.commentItem}>
+                  <View style={styles.commentAvatar}>
+                    <Text style={styles.commentAvatarText}>
+                      {username.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.commentBody}>
+                    <Text style={styles.commentUsername}>{username}</Text>
+                    <Text style={styles.commentContent}>{comment.content}</Text>
+                    <Text style={styles.commentTime}>
+                      {new Date(comment.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -344,6 +426,31 @@ const styles = StyleSheet.create({
     color: '#A8D5BA',
     fontSize: 13,
   },
+  ratingSection: {
+    marginBottom: 16,
+  },
+  ratingLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  submitRatingButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#1D9E75',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  submitRatingText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   divider: {
     height: 1,
     backgroundColor: '#1D9E75',
@@ -379,23 +486,45 @@ const styles = StyleSheet.create({
   emptyComments: {
     color: '#A8D5BA',
     fontSize: 14,
+    textAlign: 'center',
     marginBottom: 16,
   },
   commentItem: {
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: '#0F3D25',
-    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  commentAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1D9E75',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  commentBody: {
+    flex: 1,
   },
   commentUsername: {
-    color: '#1D9E75',
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   commentContent: {
     color: '#A8D5BA',
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  commentTime: {
+    color: '#666666',
+    fontSize: 11,
+    marginTop: 4,
   },
   commentInputBar: {
     flexDirection: 'row',
