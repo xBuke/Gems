@@ -158,6 +158,10 @@ export default function HomeScreen() {
                   router.push('/map');
                 } else if (tab.key === 'add') {
                   router.push('/add-gem');
+                } else if (tab.key === 'messages') {
+                  router.push('/messages');
+                } else if (tab.key === 'profile') {
+                  router.push('/profile');
                 }
                 setActiveTab(tab.key);
               }}
