@@ -1,3 +1,4 @@
+import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -5,16 +6,16 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActionSheetIOS,
-  Alert,
-  Image,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActionSheetIOS,
+    Alert,
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -143,12 +144,7 @@ export default function AddGemScreen() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a gem name.');
-      return;
-    }
-
+  const insertGem = async (verified: boolean) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
@@ -166,6 +162,7 @@ export default function AddGemScreen() {
       longitude,
       user_id: user.id,
       image_url: imageUrl,
+      verified,
     });
 
     if (error) {
@@ -174,6 +171,35 @@ export default function AddGemScreen() {
     }
 
     Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.back() }]);
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter a gem name.');
+      return;
+    }
+
+    if (latitude == null || longitude == null) {
+      Alert.alert('Error', 'Location not detected. Please enable location services.');
+      return;
+    }
+
+    const location = await Location.getCurrentPositionAsync({});
+    const distance = getDistance(
+      location.coords.latitude,
+      location.coords.longitude,
+      latitude,
+      longitude
+    );
+
+    if (distance > 500) {
+      Alert.alert('You seem far from this location. Pin here anyway?', undefined, [
+        { text: 'No', style: 'cancel' },
+        { text: 'Yes', onPress: () => insertGem(false) },
+      ]);
+    } else {
+      await insertGem(true);
+    }
   };
 
   return (

@@ -1,3 +1,4 @@
+import { startTracking, stopTracking } from '@/lib/locationTracker';
 import { supabase } from '@/lib/supabase';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -6,9 +7,22 @@ import { View } from 'react-native';
 
 export default function RootLayout() {
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {});
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) startTracking(session.user.id);
+    });
 
-    return () => subscription.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        startTracking(session.user.id);
+      } else {
+        stopTracking();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      stopTracking();
+    };
   }, []);
 
   return (

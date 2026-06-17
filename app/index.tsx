@@ -34,6 +34,7 @@ type Gem = {
   category: string;
   rating_avg: number | null;
   image_url: string | null;
+  verified: boolean;
 };
 
 const TABS = [
@@ -219,8 +220,15 @@ export default function HomeScreen() {
                   {gem.image_url ? (
                     <Image source={{ uri: gem.image_url }} style={styles.gemImage} />
                   ) : null}
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{gem.category}</Text>
+                  <View style={styles.badgeRow}>
+                    <View style={styles.categoryBadge}>
+                      <Text style={styles.categoryBadgeText}>{gem.category}</Text>
+                    </View>
+                    {gem.verified && (
+                      <View style={styles.verifiedBadge}>
+                        <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
                 <View style={styles.gemInfo}>
@@ -451,15 +459,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   categoryBadge: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
     backgroundColor: COLORS.accentSubtle,
     borderWidth: 0.5,
     borderColor: COLORS.accent,
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: 20,
+  },
+  badgeRow: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  verifiedBadge: {
+    backgroundColor: COLORS.accentSubtle,
+    borderWidth: 0.5,
+    borderColor: COLORS.accent,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 20,
+  },
+  verifiedBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.accent,
   },
   categoryBadgeText: {
     fontSize: 11,

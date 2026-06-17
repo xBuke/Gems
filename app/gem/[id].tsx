@@ -1,5 +1,7 @@
+import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -28,6 +30,7 @@ type Gem = {
   image_url: string | null;
   rating_avg: number | null;
   rating_count: number | null;
+  verified: boolean;
   user_id: string;
   profiles: { username: string } | null;
 };
@@ -56,6 +59,7 @@ export default function GemDetailScreen() {
   const [commentText, setCommentText] = useState('');
   const [userRating, setUserRating] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [visitVerified, setVisitVerified] = useState(false);
 
   const fetchComments = async () => {
     if (!id) return;
@@ -163,6 +167,44 @@ export default function GemDetailScreen() {
     Alert.alert('Rating saved!');
   };
 
+  const handleBeenHere = async () => {
+    if (!gem) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to verify a visit.');
+      return;
+    }
+
+    const location = await Location.getCurrentPositionAsync({});
+    const distance = getDistance(
+      location.coords.latitude,
+      location.coords.longitude,
+      gem.latitude,
+      gem.longitude
+    );
+
+    if (distance > 1000) {
+      Alert.alert('You need to be within 1km to verify your visit');
+      return;
+    }
+
+    const gemId = Array.isArray(id) ? id[0] : id;
+    const { error } = await supabase.from('gem_visits').upsert(
+      {
+        gem_id: gemId,
+        user_id: user.id,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      },
+      { onConflict: 'gem_id,user_id' }
+    );
+
+    if (!error) {
+      setVisitVerified(true);
+    }
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0D0D0D', justifyContent: 'center', alignItems: 'center' }}>
@@ -199,8 +241,15 @@ export default function GemDetailScreen() {
             </View>
           )}
 
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>{gem.category}</Text>
+          <View style={styles.badgeRow}>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{gem.category}</Text>
+            </View>
+            {gem.verified && (
+              <View style={styles.verifiedBadge}>
+                <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
+              </View>
+            )}
           </View>
 
           <TouchableOpacity style={styles.saveButton} activeOpacity={0.8}>
@@ -284,6 +333,20 @@ export default function GemDetailScreen() {
           <TouchableOpacity style={styles.navigateButton} onPress={openMaps} activeOpacity={0.8}>
             <Ionicons name="navigate" size={20} color="#0D0D0D" />
             <Text style={styles.navigateButtonText}>Navigate</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.beenHereButton, visitVerified && styles.beenHereButtonVerified]}
+            onPress={handleBeenHere}
+            disabled={visitVerified}
+            activeOpacity={0.8}>
+            <Text
+              style={[
+                styles.beenHereButtonText,
+                visitVerified && styles.beenHereButtonTextVerified,
+              ]}>
+              {visitVerified ? 'Visit verified! ✓' : "I've been here"}
+            </Text>
           </TouchableOpacity>
 
           <Text style={styles.commentsTitle}>Comments</Text>
@@ -415,15 +478,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryBadge: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
     backgroundColor: '#0F3D25',
     borderWidth: 0.5,
     borderColor: '#1D9E75',
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 20,
+  },
+  badgeRow: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  verifiedBadge: {
+    backgroundColor: '#0F3D25',
+    borderWidth: 0.5,
+    borderColor: '#1D9E75',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+  },
+  verifiedBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#1D9E75',
   },
   categoryBadgeText: {
     fontSize: 11,
@@ -554,12 +634,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#1D9E75',
     borderRadius: 10,
     paddingVertical: 14,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   navigateButtonText: {
     color: '#0D0D0D',
     fontSize: 14,
     fontWeight: '600',
+  },
+  beenHereButton: {
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#1D9E75',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  beenHereButtonVerified: {
+    borderColor: '#1D9E75',
+    opacity: 0.7,
+  },
+  beenHereButtonText: {
+    color: '#1D9E75',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  beenHereButtonTextVerified: {
+    color: '#1D9E75',
   },
   commentsTitle: {
     color: '#F5F5F5',
