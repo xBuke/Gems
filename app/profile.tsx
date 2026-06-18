@@ -6,12 +6,9 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Image,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -55,9 +52,6 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId?: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [promptVisible, setPromptVisible] = useState(false);
-  const [promptMode, setPromptMode] = useState<'username' | 'password' | null>(null);
-  const [promptValue, setPromptValue] = useState('');
   const [gems, setGems] = useState<Gem[]>([]);
   const [followingCount, setFollowingCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
@@ -200,100 +194,7 @@ export default function ProfileScreen() {
     });
   };
 
-  const handleUpdateUsername = async (newUsername: string) => {
-    const trimmed = newUsername.trim();
-    if (!trimmed) return;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ username: trimmed })
-      .eq('id', user.id);
-
-    if (error) {
-      Alert.alert('Error', 'Could not update username');
-      return;
-    }
-
-    setProfile((prev) => (prev ? { ...prev, username: trimmed } : prev));
-  };
-
-  const handleChangePassword = async (newPassword: string) => {
-    if (!newPassword || newPassword.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    if (error) {
-      Alert.alert('Error', error.message);
-      return;
-    }
-
-    Alert.alert('Success', 'Password updated');
-  };
-
-  const showUsernamePrompt = () => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        'Edit Username',
-        'Enter your new username',
-        async (value) => {
-          if (value) await handleUpdateUsername(value);
-        },
-        'plain-text',
-        profile?.username ?? '',
-      );
-      return;
-    }
-
-    setPromptValue(profile?.username ?? '');
-    setPromptMode('username');
-    setPromptVisible(true);
-  };
-
-  const showPasswordPrompt = () => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        'Change Password',
-        'Enter your new password',
-        async (value) => {
-          if (value) await handleChangePassword(value);
-        },
-        'secure-text',
-      );
-      return;
-    }
-
-    setPromptValue('');
-    setPromptMode('password');
-    setPromptVisible(true);
-  };
-
-  const handlePromptSubmit = async () => {
-    const value = promptValue;
-    const mode = promptMode;
-    setPromptVisible(false);
-    setPromptMode(null);
-    setPromptValue('');
-
-    if (mode === 'username') {
-      await handleUpdateUsername(value);
-    } else if (mode === 'password') {
-      await handleChangePassword(value);
-    }
-  };
-
-  const handleSettings = () => {
-    Alert.alert('Settings', undefined, [
-      { text: 'Edit Username', onPress: showUsernamePrompt },
-      { text: 'Change Password', onPress: showPasswordPrompt },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
+  const profileId = isOwnProfile ? currentUserId : userId;
 
   const renderGemCard = (gem: Gem) => (
     <TouchableOpacity
@@ -342,7 +243,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         {isOwnProfile ? (
-          <TouchableOpacity onPress={handleSettings} activeOpacity={0.7} style={styles.headerSide}>
+          <TouchableOpacity onPress={() => router.push('/settings')} activeOpacity={0.7} style={styles.headerSide}>
             <Ionicons name="settings-outline" size={22} color={COLORS.textLight} />
           </TouchableOpacity>
         ) : (
@@ -365,15 +266,27 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Gems</Text>
           </View>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() =>
+              profileId &&
+              router.push({ pathname: '/followers', params: { userId: profileId, type: 'following' } })
+            }
+            activeOpacity={0.7}>
             <Text style={styles.statValue}>{followingCount}</Text>
             <Text style={styles.statLabel}>Following</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() =>
+              profileId &&
+              router.push({ pathname: '/followers', params: { userId: profileId, type: 'followers' } })
+            }
+            activeOpacity={0.7}>
             <Text style={styles.statValue}>{followersCount}</Text>
             <Text style={styles.statLabel}>Followers</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {!isOwnProfile && (
@@ -430,46 +343,6 @@ export default function ProfileScreen() {
         )}
       </ScrollView>
 
-      <Modal visible={promptVisible} transparent animationType="fade">
-        <View style={styles.promptOverlay}>
-          <View style={styles.promptBox}>
-            <Text style={styles.promptTitle}>
-              {promptMode === 'password' ? 'Change Password' : 'Edit Username'}
-            </Text>
-            <Text style={styles.promptMessage}>
-              {promptMode === 'password'
-                ? 'Enter your new password'
-                : 'Enter your new username'}
-            </Text>
-            <TextInput
-              style={styles.promptInput}
-              value={promptValue}
-              onChangeText={setPromptValue}
-              secureTextEntry={promptMode === 'password'}
-              autoFocus
-              placeholderTextColor={COLORS.textMuted}
-            />
-            <View style={styles.promptButtons}>
-              <TouchableOpacity
-                style={styles.promptCancelButton}
-                onPress={() => {
-                  setPromptVisible(false);
-                  setPromptMode(null);
-                  setPromptValue('');
-                }}
-                activeOpacity={0.8}>
-                <Text style={styles.promptCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.promptSubmitButton}
-                onPress={handlePromptSubmit}
-                activeOpacity={0.8}>
-                <Text style={styles.promptSubmitText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -725,71 +598,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: COLORS.danger,
-  },
-  promptOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  promptBox: {
-    width: '100%',
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    padding: 20,
-  },
-  promptTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  promptMessage: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    marginBottom: 12,
-  },
-  promptInput: {
-    backgroundColor: COLORS.bg,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginBottom: 16,
-  },
-  promptButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  promptCancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  promptCancelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textMuted,
-  },
-  promptSubmitButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: COLORS.accent,
-    alignItems: 'center',
-  },
-  promptSubmitText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.bg,
   },
 });

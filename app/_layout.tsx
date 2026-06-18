@@ -36,6 +36,8 @@ export default function RootLayout() {
         <Stack.Screen name="messages" options={{ headerShown: false }} />
         <Stack.Screen name="chat" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="followers" options={{ headerShown: false }} />
         <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="light" />

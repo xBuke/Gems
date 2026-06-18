@@ -1,0 +1,279 @@
+import { supabase } from '@/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const COLORS = {
+  bg: '#0D0D0D',
+  card: '#141414',
+  accent: '#1D9E75',
+  text: '#FFFFFF',
+  textLight: '#F5F5F5',
+  textMuted: '#888888',
+  border: '#222222',
+};
+
+type ProfileSummary = {
+  id: string;
+  username: string;
+};
+
+type FollowRow = {
+  id: string;
+  follower?: ProfileSummary;
+  following?: ProfileSummary;
+};
+
+export default function FollowersScreen() {
+  const router = useRouter();
+  const { userId, type } = useLocalSearchParams<{ userId: string; type: 'followers' | 'following' }>();
+  const [users, setUsers] = useState<ProfileSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+
+  const isFollowers = type === 'followers';
+  const title = isFollowers ? 'Followers' : 'Following';
+  const isOwnList = currentUserId === userId;
+
+  const fetchData = useCallback(async () => {
+    if (!userId) return;
+
+    setLoading(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUserId(user?.id ?? null);
+
+    if (user) {
+      const { data: myFollows } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id);
+
+      setFollowingIds(new Set((myFollows ?? []).map((f: { following_id: string }) => f.following_id)));
+    }
+
+    if (isFollowers) {
+      const { data } = await supabase
+        .from('follows')
+        .select('*, follower:profiles!follows_follower_id_fkey(id, username)')
+        .eq('following_id', userId);
+
+      const list = (data as FollowRow[] | null)?.map((row) => row.follower).filter(Boolean) as ProfileSummary[];
+      setUsers(list ?? []);
+    } else {
+      const { data } = await supabase
+        .from('follows')
+        .select('*, following:profiles!follows_following_id_fkey(id, username)')
+        .eq('follower_id', userId);
+
+      const list = (data as FollowRow[] | null)?.map((row) => row.following).filter(Boolean) as ProfileSummary[];
+      setUsers(list ?? []);
+    }
+
+    setLoading(false);
+  }, [userId, isFollowers]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleFollow = async (targetId: string) => {
+    if (!currentUserId) return;
+
+    await supabase.from('follows').insert({
+      follower_id: currentUserId,
+      following_id: targetId,
+    });
+
+    await supabase.from('notifications').insert({
+      user_id: targetId,
+      sender_id: currentUserId,
+      type: 'follow',
+      gem_id: null,
+      read: false,
+    });
+
+    setFollowingIds((prev) => new Set(prev).add(targetId));
+  };
+
+  const handleUnfollow = async (targetId: string) => {
+    if (!currentUserId) return;
+
+    await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', currentUserId)
+      .eq('following_id', targetId);
+
+    setFollowingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(targetId);
+      return next;
+    });
+  };
+
+  const renderItem = ({ item }: { item: ProfileSummary }) => {
+    const initials = (item.username ?? 'U').charAt(0).toUpperCase();
+    const isSelf = item.id === currentUserId;
+    const isFollowing = followingIds.has(item.id);
+
+    return (
+      <TouchableOpacity
+        style={styles.userItem}
+        onPress={() => router.push({ pathname: '/profile', params: { userId: item.id } })}
+        activeOpacity={0.7}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
+        <Text style={styles.username} numberOfLines={1}>
+          {item.username}
+        </Text>
+        {!isSelf && !isOwnList ? (
+          <TouchableOpacity
+            style={isFollowing ? styles.followingButton : styles.followButton}
+            onPress={() => {
+              if (isFollowing) {
+                handleUnfollow(item.id);
+              } else {
+                handleFollow(item.id);
+              }
+            }}
+            activeOpacity={0.8}>
+            <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
+              {isFollowing ? 'Following' : 'Follow'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+          <Ionicons name="arrow-back" size={22} color={COLORS.textLight} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{title}</Text>
+        <View style={styles.headerSide} />
+      </View>
+
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator color={COLORS.accent} />
+        </View>
+      ) : users.length === 0 ? (
+        <View style={styles.centered}>
+          <Text style={styles.emptyText}>No {title.toLowerCase()} yet</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={users}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.bg,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  headerSide: {
+    width: 22,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  listContent: {
+    paddingVertical: 8,
+  },
+  userItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 0.5,
+    borderBottomColor: COLORS.border,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  username: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  followButton: {
+    backgroundColor: COLORS.accent,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+  },
+  followButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.bg,
+  },
+  followingButton: {
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.accent,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+  },
+  followingButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.accent,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 15,
+    color: COLORS.textMuted,
+  },
+});
