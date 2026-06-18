@@ -166,6 +166,24 @@ export default function ProfileScreen() {
     await fetchData();
   };
 
+  const handleDeleteGem = async (gemId: string, imageUrl: string | null) => {
+    if (imageUrl) {
+      const fileName = imageUrl.split('/').pop();
+      if (fileName) {
+        await supabase.storage.from('gem-images').remove([fileName]);
+      }
+    }
+
+    const { error } = await supabase.from('gems').delete().eq('id', gemId);
+
+    if (error) {
+      Alert.alert('Error', 'Could not delete gem');
+      return;
+    }
+
+    setGems((prev) => prev.filter((g) => g.id !== gemId));
+  };
+
   const handleSendMessage = async () => {
     if (!userId) return;
 
@@ -183,6 +201,19 @@ export default function ProfileScreen() {
       key={gem.id}
       style={styles.gemCard}
       onPress={() => router.push('/gem/' + gem.id)}
+      onLongPress={
+        isOwnProfile
+          ? () =>
+              Alert.alert('Delete Gem', gem.title + ' will be deleted permanently.', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => handleDeleteGem(gem.id, gem.image_url),
+                },
+              ])
+          : undefined
+      }
       activeOpacity={0.8}>
       {gem.image_url ? (
         <Image source={{ uri: gem.image_url }} style={styles.gemImage} resizeMode="cover" />

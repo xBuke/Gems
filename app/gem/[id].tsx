@@ -66,6 +66,7 @@ export default function GemDetailScreen() {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [commentLikes, setCommentLikes] = useState<Record<string, CommentLikeState>>({});
+  const [isOwner, setIsOwner] = useState(false);
 
   const gemId = Array.isArray(id) ? id[0] : id;
 
@@ -123,7 +124,11 @@ export default function GemDetailScreen() {
       console.log('Gem data:', data);
       console.log('Gem error:', error);
 
-      if (data) setGem(data);
+      if (data) {
+        setGem(data);
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsOwner(user?.id === data.user_id);
+      }
       if (error) console.log('Error details:', JSON.stringify(error));
       setLoading(false);
     };
@@ -271,6 +276,37 @@ export default function GemDetailScreen() {
         },
       }));
     }
+  };
+
+  const handleDelete = async () => {
+    if (!gem || !gemId) return;
+
+    try {
+      if (gem.image_url) {
+        const fileName = gem.image_url.split('/').pop();
+        if (fileName) {
+          await supabase.storage.from('gem-images').remove([fileName]);
+        }
+      }
+
+      const { error } = await supabase.from('gems').delete().eq('id', gemId);
+
+      if (error) {
+        Alert.alert('Error', 'Could not delete gem');
+        return;
+      }
+
+      router.replace('/');
+    } catch {
+      Alert.alert('Error', 'Could not delete gem');
+    }
+  };
+
+  const confirmDelete = () => {
+    Alert.alert('Delete Gem', 'Are you sure? This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: handleDelete },
+    ]);
   };
 
   const handleBeenHere = async () => {
@@ -479,12 +515,19 @@ export default function GemDetailScreen() {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => console.log('Share gem', gem.id)}
-          activeOpacity={0.8}>
-          <Ionicons name="share-outline" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {isOwner && (
+            <TouchableOpacity style={styles.headerButton} onPress={confirmDelete} activeOpacity={0.8}>
+              <Ionicons name="trash-outline" size={22} color="#FF4444" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => console.log('Share gem', gem.id)}
+            activeOpacity={0.8}>
+            <Ionicons name="share-outline" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
 
       <SafeAreaView style={styles.commentInputBar} edges={['bottom']}>
@@ -552,6 +595,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 8,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerButton: {
     width: 40,
