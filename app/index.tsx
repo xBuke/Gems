@@ -88,7 +88,7 @@ export default function DiscoverScreen() {
     const { count, error } = await supabase
       .from('messages')
       .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', user.id)
+      .eq('receiver_id', user.id)
       .eq('read', false);
 
     setHasUnreadMessages(!error && (count ?? 0) > 0);
