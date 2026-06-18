@@ -1,14 +1,15 @@
 import { requireAuth } from '@/lib/authGuard';
+import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Image,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -24,47 +25,101 @@ const COLORS = {
   textDim: '#555555',
   border: '#222222',
   star: '#FFD700',
+  imagePlaceholder: '#1A5C3A',
+  danger: '#FF4444',
 };
-
-const CATEGORIES = ['All', 'Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
 
 type Gem = {
   id: string;
   title: string;
-  description: string | null;
   category: string;
   rating_avg: number | null;
   image_url: string | null;
   verified: boolean;
+  latitude: number;
+  longitude: number;
+  created_at: string;
 };
 
+type FollowingGem = Gem & {
+  profiles: { username: string } | null;
+};
+
+type FeedTab = 'forYou' | 'following';
+
 const TABS = [
+  { key: 'discover', label: 'Discover', icon: 'compass-outline' as const, activeIcon: 'compass' as const },
   { key: 'map', label: 'Map', icon: 'map-outline' as const, activeIcon: 'map' as const },
-  { key: 'add', label: 'Add', icon: 'add-circle-outline' as const, activeIcon: 'add-circle' as const },
-  { key: 'messages', label: 'Messages', icon: 'chatbubble-outline' as const, activeIcon: 'chatbubble' as const },
+  {
+    key: 'add',
+    label: 'Add',
+    icon: 'add-circle-outline' as const,
+    activeIcon: 'add-circle' as const,
+    addButton: true,
+  },
+  {
+    key: 'notifications',
+    label: 'Notifications',
+    icon: 'notifications-outline' as const,
+    activeIcon: 'notifications' as const,
+  },
   { key: 'profile', label: 'Profile', icon: 'person-outline' as const, activeIcon: 'person' as const },
 ];
 
-export default function HomeScreen() {
+export default function DiscoverScreen() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [allGems, setAllGems] = useState<Gem[]>([]);
-  const [filteredGems, setFilteredGems] = useState<Gem[]>([]);
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [activeTab, setActiveTab] = useState<string>('map');
-  const [hasSession, setHasSession] = useState(false);
+  const [activeTab, setActiveTab] = useState('discover');
+  const [feedTab, setFeedTab] = useState<FeedTab>('forYou');
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [gemOfTheDay, setGemOfTheDay] = useState<Gem | null>(null);
+  const [trendingGems, setTrendingGems] = useState<Gem[]>([]);
+  const [recentGems, setRecentGems] = useState<Gem[]>([]);
+  const [nearbyGems, setNearbyGems] = useState<Gem[]>([]);
+  const [followingGems, setFollowingGems] = useState<FollowingGem[]>([]);
+  const [locationAvailable, setLocationAvailable] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setHasSession(!!session);
-    });
+  const checkUnreadMessages = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setHasUnreadMessages(false);
+      return;
+    }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setHasSession(!!session);
-    });
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', user.id)
+      .eq('read', false);
 
-    return () => subscription.unsubscribe();
+    setHasUnreadMessages(!error && (count ?? 0) > 0);
+  }, []);
+
+  const fetchFollowingGems = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setFollowingGems([]);
+      return;
+    }
+
+    const { data: followingIds } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', user.id);
+
+    if (!followingIds || followingIds.length === 0) {
+      setFollowingGems([]);
+      return;
+    }
+
+    const ids = followingIds.map((f) => f.following_id);
+
+    const { data: gems } = await supabase
+      .from('gems')
+      .select('*, profiles!gems_user_id_fkey(username)')
+      .in('user_id', ids)
+      .order('created_at', { ascending: false });
+
+    if (gems) setFollowingGems(gems as FollowingGem[]);
   }, []);
 
   useEffect(() => {
@@ -81,202 +136,271 @@ export default function HomeScreen() {
       }
     };
 
-    fetchGemOfTheDay();
-  }, []);
-
-  useEffect(() => {
-    const fetchAllGems = async () => {
+    const fetchTrending = async () => {
       const { data } = await supabase
         .from('gems')
         .select('*')
         .eq('is_private', false)
-        .order('created_at', { ascending: false });
+        .order('rating_avg', { ascending: false, nullsFirst: false })
+        .limit(5);
+
+      if (data) setTrendingGems(data);
+    };
+
+    const fetchRecent = async () => {
+      const { data } = await supabase
+        .from('gems')
+        .select('*')
+        .eq('is_private', false)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (data) setRecentGems(data);
+    };
+
+    const fetchNearby = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationAvailable(false);
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setLocationAvailable(true);
+
+      const { data } = await supabase
+        .from('gems')
+        .select('*')
+        .eq('is_private', false);
 
       if (data) {
-        setAllGems(data);
-        setFilteredGems(data);
+        const nearby = data.filter(
+          (gem) =>
+            getDistance(
+              location.coords.latitude,
+              location.coords.longitude,
+              gem.latitude,
+              gem.longitude,
+            ) < 50000,
+        );
+        setNearbyGems(nearby);
       }
     };
 
-    fetchAllGems();
-  }, []);
+    fetchGemOfTheDay();
+    fetchTrending();
+    fetchRecent();
+    fetchNearby();
+    checkUnreadMessages();
+  }, [checkUnreadMessages]);
 
   useEffect(() => {
-    let results = allGems;
-
-    if (activeCategory !== 'All') {
-      results = results.filter((g) => g.category === activeCategory);
+    if (feedTab === 'following') {
+      fetchFollowingGems();
     }
+  }, [feedTab, fetchFollowingGems]);
 
-    if (searchQuery.trim() !== '') {
-      results = results.filter(
-        (g) =>
-          g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          g.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleMessagesPress = async () => {
+    const proceed = await requireAuth();
+    if (!proceed) return;
+    router.push('/messages');
+  };
+
+  const renderGemCard = (gem: Gem, username?: string) => (
+    <TouchableOpacity
+      key={gem.id}
+      style={styles.gemCard}
+      onPress={() => router.push('/gem/' + gem.id)}
+      activeOpacity={0.7}>
+      <View style={styles.photoPlaceholder}>
+        {gem.image_url ? (
+          <Image source={{ uri: gem.image_url }} style={styles.gemImage} />
+        ) : null}
+        <View style={styles.badgeRow}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>{gem.category}</Text>
+          </View>
+          {gem.verified && (
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
+            </View>
+          )}
+        </View>
+      </View>
+      <View style={styles.gemInfo}>
+        {username ? <Text style={styles.posterName}>@{username}</Text> : null}
+        <Text style={styles.gemName}>{gem.title}</Text>
+        <View style={styles.gemMeta}>
+          {gem.rating_avg != null && (
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={14} color={COLORS.star} />
+              <Text style={styles.ratingText}>{gem.rating_avg.toFixed(1)}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderForYouContent = () => (
+    <>
+      <Text style={styles.sectionTitle}>Gem of the Day</Text>
+      {gemOfTheDay && (
+        <TouchableOpacity
+          style={styles.gemOfTheDayCard}
+          onPress={() => router.push('/gem/' + gemOfTheDay.id)}
+          activeOpacity={0.7}>
+          <Ionicons name="location" size={24} color={COLORS.accent} />
+          <View style={styles.gemOfTheDayContent}>
+            <Text style={styles.gemOfTheDayLabel}>GEM OF THE DAY</Text>
+            <Text style={styles.gemOfTheDayName}>{gemOfTheDay.title}</Text>
+            <Text style={styles.gemOfTheDayMeta}>
+              {gemOfTheDay.category} · Tap to explore
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+        </TouchableOpacity>
+      )}
+
+      <Text style={styles.sectionTitle}>Trending</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.trendingRow}>
+        {trendingGems.map((gem) => (
+          <TouchableOpacity
+            key={gem.id}
+            style={styles.trendingCard}
+            onPress={() => router.push('/gem/' + gem.id)}
+            activeOpacity={0.7}>
+            <View style={styles.trendingImage}>
+              {gem.image_url ? (
+                <Image source={{ uri: gem.image_url }} style={styles.trendingImageFill} />
+              ) : null}
+              <View style={styles.trendingBadge}>
+                <Text style={styles.trendingBadgeText}>{gem.category}</Text>
+              </View>
+            </View>
+            <Text style={styles.trendingTitle} numberOfLines={2}>
+              {gem.title}
+            </Text>
+            {gem.rating_avg != null && (
+              <View style={styles.trendingRatingRow}>
+                <Ionicons name="star" size={12} color={COLORS.star} />
+                <Text style={styles.ratingText}>{gem.rating_avg.toFixed(1)}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <Text style={styles.sectionTitle}>Recently Added</Text>
+      {recentGems.map((gem) => renderGemCard(gem))}
+
+      {locationAvailable && (
+        <>
+          <Text style={styles.sectionTitle}>Near You</Text>
+          {nearbyGems.length === 0 ? (
+            <Text style={styles.emptyText}>No gems near you yet — be the first!</Text>
+          ) : (
+            nearbyGems.map((gem) => renderGemCard(gem))
+          )}
+        </>
+      )}
+    </>
+  );
+
+  const renderFollowingContent = () => {
+    if (followingGems.length === 0) {
+      return (
+        <View style={styles.followingEmpty}>
+          <Ionicons name="people-outline" size={48} color={COLORS.accent} />
+          <Text style={styles.followingEmptyText}>Follow people to see their gems</Text>
+          <TouchableOpacity
+            style={styles.exploreButton}
+            onPress={() => setFeedTab('forYou')}
+            activeOpacity={0.8}>
+            <Text style={styles.exploreButtonText}>Explore gems</Text>
+          </TouchableOpacity>
+        </View>
       );
     }
 
-    setFilteredGems(results);
-  }, [searchQuery, activeCategory, allGems]);
+    return followingGems.map((gem) =>
+      renderGemCard(gem, gem.profiles?.username ?? 'unknown'),
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.content}>
-        <ScrollView
-          style={styles.headerScroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          bounces={false}>
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>Hidden Gems</Text>
-            <TouchableOpacity onPress={() => router.push('/auth')} activeOpacity={0.7}>
-              {hasSession ? (
-                <Ionicons name="person-circle-outline" size={28} color={COLORS.text} />
-              ) : (
-                <Text style={styles.loginButton}>Login</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.subtitle}>Discover secret places near you</Text>
-
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchBar}
-              placeholder="Search hidden gems..."
-              placeholderTextColor={COLORS.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery !== '' && (
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={() => setSearchQuery('')}
-                activeOpacity={0.7}>
-                <Ionicons name="close-circle" size={20} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {gemOfTheDay && (
-            <TouchableOpacity
-              style={styles.gemOfTheDayCard}
-              onPress={() => router.push('/gem/' + gemOfTheDay.id)}
-              activeOpacity={0.7}>
-              <Ionicons name="location" size={24} color={COLORS.accent} />
-              <View style={styles.gemOfTheDayContent}>
-                <Text style={styles.gemOfTheDayLabel}>GEM OF THE DAY</Text>
-                <Text style={styles.gemOfTheDayName}>
-                  {gemOfTheDay?.title || 'No gems yet'}
-                </Text>
-                <Text style={styles.gemOfTheDayMeta}>
-                  {gemOfTheDay?.category + ' · Tap to explore'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          )}
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryRow}>
-            {CATEGORIES.map((category) => {
-              const isActive = activeCategory === category;
-              return (
-                <TouchableOpacity
-                  key={category}
-                  style={[styles.categoryPill, isActive && styles.categoryPillActive]}
-                  onPress={() => setActiveCategory(category)}
-                  activeOpacity={0.7}>
-                  <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          <Text style={styles.sectionTitle}>Gems near you</Text>
-        </ScrollView>
-
-        <ScrollView style={styles.gemsList} showsVerticalScrollIndicator={false}>
-          {filteredGems.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No gems found</Text>
-              {searchQuery.trim() !== '' && (
-                <Text style={styles.emptySubtext}>Try a different search</Text>
-              )}
-              {searchQuery.trim() === '' && activeCategory !== 'All' && (
-                <Text style={styles.emptySubtext}>No gems in this category yet</Text>
-              )}
-            </View>
-          ) : (
-            filteredGems.map((gem) => (
-              <TouchableOpacity
-                key={gem.id}
-                style={styles.gemCard}
-                onPress={() => router.push('/gem/' + gem.id)}
-                activeOpacity={0.7}>
-                <View style={styles.photoPlaceholder}>
-                  {gem.image_url ? (
-                    <Image source={{ uri: gem.image_url }} style={styles.gemImage} />
-                  ) : null}
-                  <View style={styles.badgeRow}>
-                    <View style={styles.categoryBadge}>
-                      <Text style={styles.categoryBadgeText}>{gem.category}</Text>
-                    </View>
-                    {gem.verified && (
-                      <View style={styles.verifiedBadge}>
-                        <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-                <View style={styles.gemInfo}>
-                  <Text style={styles.gemName}>{gem.title}</Text>
-                  <View style={styles.gemMeta}>
-                    {gem.rating_avg != null && (
-                      <View style={styles.ratingRow}>
-                        <Ionicons name="star" size={14} color={COLORS.star} />
-                        <Text style={styles.ratingText}>{gem.rating_avg.toFixed(1)}</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
-        </ScrollView>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Discover</Text>
+        <TouchableOpacity
+          style={styles.messagesButton}
+          onPress={handleMessagesPress}
+          activeOpacity={0.7}>
+          <Ionicons name="chatbubble-outline" size={24} color={COLORS.text} />
+          {hasUnreadMessages && <View style={styles.unreadDot} />}
+        </TouchableOpacity>
       </View>
+
+      <View style={styles.feedTabContainer}>
+        <TouchableOpacity
+          style={[styles.feedTab, feedTab === 'forYou' && styles.feedTabActive]}
+          onPress={() => setFeedTab('forYou')}
+          activeOpacity={0.8}>
+          <Text style={[styles.feedTabText, feedTab === 'forYou' && styles.feedTabTextActive]}>
+            For You
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.feedTab, feedTab === 'following' && styles.feedTabActive]}
+          onPress={() => setFeedTab('following')}
+          activeOpacity={0.8}>
+          <Text style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
+            Following
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {feedTab === 'forYou' ? renderForYouContent() : renderFollowingContent()}
+      </ScrollView>
 
       <View style={styles.tabBar}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
+          const isAddButton = 'addButton' in tab && tab.addButton;
           return (
             <TouchableOpacity
               key={tab.key}
               style={styles.tabItem}
               onPress={async () => {
-                if (tab.key === 'map') {
+                if (tab.key === 'discover') {
+                  setActiveTab('discover');
+                } else if (tab.key === 'map') {
                   router.push('/map');
+                  setActiveTab(tab.key);
                 } else if (tab.key === 'add') {
                   const proceed = await requireAuth();
                   if (!proceed) return;
                   router.push('/add-gem');
-                } else if (tab.key === 'messages') {
-                  router.push('/messages');
+                  setActiveTab(tab.key);
+                } else if (tab.key === 'notifications') {
+                  router.push('/notifications');
+                  setActiveTab(tab.key);
                 } else if (tab.key === 'profile') {
                   const proceed = await requireAuth();
                   if (!proceed) return;
                   router.push('/profile');
+                  setActiveTab(tab.key);
                 }
-                setActiveTab(tab.key);
               }}
               activeOpacity={0.7}>
               <Ionicons
                 name={isActive ? tab.activeIcon : tab.icon}
-                size={24}
-                color={isActive ? COLORS.accent : COLORS.textDim}
+                size={isAddButton ? 34 : 24}
+                color={isAddButton ? COLORS.accent : isActive ? COLORS.accent : COLORS.textDim}
               />
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
             </TouchableOpacity>
@@ -292,62 +416,67 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
-  content: {
-    flex: 1,
-  },
-  headerScroll: {
-    flexGrow: 0,
-  },
-  gemsList: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
     marginTop: 8,
+    marginBottom: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: '600',
     color: COLORS.text,
   },
-  loginButton: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.accent,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    marginTop: 4,
-    marginBottom: 20,
-  },
-  searchContainer: {
+  messagesButton: {
     position: 'relative',
-    marginBottom: 20,
+    padding: 4,
   },
-  searchBar: {
-    backgroundColor: COLORS.card,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingRight: 40,
-    fontSize: 14,
-    color: COLORS.text,
-  },
-  clearButton: {
+  unreadDot: {
     position: 'absolute',
-    right: 12,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.danger,
+  },
+  feedTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.card,
+    borderRadius: 10,
+    padding: 4,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  feedTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  feedTabActive: {
+    backgroundColor: COLORS.accent,
+  },
+  feedTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.textMuted,
+  },
+  feedTabTextActive: {
+    color: COLORS.bg,
+    fontWeight: '600',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 12,
   },
   gemOfTheDayCard: {
     flexDirection: 'row',
@@ -359,7 +488,7 @@ const styles = StyleSheet.create({
     borderLeftColor: COLORS.accent,
     borderRadius: 12,
     padding: 14,
-    marginBottom: 20,
+    marginBottom: 24,
     gap: 12,
   },
   gemOfTheDayContent: {
@@ -382,37 +511,59 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 2,
   },
-  categoryRow: {
-    gap: 8,
+  trendingRow: {
+    gap: 12,
     paddingBottom: 4,
     marginBottom: 24,
   },
-  categoryPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+  trendingCard: {
+    width: 160,
+    height: 200,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  trendingImage: {
+    height: 120,
+    backgroundColor: COLORS.imagePlaceholder,
+    position: 'relative',
+  },
+  trendingImageFill: {
+    width: '100%',
+    height: '100%',
+  },
+  trendingBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: COLORS.accentSubtle,
     borderWidth: 0.5,
     borderColor: COLORS.accent,
-    backgroundColor: COLORS.accentSubtle,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 20,
   },
-  categoryPillActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
-  },
-  categoryText: {
-    fontSize: 13,
-    fontWeight: '500',
+  trendingBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: COLORS.accent,
   },
-  categoryTextActive: {
-    color: COLORS.bg,
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 16,
+  trendingTitle: {
+    fontSize: 13,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 16,
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  trendingRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
   },
   gemCard: {
     backgroundColor: COLORS.card,
@@ -420,7 +571,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 12,
     overflow: 'hidden',
-    marginHorizontal: 16,
     marginBottom: 12,
   },
   photoPlaceholder: {
@@ -432,36 +582,12 @@ const styles = StyleSheet.create({
     height: 130,
     width: '100%',
   },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  gemInfo: {
-    padding: 12,
-  },
-  gemName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 6,
-  },
-  gemMeta: {
+  badgeRow: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
   },
   categoryBadge: {
     backgroundColor: COLORS.accentSubtle,
@@ -471,12 +597,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 20,
   },
-  badgeRow: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    flexDirection: 'row',
-    gap: 6,
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.accent,
   },
   verifiedBadge: {
     backgroundColor: COLORS.accentSubtle,
@@ -491,10 +615,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.accent,
   },
-  categoryBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
+  gemInfo: {
+    padding: 12,
+  },
+  posterName: {
+    fontSize: 12,
     color: COLORS.accent,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  gemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 6,
+  },
+  gemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -505,14 +644,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
   },
-  distanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  distanceText: {
-    fontSize: 12,
+  emptyText: {
+    fontSize: 14,
     color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 24,
+    paddingVertical: 16,
+  },
+  followingEmpty: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: 12,
+  },
+  followingEmptyText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  exploreButton: {
+    backgroundColor: COLORS.accent,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  exploreButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.bg,
   },
   tabBar: {
     flexDirection: 'row',

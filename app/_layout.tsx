@@ -30,6 +30,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A2E1F' } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="auth" />
+        <Stack.Screen name="discover" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="add-gem" options={{ headerShown: false }} />
         <Stack.Screen name="messages" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />

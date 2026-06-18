@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/authGuard';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Callout, MapType, Marker } from 'react-native-maps';
@@ -42,24 +42,30 @@ type Gem = {
   category: string;
 };
 
-type PendingPin = {
+type MapCenter = {
   latitude: number;
   longitude: number;
 };
 
 export default function MapScreen() {
   const router = useRouter();
+  const { placeMode } = useLocalSearchParams<{ placeMode?: string }>();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const [mapTypeIndex, setMapTypeIndex] = useState(0);
   const [gems, setGems] = useState<Gem[]>([]);
   const [activeCategory, setActiveCategory] = useState('All');
-  const [pendingPin, setPendingPin] = useState<PendingPin | null>(null);
   const [placingMode, setPlacingMode] = useState(false);
+  const [mapCenter, setMapCenter] = useState<MapCenter>({
+    latitude: INITIAL_REGION.latitude,
+    longitude: INITIAL_REGION.longitude,
+  });
 
   useEffect(() => {
-    Location.requestForegroundPermissionsAsync();
-  }, []);
+    if (placeMode === 'true') {
+      setPlacingMode(true);
+    }
+  }, [placeMode]);
 
   useEffect(() => {
     const fetchGems = async () => {
@@ -72,6 +78,10 @@ export default function MapScreen() {
     fetchGems();
   }, []);
 
+  useEffect(() => {
+    Location.requestForegroundPermissionsAsync();
+  }, []);
+
   const currentMapType = MAP_TYPES[mapTypeIndex];
 
   const visibleGems =
@@ -82,30 +92,22 @@ export default function MapScreen() {
   };
 
   const handleAddGemHere = async () => {
-    if (!pendingPin) return;
-
     const proceed = await requireAuth();
     if (!proceed) return;
 
     router.push({
       pathname: '/add-gem',
-      params: { lat: pendingPin.latitude, lng: pendingPin.longitude },
+      params: { lat: mapCenter.latitude, lng: mapCenter.longitude },
     });
-    setPendingPin(null);
+    setPlacingMode(false);
   };
 
   const togglePlacingMode = () => {
     if (placingMode) {
-      setPendingPin(null);
       setPlacingMode(false);
     } else {
       setPlacingMode(true);
     }
-  };
-
-  const handleMapPress = (e: { nativeEvent: { coordinate: PendingPin } }) => {
-    setPendingPin(e.nativeEvent.coordinate);
-    setPlacingMode(false);
   };
 
   const handleMyLocation = async () => {
@@ -131,14 +133,9 @@ export default function MapScreen() {
         showsUserLocation
         showsMyLocationButton
         followsUserLocation={false}
-        onPress={placingMode ? handleMapPress : undefined}>
-        {pendingPin && (
-          <Marker coordinate={pendingPin}>
-            <View style={styles.pendingMarker}>
-              <Text style={styles.pendingMarkerText}>+</Text>
-            </View>
-          </Marker>
-        )}
+        onRegionChangeComplete={(region) =>
+          setMapCenter({ latitude: region.latitude, longitude: region.longitude })
+        }>
         {visibleGems.map((gem) => (
           <Marker
             key={gem.id}
@@ -163,6 +160,15 @@ export default function MapScreen() {
           </Marker>
         ))}
       </MapView>
+
+      {placingMode && (
+        <View style={styles.crosshairOverlay} pointerEvents="none">
+          <View style={styles.crosshairIconWrap}>
+            <Ionicons name="add-circle" size={40} color="#1D9E75" />
+          </View>
+          <Text style={styles.crosshairLabel}>Move map to position</Text>
+        </View>
+      )}
 
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
         <Ionicons name="arrow-back" size={24} color="#F5F5F5" />
@@ -218,16 +224,16 @@ export default function MapScreen() {
         <Ionicons name="locate" size={22} color="#1D9E75" />
       </TouchableOpacity>
 
-      {pendingPin && (
+      {placingMode && (
         <View style={[styles.actionSheet, { paddingBottom: 16 + insets.bottom }]}>
           <Text style={styles.actionSheetTitle}>Drop a gem here?</Text>
           <Text style={styles.actionSheetCoords}>
-            {pendingPin.latitude.toFixed(2)}, {pendingPin.longitude.toFixed(2)}
+            {mapCenter.latitude.toFixed(2)}, {mapCenter.longitude.toFixed(2)}
           </Text>
           <View style={styles.actionSheetButtons}>
             <TouchableOpacity
               style={styles.cancelButton}
-              onPress={() => setPendingPin(null)}
+              onPress={() => setPlacingMode(false)}
               activeOpacity={0.8}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -384,20 +390,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  pendingMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1D9E75',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
+  crosshairOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pendingMarkerText: {
+  crosshairIconWrap: {
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    borderRadius: 22,
+  },
+  crosshairLabel: {
     color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
+    backgroundColor: '#0D0D0D80',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    fontSize: 12,
+    marginTop: 8,
   },
   actionSheet: {
     position: 'absolute',

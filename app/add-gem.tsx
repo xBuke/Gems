@@ -32,6 +32,8 @@ const COLORS = {
 
 const CATEGORIES = ['Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
 
+type LocationChoice = 'here' | 'else';
+
 const uploadImage = async (uri: string) => {
   const fileName = `gem_${Date.now()}.jpg`;
 
@@ -63,6 +65,14 @@ const uploadImage = async (uri: string) => {
 export default function AddGemScreen() {
   const router = useRouter();
   const { lat, lng } = useLocalSearchParams<{ lat?: string; lng?: string }>();
+  const parsedLat = lat ? parseFloat(lat) : NaN;
+  const parsedLng = lng ? parseFloat(lng) : NaN;
+  const hasMapLocation =
+    lat != null &&
+    lng != null &&
+    !Number.isNaN(parsedLat) &&
+    !Number.isNaN(parsedLng);
+
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -71,33 +81,39 @@ export default function AddGemScreen() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationDetected, setLocationDetected] = useState(false);
   const [locationFromMap, setLocationFromMap] = useState(false);
+  const [locationChoice, setLocationChoice] = useState<LocationChoice | null>(null);
 
   useEffect(() => {
-    if (lat && lng) {
-      const parsedLat = parseFloat(lat);
-      const parsedLng = parseFloat(lng);
-      if (!Number.isNaN(parsedLat) && !Number.isNaN(parsedLng)) {
-        setLatitude(parsedLat);
-        setLongitude(parsedLng);
-        setLocationDetected(true);
-        setLocationFromMap(true);
-        return;
-      }
+    if (hasMapLocation) {
+      setLatitude(parsedLat);
+      setLongitude(parsedLng);
+      setLocationDetected(true);
+      setLocationFromMap(true);
+    }
+  }, [hasMapLocation, parsedLat, parsedLng]);
+
+  const detectCurrentLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      return;
     }
 
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        return;
-      }
+    const location = await Location.getCurrentPositionAsync({});
+    setLatitude(location.coords.latitude);
+    setLongitude(location.coords.longitude);
+    setLocationDetected(true);
+    setLocationFromMap(false);
+  };
 
-      const location = await Location.getCurrentPositionAsync({});
-      setLatitude(location.coords.latitude);
-      setLongitude(location.coords.longitude);
-      setLocationDetected(true);
-      setLocationFromMap(false);
-    })();
-  }, [lat, lng]);
+  const handleSelectHere = async () => {
+    setLocationChoice('here');
+    await detectCurrentLocation();
+  };
+
+  const handleSelectElse = () => {
+    setLocationChoice('else');
+    router.push({ pathname: '/map', params: { placeMode: 'true' } });
+  };
 
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -186,7 +202,7 @@ export default function AddGemScreen() {
       return;
     }
 
-    Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.back() }]);
+    Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace('/map') }]);
   };
 
   const handleSubmit = async () => {
@@ -236,6 +252,40 @@ export default function AddGemScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
+        {!hasMapLocation && (
+          <>
+            <Text style={styles.label}>Where are you dropping this gem?</Text>
+            <TouchableOpacity
+              style={[
+                styles.locationCard,
+                locationChoice === 'here' && styles.locationCardSelected,
+              ]}
+              onPress={handleSelectHere}
+              activeOpacity={0.8}>
+              <Ionicons name="locate" size={24} color={COLORS.accent} />
+              <View style={styles.locationCardText}>
+                <Text style={styles.locationCardTitle}>Drop gem at my location</Text>
+                <Text style={styles.locationCardSubtitle}>Use your current GPS location</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.locationCard,
+                locationChoice === 'else' && styles.locationCardSelectedElse,
+              ]}
+              onPress={handleSelectElse}
+              activeOpacity={0.8}>
+              <Ionicons name="map" size={24} color={COLORS.textMuted} />
+              <View style={styles.locationCardText}>
+                <Text style={styles.locationCardTitle}>Drop gem somewhere else</Text>
+                <Text style={styles.locationCardSubtitle}>Pick a location on the map</Text>
+              </View>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {(hasMapLocation || locationChoice === 'here') && (
+          <>
         <TouchableOpacity style={styles.imagePicker} onPress={handleImagePress} activeOpacity={0.8}>
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.selectedImage} resizeMode="cover" />
@@ -288,14 +338,24 @@ export default function AddGemScreen() {
 
         <Text style={styles.label}>Location</Text>
         {locationDetected && (
-          <Text style={styles.locationText}>
-            {locationFromMap ? '📍 Location set from map' : '📍 Using your current location'}
-          </Text>
+          <>
+            <Text
+              style={[styles.locationText, !locationFromMap && styles.locationTextOnly]}>
+              {locationFromMap ? '📍 Location set from map' : '📍 Using your current location'}
+            </Text>
+            {locationFromMap && latitude != null && longitude != null && (
+              <Text style={styles.locationPreview}>
+                {latitude.toFixed(2)}, {longitude.toFixed(2)}
+              </Text>
+            )}
+          </>
         )}
 
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8}>
           <Text style={styles.submitButtonText}>Drop this Gem 📍</Text>
         </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -371,6 +431,36 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 12,
   },
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  locationCardSelected: {
+    borderColor: COLORS.accent,
+  },
+  locationCardSelectedElse: {
+    borderColor: COLORS.border,
+  },
+  locationCardText: {
+    flex: 1,
+    gap: 2,
+  },
+  locationCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  locationCardSubtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
   categoryRow: {
     gap: 8,
     marginBottom: 20,
@@ -398,6 +488,14 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
+    color: COLORS.textMuted,
+    marginBottom: 8,
+  },
+  locationTextOnly: {
+    marginBottom: 24,
+  },
+  locationPreview: {
+    fontSize: 12,
     color: COLORS.textMuted,
     marginBottom: 24,
   },
