@@ -1,7 +1,9 @@
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,16 +13,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const COLORS = {
-  bg: '#0D0D0D',
-  card: '#141414',
-  accent: '#1D9E75',
-  text: '#FFFFFF',
-  textLight: '#F5F5F5',
-  textMuted: '#888888',
-  border: '#222222',
-};
 
 type ProfileSummary = {
   id: string;
@@ -35,6 +27,8 @@ type FollowRow = {
 
 export default function FollowersScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { userId, type } = useLocalSearchParams<{ userId: string; type: 'followers' | 'following' }>();
   const [users, setUsers] = useState<ProfileSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,7 +156,7 @@ export default function FollowersScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.textLight} />
+          <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{title}</Text>
         <View style={styles.headerSide} />
@@ -170,7 +164,7 @@ export default function FollowersScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator color={COLORS.accent} />
+          <ActivityIndicator color={theme.accent} />
         </View>
       ) : users.length === 0 ? (
         <View style={styles.centered}>
@@ -189,91 +183,92 @@ export default function FollowersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.bg,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerSide: {
-    width: 22,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  listContent: {
-    paddingVertical: 8,
-  },
-  userItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  username: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  followButton: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-  },
-  followButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.bg,
-  },
-  followingButton: {
-    backgroundColor: COLORS.card,
-    borderWidth: 0.5,
-    borderColor: COLORS.accent,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-  },
-  followingButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.accent,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontSize: 15,
-    color: COLORS.textMuted,
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.background,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    headerSide: {
+      width: 22,
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    listContent: {
+      paddingVertical: 8,
+    },
+    userItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.card,
+      borderBottomWidth: 0.5,
+      borderBottomColor: theme.border,
+    },
+    avatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    username: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    followButton: {
+      backgroundColor: theme.accent,
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+    },
+    followButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.background,
+    },
+    followingButton: {
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.accent,
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+    },
+    followingButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.accent,
+    },
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyText: {
+      fontSize: 15,
+      color: theme.textSecondary,
+    },
+  });

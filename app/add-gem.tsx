@@ -1,11 +1,13 @@
 import { requireAuth } from '@/lib/authGuard';
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -21,20 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const COLORS = {
-  bg: '#0D0D0D',
-  card: '#141414',
-  accent: '#1D9E75',
-  accentSubtle: '#0F3D25',
-  accentMuted: '#A8D5BA',
-  text: '#FFFFFF',
-  textLight: '#F5F5F5',
-  textMuted: '#888888',
-  textDim: '#555555',
-  placeholder: '#444444',
-  border: '#222222',
-  borderDashed: '#333333',
-};
+const ACCENT_MUTED = '#A8D5BA';
 
 const CATEGORIES = ['Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
 
@@ -79,6 +68,8 @@ const uploadImage = async (uri: string) => {
 };
 
 export default function AddGemScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { lat, lng } = useLocalSearchParams<{ lat?: string; lng?: string }>();
   const parsedLat = lat ? parseFloat(lat) : NaN;
@@ -272,7 +263,7 @@ export default function AddGemScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.textLight} />
+          <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Drop a Gem</Text>
         <View style={styles.headerSpacer} />
@@ -289,7 +280,7 @@ export default function AddGemScreen() {
               style={[styles.locationCard, locationChoice === 'here' && styles.locationCardSelected]}
               onPress={handleSelectHere}
               activeOpacity={0.8}>
-              <Ionicons name="locate" size={22} color={COLORS.accent} style={styles.locationCardIcon} />
+              <Ionicons name="locate" size={22} color={theme.accent} style={styles.locationCardIcon} />
               <Text style={styles.locationCardTitle}>I'm here now</Text>
               <Text style={styles.locationCardSubtitle}>Use my GPS</Text>
             </TouchableOpacity>
@@ -300,7 +291,7 @@ export default function AddGemScreen() {
               <Ionicons
                 name="map-outline"
                 size={22}
-                color={COLORS.textMuted}
+                color={theme.textSecondary}
                 style={styles.locationCardIcon}
               />
               <Text style={styles.locationCardTitle}>Pick on map</Text>
@@ -319,12 +310,12 @@ export default function AddGemScreen() {
                     style={styles.imageEditButton}
                     onPress={handleImagePress}
                     activeOpacity={0.8}>
-                    <Ionicons name="camera" size={16} color={COLORS.text} />
+                    <Ionicons name="camera" size={16} color={theme.text} />
                   </TouchableOpacity>
                 </>
               ) : (
                 <View style={styles.imagePlaceholder}>
-                  <Ionicons name="camera" size={40} color={COLORS.accent} />
+                  <Ionicons name="camera" size={40} color={theme.accent} />
                   <Text style={styles.imagePlaceholderTitle}>Add a photo</Text>
                   <Text style={styles.imagePlaceholderSubtitle}>
                     Tap to choose from library or camera
@@ -338,7 +329,7 @@ export default function AddGemScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Give your gem a name..."
-                placeholderTextColor={COLORS.placeholder}
+                placeholderTextColor={theme.textTertiary}
                 value={name}
                 onChangeText={setName}
               />
@@ -347,7 +338,7 @@ export default function AddGemScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Share what makes this spot worth visiting..."
-                placeholderTextColor={COLORS.placeholder}
+                placeholderTextColor={theme.textTertiary}
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -375,7 +366,7 @@ export default function AddGemScreen() {
             </View>
 
             <View style={styles.locationStatus}>
-              <Ionicons name="location" size={16} color={COLORS.accent} />
+              <Ionicons name="location" size={16} color={theme.accent} />
               <Text style={styles.locationStatusText}>{locationStatusText}</Text>
             </View>
 
@@ -385,7 +376,7 @@ export default function AddGemScreen() {
               disabled={submitting}
               activeOpacity={0.8}>
               {submitting ? (
-                <ActivityIndicator color={COLORS.text} />
+                <ActivityIndicator color={theme.text} />
               ) : (
                 <Text style={styles.submitButtonText}>Drop this Gem</Text>
               )}
@@ -397,16 +388,17 @@ export default function AddGemScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.bg,
+    backgroundColor: theme.background,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -416,7 +408,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: COLORS.text,
+    color: theme.text,
   },
   headerSpacer: {
     width: 22,
@@ -435,14 +427,14 @@ const styles = StyleSheet.create({
   },
   locationCard: {
     flex: 1,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 14,
   },
   locationCardSelected: {
-    borderColor: COLORS.accent,
+    borderColor: theme.accent,
   },
   locationCardIcon: {
     marginBottom: 6,
@@ -450,12 +442,12 @@ const styles = StyleSheet.create({
   locationCardTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 2,
   },
   locationCardSubtitle: {
     fontSize: 11,
-    color: COLORS.textDim,
+    color: theme.textTertiary,
   },
   imagePicker: {
     height: 220,
@@ -463,9 +455,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: 16,
     marginBottom: 16,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 1.5,
-    borderColor: COLORS.borderDashed,
+    borderColor: theme.border,
     borderStyle: 'dashed',
   },
   imagePlaceholder: {
@@ -476,12 +468,12 @@ const styles = StyleSheet.create({
   imagePlaceholderTitle: {
     fontSize: 15,
     fontWeight: '500',
-    color: COLORS.text,
+    color: theme.text,
     marginTop: 8,
   },
   imagePlaceholderSubtitle: {
     fontSize: 12,
-    color: COLORS.textDim,
+    color: theme.textTertiary,
     marginTop: 4,
   },
   selectedImage: {
@@ -503,7 +495,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   fieldLabel: {
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 6,
@@ -511,14 +503,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 10,
     padding: 14,
     marginBottom: 16,
     fontSize: 15,
-    color: COLORS.textLight,
+    color: theme.text,
   },
   textArea: {
     height: 100,
@@ -534,20 +526,20 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   categoryItem: {
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 10,
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   categoryItemSelected: {
-    backgroundColor: COLORS.accentSubtle,
-    borderColor: COLORS.accent,
+    backgroundColor: theme.accentSubtle,
+    borderColor: theme.accent,
   },
   categoryName: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 12,
     marginTop: 4,
   },
@@ -555,9 +547,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 10,
     padding: 12,
     marginHorizontal: 16,
@@ -565,12 +557,12 @@ const styles = StyleSheet.create({
   },
   locationStatusText: {
     flex: 1,
-    color: COLORS.accentMuted,
+    color: ACCENT_MUTED,
     fontSize: 13,
   },
   submitButton: {
     marginHorizontal: 16,
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -580,6 +572,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.text,
   },
 });

@@ -1,4 +1,6 @@
 import { requireAuth } from '@/lib/authGuard';
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,20 +18,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const COLORS = {
-  bg: '#0D0D0D',
-  card: '#141414',
-  accent: '#1D9E75',
-  accentSubtle: '#0F3D25',
-  accentMuted: '#A8D5BA',
-  text: '#FFFFFF',
-  textMuted: '#888888',
-  textDim: '#555555',
-  border: '#222222',
-  star: '#FFD700',
-  imagePlaceholder: '#1A5C3A',
-  danger: '#FF4444',
-};
+const ACCENT_MUTED = '#A8D5BA';
+const IMAGE_PLACEHOLDER = '#1A5C3A';
 
 type Gem = {
   id: string;
@@ -89,6 +79,8 @@ const matchesSearch = (gem: GemWithProfile, query: string) => {
 };
 
 export default function DiscoverScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('discover');
   const [feedTab, setFeedTab] = useState<FeedTab>('forYou');
@@ -405,14 +397,14 @@ export default function DiscoverScreen() {
           <Text style={styles.listCardUsername}>@{username}</Text>
           <View style={styles.listCardMetaRow}>
             <View style={styles.listCardMetaItem}>
-              <Ionicons name="heart-outline" size={12} color={COLORS.textMuted} />
+              <Ionicons name="heart-outline" size={12} color={theme.textSecondary} />
               <Text style={styles.listCardMetaText}>{likeCounts[gem.id] ?? 0}</Text>
             </View>
             {distanceMeters != null && (
               <>
                 <Text style={styles.listCardMetaDivider}>|</Text>
                 <View style={styles.listCardMetaItem}>
-                  <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
+                  <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
                   <Text style={styles.listCardMetaText}>{formatDistanceKm(distanceMeters)}</Text>
                 </View>
               </>
@@ -450,7 +442,7 @@ export default function DiscoverScreen() {
             <Text style={styles.trendingUsername}>@{username}</Text>
           </View>
           <View style={styles.trendingLikeRow}>
-            <Ionicons name="heart-outline" size={12} color={COLORS.textMuted} />
+            <Ionicons name="heart-outline" size={12} color={theme.textSecondary} />
             <Text style={styles.trendingLikeText}>{likeCounts[gem.id] ?? 0}</Text>
           </View>
         </View>
@@ -488,7 +480,7 @@ export default function DiscoverScreen() {
                     : ''}
                 </Text>
               </View>
-              <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
+              <Ionicons name="arrow-forward" size={20} color={theme.text} />
             </View>
           </TouchableOpacity>
         </>
@@ -530,7 +522,7 @@ export default function DiscoverScreen() {
     if (followingGems.length === 0) {
       return (
         <View style={styles.followingEmpty}>
-          <Ionicons name="people-outline" size={48} color={COLORS.accent} />
+          <Ionicons name="people-outline" size={48} color={theme.accent} />
           <Text style={styles.followingEmptyText}>Follow people to see their gems</Text>
           <TouchableOpacity
             style={styles.exploreButton}
@@ -565,17 +557,17 @@ export default function DiscoverScreen() {
           style={styles.messagesButton}
           onPress={handleMessagesPress}
           activeOpacity={0.7}>
-          <Ionicons name="chatbubble-outline" size={24} color={COLORS.text} />
+          <Ionicons name="chatbubble-outline" size={24} color={theme.text} />
           {hasUnreadMessages && <View style={styles.unreadDot} />}
         </TouchableOpacity>
       </View>
 
       <View style={styles.searchBar}>
-        <Ionicons name="search" size={16} color={COLORS.textDim} />
+        <Ionicons name="search" size={16} color={theme.textTertiary} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search gems..."
-          placeholderTextColor={COLORS.textDim}
+          placeholderTextColor={theme.textTertiary}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -637,7 +629,7 @@ export default function DiscoverScreen() {
                 <Ionicons
                   name={isActive ? tab.activeIcon : tab.icon}
                   size={isAddButton ? 34 : 24}
-                  color={isAddButton ? COLORS.accent : isActive ? COLORS.accent : COLORS.textDim}
+                  color={isAddButton ? theme.accent : isActive ? theme.accent : theme.textTertiary}
                 />
                 {tab.key === 'notifications' && unreadNotificationCount > 0 && (
                   <View style={styles.notificationBadge}>
@@ -656,10 +648,11 @@ export default function DiscoverScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: theme.background,
   },
   headerRow: {
     flexDirection: 'row',
@@ -672,7 +665,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.text,
   },
   messagesButton: {
     position: 'relative',
@@ -685,14 +678,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.danger,
+    backgroundColor: theme.danger,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 20,
     marginHorizontal: 20,
     marginBottom: 16,
@@ -703,12 +696,12 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: COLORS.text,
+    color: theme.text,
     paddingVertical: 0,
   },
   feedTabContainer: {
     flexDirection: 'row',
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderRadius: 10,
     padding: 4,
     marginHorizontal: 20,
@@ -721,15 +714,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   feedTabActive: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
   },
   feedTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
   },
   feedTabTextActive: {
-    color: COLORS.bg,
+    color: theme.background,
     fontWeight: '600',
   },
   scrollContent: {
@@ -739,7 +732,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 12,
   },
   heroCard: {
@@ -755,7 +748,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   heroImagePlaceholder: {
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: IMAGE_PLACEHOLDER,
   },
   heroOverlay: {
     position: 'absolute',
@@ -769,7 +762,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
     borderRadius: 4,
     paddingVertical: 4,
     paddingHorizontal: 8,
@@ -777,7 +770,7 @@ const styles = StyleSheet.create({
   heroLabelText: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.text,
     letterSpacing: 0.5,
   },
   heroBottom: {
@@ -797,12 +790,12 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 4,
   },
   heroMeta: {
     fontSize: 12,
-    color: COLORS.accentMuted,
+    color: ACCENT_MUTED,
   },
   trendingRow: {
     gap: 12,
@@ -812,15 +805,15 @@ const styles = StyleSheet.create({
   trendingCard: {
     width: 160,
     height: 210,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 12,
     overflow: 'hidden',
   },
   trendingImage: {
     height: 130,
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: IMAGE_PLACEHOLDER,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     overflow: 'hidden',
@@ -830,7 +823,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   trendingImagePlaceholder: {
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: IMAGE_PLACEHOLDER,
   },
   trendingBody: {
     flex: 1,
@@ -840,7 +833,7 @@ const styles = StyleSheet.create({
   trendingTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.text,
+    color: theme.text,
   },
   trendingUserRow: {
     flexDirection: 'row',
@@ -852,18 +845,18 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   trendingAvatarText: {
     fontSize: 9,
     fontWeight: '700',
-    color: COLORS.bg,
+    color: theme.background,
   },
   trendingUsername: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
   },
   trendingLikeRow: {
     flexDirection: 'row',
@@ -873,14 +866,14 @@ const styles = StyleSheet.create({
   },
   trendingLikeText: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
   },
   listCard: {
     flexDirection: 'row',
     height: 90,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 10,
@@ -896,7 +889,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 12,
   },
   listCardImagePlaceholder: {
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: IMAGE_PLACEHOLDER,
   },
   listCardContent: {
     flex: 1,
@@ -905,9 +898,9 @@ const styles = StyleSheet.create({
   },
   listCategoryBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.accentSubtle,
+    backgroundColor: theme.accentSubtle,
     borderWidth: 0.5,
-    borderColor: COLORS.accent,
+    borderColor: theme.accent,
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 20,
@@ -916,16 +909,16 @@ const styles = StyleSheet.create({
   listCategoryBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: COLORS.accent,
+    color: theme.accent,
   },
   listCardTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
+    color: theme.text,
   },
   listCardUsername: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
   },
   listCardMetaRow: {
     flexDirection: 'row',
@@ -939,15 +932,15 @@ const styles = StyleSheet.create({
   },
   listCardMetaText: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
   },
   listCardMetaDivider: {
     fontSize: 11,
-    color: COLORS.textDim,
+    color: theme.textTertiary,
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
     paddingVertical: 16,
@@ -957,7 +950,7 @@ const styles = StyleSheet.create({
   },
   followingPostLabel: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
     marginBottom: 8,
   },
   followingEmpty: {
@@ -967,11 +960,11 @@ const styles = StyleSheet.create({
   },
   followingEmptyText: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
     textAlign: 'center',
   },
   exploreButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -980,13 +973,13 @@ const styles = StyleSheet.create({
   exploreButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.bg,
+    color: theme.background,
   },
   tabBar: {
     flexDirection: 'row',
     borderTopWidth: 0.5,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.bg,
+    borderTopColor: theme.border,
+    backgroundColor: theme.background,
     paddingBottom: 8,
     paddingTop: 10,
   },
@@ -1005,7 +998,7 @@ const styles = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: COLORS.danger,
+    backgroundColor: theme.danger,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
@@ -1017,10 +1010,10 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 11,
-    color: COLORS.textDim,
+    color: theme.textTertiary,
   },
   tabLabelActive: {
-    color: COLORS.accent,
+    color: theme.accent,
     fontWeight: '600',
   },
 });

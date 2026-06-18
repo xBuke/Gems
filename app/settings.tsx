@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -19,32 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const THEME_KEY = '@hiddengems_theme';
 const LANGUAGE_KEY = '@hiddengems_language';
-
-const DARK = {
-  bg: '#0D0D0D',
-  card: '#141414',
-  text: '#FFFFFF',
-  textLight: '#F5F5F5',
-  textMuted: '#888888',
-  textDim: '#555555',
-  border: '#222222',
-  chevron: '#333333',
-  danger: '#FF4444',
-};
-
-const LIGHT = {
-  bg: '#F5F5F5',
-  card: '#FFFFFF',
-  text: '#0D0D0D',
-  textLight: '#0D0D0D',
-  textMuted: '#666666',
-  textDim: '#888888',
-  border: '#E0E0E0',
-  chevron: '#CCCCCC',
-  danger: '#FF4444',
-};
 
 type SettingItemProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -54,7 +31,7 @@ type SettingItemProps = {
   danger?: boolean;
   onPress?: () => void;
   rightElement?: ReactNode;
-  colors: typeof DARK;
+  theme: Theme;
 };
 
 function SettingItem({
@@ -65,21 +42,21 @@ function SettingItem({
   danger,
   onPress,
   rightElement,
-  colors,
+  theme,
 }: SettingItemProps) {
   const content = (
-    <View style={[styles.settingItem, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+    <View style={[styles.settingItem, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
       <Ionicons
         name={icon}
         size={20}
-        color={danger ? colors.danger : colors.textMuted}
+        color={danger ? theme.danger : theme.textSecondary}
       />
-      <Text style={[styles.settingLabel, { color: danger ? colors.danger : colors.text }, { flex: 1 }]}>
+      <Text style={[styles.settingLabel, { color: danger ? theme.danger : theme.text }, { flex: 1 }]}>
         {label}
       </Text>
-      {value ? <Text style={[styles.settingValue, { color: colors.textDim }]}>{value}</Text> : null}
+      {value ? <Text style={[styles.settingValue, { color: theme.textTertiary }]}>{value}</Text> : null}
       {rightElement}
-      {showChevron ? <Ionicons name="chevron-forward" size={16} color={colors.chevron} /> : null}
+      {showChevron ? <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} /> : null}
     </View>
   );
 
@@ -94,13 +71,13 @@ function SettingItem({
   return content;
 }
 
-function SectionHeader({ title, colors }: { title: string; colors: typeof DARK }) {
-  return <Text style={[styles.sectionHeader, { color: colors.textDim }]}>{title}</Text>;
+function SectionHeader({ title, theme }: { title: string; theme: Theme }) {
+  return <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>{title}</Text>;
 }
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [isDark, setIsDark] = useState(true);
+  const { theme, isDark, toggleTheme } = useTheme();
   const [username, setUsername] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [language, setLanguage] = useState('en');
@@ -109,14 +86,11 @@ export default function SettingsScreen() {
   const [promptMode, setPromptMode] = useState<'username' | 'password' | null>(null);
   const [promptValue, setPromptValue] = useState('');
 
-  const colors = isDark ? DARK : LIGHT;
   const languageLabel = language === 'hr' ? 'Hrvatski' : 'English';
 
   const loadSettings = useCallback(async () => {
-    const storedTheme = await AsyncStorage.getItem(THEME_KEY);
     const storedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
 
-    if (storedTheme === 'light') setIsDark(false);
     if (storedLanguage) setLanguage(storedLanguage);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -143,11 +117,6 @@ export default function SettingsScreen() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
-
-  const handleThemeToggle = async (value: boolean) => {
-    setIsDark(value);
-    await AsyncStorage.setItem(THEME_KEY, value ? 'dark' : 'light');
-  };
 
   const handlePrivateToggle = async (value: boolean) => {
     if (!userId) return;
@@ -309,17 +278,17 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
-      <View style={[styles.header, { backgroundColor: colors.bg }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <View style={[styles.header, { backgroundColor: theme.background }]}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
-          <Ionicons name="arrow-back" size={22} color={colors.textLight} />
+          <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Settings</Text>
         <View style={styles.headerSide} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <SectionHeader title="Account" colors={colors} />
+        <SectionHeader title="Account" theme={theme} />
         <View style={styles.sectionGroup}>
           <SettingItem
             icon="person-outline"
@@ -327,45 +296,47 @@ export default function SettingsScreen() {
             value={username}
             showChevron
             onPress={showUsernamePrompt}
-            colors={colors}
+            theme={theme}
           />
           <SettingItem
             icon="lock-closed-outline"
             label="Change Password"
             showChevron
             onPress={showPasswordPrompt}
-            colors={colors}
+            theme={theme}
           />
         </View>
 
-        <SectionHeader title="Privacy" colors={colors} />
+        <SectionHeader title="Privacy" theme={theme} />
         <View style={styles.sectionGroup}>
           <SettingItem
             icon="eye-off-outline"
             label="Private Profile"
-            colors={colors}
+            theme={theme}
             rightElement={
               <Switch
                 value={isPrivate}
                 onValueChange={handlePrivateToggle}
-                trackColor={{ false: colors.border, true: '#1D9E75' }}
+                trackColor={{ false: theme.border, true: theme.accent }}
                 thumbColor="#FFFFFF"
               />
             }
           />
         </View>
 
-        <SectionHeader title="Appearance" colors={colors} />
+        <SectionHeader title="Appearance" theme={theme} />
         <View style={styles.sectionGroup}>
           <SettingItem
             icon="moon-outline"
             label="Dark Mode"
-            colors={colors}
+            theme={theme}
             rightElement={
               <Switch
                 value={isDark}
-                onValueChange={handleThemeToggle}
-                trackColor={{ false: colors.border, true: '#1D9E75' }}
+                onValueChange={(value) => {
+                  if (value !== isDark) toggleTheme();
+                }}
+                trackColor={{ false: theme.border, true: theme.accent }}
                 thumbColor="#FFFFFF"
               />
             }
@@ -376,88 +347,88 @@ export default function SettingsScreen() {
             value={languageLabel}
             showChevron
             onPress={showLanguagePicker}
-            colors={colors}
+            theme={theme}
           />
         </View>
 
-        <SectionHeader title="About" colors={colors} />
+        <SectionHeader title="About" theme={theme} />
         <View style={styles.sectionGroup}>
-          <SettingItem icon="information-circle-outline" label="Version" value="1.0.0" colors={colors} />
+          <SettingItem icon="information-circle-outline" label="Version" value="1.0.0" theme={theme} />
           <SettingItem
             icon="star-outline"
             label="Rate Hidden Gems"
             showChevron
             onPress={() => Linking.openURL('https://apps.apple.com/app/id0000000000')}
-            colors={colors}
+            theme={theme}
           />
           <SettingItem
             icon="document-outline"
             label="Privacy Policy"
             showChevron
             onPress={() => console.log('Privacy Policy')}
-            colors={colors}
+            theme={theme}
           />
           <SettingItem
             icon="document-text-outline"
             label="Terms of Service"
             showChevron
             onPress={() => console.log('Terms of Service')}
-            colors={colors}
+            theme={theme}
           />
         </View>
 
-        <SectionHeader title="Danger Zone" colors={colors} />
+        <SectionHeader title="Danger Zone" theme={theme} />
         <View style={styles.sectionGroup}>
           <SettingItem
             icon="log-out-outline"
             label="Log Out"
             danger
             onPress={handleLogout}
-            colors={colors}
+            theme={theme}
           />
           <SettingItem
             icon="trash-outline"
             label="Delete Account"
             danger
             onPress={handleDeleteAccount}
-            colors={colors}
+            theme={theme}
           />
         </View>
       </ScrollView>
 
       <Modal visible={promptVisible} transparent animationType="fade">
         <View style={styles.promptOverlay}>
-          <View style={[styles.promptBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.promptTitle, { color: colors.text }]}>
+          <View style={[styles.promptBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.promptTitle, { color: theme.text }]}>
               {promptMode === 'password' ? 'Change Password' : 'Edit Username'}
             </Text>
-            <Text style={[styles.promptMessage, { color: colors.textMuted }]}>
+            <Text style={[styles.promptMessage, { color: theme.textSecondary }]}>
               {promptMode === 'password' ? 'Enter your new password' : 'Enter your new username'}
             </Text>
             <TextInput
               style={[
                 styles.promptInput,
-                { backgroundColor: colors.bg, borderColor: colors.border, color: colors.textLight },
+                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
               ]}
               value={promptValue}
               onChangeText={setPromptValue}
               secureTextEntry={promptMode === 'password'}
               autoFocus
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={theme.textSecondary}
             />
             <View style={styles.promptButtons}>
               <TouchableOpacity
-                style={[styles.promptCancelButton, { borderColor: colors.border }]}
+                style={[styles.promptCancelButton, { borderColor: theme.border }]}
                 onPress={() => {
                   setPromptVisible(false);
                   setPromptMode(null);
                   setPromptValue('');
                 }}
                 activeOpacity={0.8}>
-                <Text style={[styles.promptCancelText, { color: colors.textMuted }]}>Cancel</Text>
+                <Text style={[styles.promptCancelText, { color: theme.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.promptSubmitButton} onPress={handlePromptSubmit} activeOpacity={0.8}>
-                <Text style={styles.promptSubmitText}>Save</Text>
+              <TouchableOpacity style={[styles.promptSubmitButton, { backgroundColor: theme.accent }]} onPress={handlePromptSubmit} activeOpacity={0.8}>
+                <Text style={[styles.promptSubmitText, { color: theme.background }]}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -563,12 +534,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#1D9E75',
     alignItems: 'center',
   },
   promptSubmitText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0D0D0D',
   },
 });

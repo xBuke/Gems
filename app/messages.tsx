@@ -1,7 +1,9 @@
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -48,6 +50,8 @@ const timeAgo = (dateString: string) => {
 
 export default function MessagesScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -144,17 +148,17 @@ export default function MessagesScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
-          <Ionicons name="arrow-back" size={22} color="#F5F5F5" />
+          <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Messages</Text>
         <TouchableOpacity onPress={() => console.log('New message')} activeOpacity={0.7} style={styles.headerSideRight}>
-          <Ionicons name="create-outline" size={22} color="#1D9E75" />
+          <Ionicons name="create-outline" size={22} color={theme.accent} />
         </TouchableOpacity>
       </View>
 
       {!loading && conversations.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="chatbubbles-outline" size={64} color="#1D9E75" style={styles.emptyIcon} />
+          <Ionicons name="chatbubbles-outline" size={64} color={theme.accent} style={styles.emptyIcon} />
           <Text style={styles.emptyTitle}>No messages yet</Text>
           <Text style={styles.emptySubtitle}>Connect with other explorers!</Text>
         </View>
@@ -170,104 +174,105 @@ export default function MessagesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0D0D0D',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerSide: {
-    width: 40,
-  },
-  headerSideRight: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  conversationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#222222',
-    gap: 12,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#1D9E75',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  conversationContent: {
-    flex: 1,
-  },
-  conversationTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-    gap: 8,
-  },
-  username: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  usernameUnread: {
-    fontWeight: '700',
-  },
-  timeAgo: {
-    fontSize: 12,
-    color: '#555555',
-  },
-  preview: {
-    fontSize: 13,
-    color: '#888888',
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#1D9E75',
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 60,
-  },
-  emptyIcon: {
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#888888',
-    marginTop: 6,
-    textAlign: 'center',
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    headerSide: {
+      width: 40,
+    },
+    headerSideRight: {
+      width: 40,
+      alignItems: 'flex-end',
+    },
+    headerTitle: {
+      flex: 1,
+      fontSize: 17,
+      fontWeight: '600',
+      color: theme.text,
+      textAlign: 'center',
+    },
+    conversationItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderBottomWidth: 0.5,
+      borderBottomColor: theme.border,
+      gap: 12,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    conversationContent: {
+      flex: 1,
+    },
+    conversationTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 4,
+      gap: 8,
+    },
+    username: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    usernameUnread: {
+      fontWeight: '700',
+    },
+    timeAgo: {
+      fontSize: 12,
+      color: theme.textTertiary,
+    },
+    preview: {
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.accent,
+    },
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 60,
+    },
+    emptyIcon: {
+      marginBottom: 16,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginTop: 6,
+      textAlign: 'center',
+    },
+  });

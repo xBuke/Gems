@@ -1,24 +1,14 @@
 import { requireAuth } from '@/lib/authGuard';
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { MapType, Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const COLORS = {
-  bg: '#0D0D0D',
-  card: '#141414',
-  accent: '#1D9E75',
-  text: '#FFFFFF',
-  textLight: '#F5F5F5',
-  textMuted: '#888888',
-  border: '#222222',
-  overlay: 'rgba(13, 13, 13, 0.85)',
-  cancelBg: '#1A1A1A',
-};
 
 const MAP_TYPES: { type: MapType; label: string }[] = [
   { type: 'standard', label: 'Street' },
@@ -61,6 +51,9 @@ type TapLocation = {
 
 export default function MapScreen() {
   const router = useRouter();
+  const { theme, isDark } = useTheme();
+  const overlay = isDark ? 'rgba(13, 13, 13, 0.85)' : 'rgba(255, 255, 255, 0.9)';
+  const styles = useMemo(() => createStyles(theme, overlay), [theme, overlay]);
   const { placeMode } = useLocalSearchParams<{ placeMode?: string }>();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
@@ -193,13 +186,13 @@ export default function MapScreen() {
         ))}
         {tapLocation && (
           <Marker coordinate={tapLocation}>
-            <Ionicons name="location" size={48} color={COLORS.accent} />
+            <Ionicons name="location" size={48} color={theme.accent} />
           </Marker>
         )}
       </MapView>
 
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
-        <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+        <Ionicons name="arrow-back" size={20} color={theme.text} />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -237,7 +230,7 @@ export default function MapScreen() {
       </ScrollView>
 
       <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocation} activeOpacity={0.8}>
-        <Ionicons name="locate" size={22} color={COLORS.accent} />
+        <Ionicons name="locate" size={22} color={theme.accent} />
       </TouchableOpacity>
 
       {tapLocation && (
@@ -261,174 +254,168 @@ export default function MapScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.overlay,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  layerButton: {
-    position: 'absolute',
-    top: 50,
-    right: 16,
-    backgroundColor: COLORS.overlay,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  layerButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.text,
-  },
-  placeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 130,
-    backgroundColor: COLORS.overlay,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  placeButtonActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
-  },
-  placeButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.text,
-  },
-  placeButtonTextActive: {
-    color: COLORS.bg,
-  },
-  categoryBar: {
-    position: 'absolute',
-    top: 105,
-    left: 0,
-    right: 0,
-  },
-  categoryRow: {
-    paddingHorizontal: 16,
-  },
-  categoryPill: {
-    backgroundColor: COLORS.overlay,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    marginRight: 8,
-  },
-  categoryPillActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
-  },
-  categoryText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.textLight,
-  },
-  categoryTextActive: {
-    fontWeight: '600',
-    color: COLORS.bg,
-  },
-  marker: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: COLORS.text,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerText: {
-    color: COLORS.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  myLocationButton: {
-    position: 'absolute',
-    bottom: 40,
-    right: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.overlay,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionSheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.card,
-    borderTopWidth: 0.5,
-    borderTopColor: COLORS.border,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 20,
-  },
-  actionSheetTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  actionSheetLocation: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  actionSheetButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: COLORS.cancelBg,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  addButton: {
-    flex: 1,
-    backgroundColor: COLORS.accent,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: COLORS.bg,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
+const createStyles = (theme: Theme, overlay: string) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    map: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    backButton: {
+      position: 'absolute',
+      top: 50,
+      left: 16,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: overlay,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    layerButton: {
+      position: 'absolute',
+      top: 50,
+      right: 16,
+      backgroundColor: overlay,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 20,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+    },
+    layerButtonText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: theme.text,
+    },
+    placeButton: {
+      position: 'absolute',
+      top: 50,
+      right: 130,
+      backgroundColor: overlay,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 20,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+    },
+    placeButtonText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: theme.text,
+    },
+    categoryBar: {
+      position: 'absolute',
+      top: 105,
+      left: 0,
+      right: 0,
+    },
+    categoryRow: {
+      paddingHorizontal: 16,
+    },
+    categoryPill: {
+      backgroundColor: overlay,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 20,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      marginRight: 8,
+    },
+    categoryPillActive: {
+      backgroundColor: theme.accent,
+      borderColor: theme.accent,
+    },
+    categoryText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: theme.text,
+    },
+    categoryTextActive: {
+      fontWeight: '600',
+      color: theme.background,
+    },
+    marker: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 2,
+      borderColor: theme.text,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    markerText: {
+      color: theme.text,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    myLocationButton: {
+      position: 'absolute',
+      bottom: 40,
+      right: 16,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: overlay,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionSheet: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.card,
+      borderTopWidth: 0.5,
+      borderTopColor: theme.border,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      padding: 20,
+    },
+    actionSheetTitle: {
+      color: theme.text,
+      fontSize: 18,
+      fontWeight: '600',
+      marginBottom: 6,
+    },
+    actionSheetLocation: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      marginBottom: 16,
+    },
+    actionSheetButtons: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    cancelButton: {
+      flex: 1,
+      backgroundColor: theme.backgroundTertiary,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    cancelButtonText: {
+      color: theme.textSecondary,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    addButton: {
+      flex: 1,
+      backgroundColor: theme.accent,
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    addButtonText: {
+      color: theme.background,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+  });

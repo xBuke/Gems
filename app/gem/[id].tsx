@@ -1,10 +1,12 @@
 import { requireAuth } from '@/lib/authGuard';
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,20 +23,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const COLORS = {
-  bg: '#0D0D0D',
-  card: '#141414',
-  accent: '#1D9E75',
-  accentSubtle: '#0F3D25',
-  accentMuted: '#A8D5BA',
-  text: '#FFFFFF',
-  textMuted: '#888888',
-  textDim: '#555555',
-  border: '#222222',
-  danger: '#FF4444',
-  commentBlue: '#185FA5',
-  imagePlaceholder: '#1A5C3A',
-};
+const ACCENT_MUTED = '#A8D5BA';
+const IMAGE_PLACEHOLDER = '#1A5C3A';
+const COMMENT_BLUE = '#185FA5';
 
 type Gem = {
   id: string;
@@ -74,6 +65,8 @@ const formatTimeAgo = (dateStr: string) => {
 };
 
 export default function GemDetailScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [gem, setGem] = useState<Gem | null>(null);
@@ -408,7 +401,7 @@ export default function GemDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={theme.accent} size="large" />
       </View>
     );
   }
@@ -437,7 +430,7 @@ export default function GemDetailScreen() {
             <Image source={{ uri: gem.image_url }} style={styles.heroImage} resizeMode="cover" />
           ) : (
             <View style={styles.heroPlaceholder}>
-              <Ionicons name="location-outline" size={64} color={COLORS.accent} />
+              <Ionicons name="location-outline" size={64} color={theme.accent} />
             </View>
           )}
 
@@ -471,7 +464,7 @@ export default function GemDetailScreen() {
               <Ionicons
                 name={isLiked ? 'heart' : 'heart-outline'}
                 size={22}
-                color={isLiked ? COLORS.danger : COLORS.textMuted}
+                color={isLiked ? theme.danger : theme.textSecondary}
               />
               <Text style={[styles.likeCountText, isLiked && styles.likeCountTextActive]}>
                 {likeCount}
@@ -480,7 +473,7 @@ export default function GemDetailScreen() {
           </View>
 
           <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color={COLORS.accent} />
+            <Ionicons name="location-outline" size={14} color={theme.accent} />
             <Text style={styles.locationText}>
               {locationName ?? `${gem.latitude.toFixed(4)}, ${gem.longitude.toFixed(4)}`}
             </Text>
@@ -488,15 +481,15 @@ export default function GemDetailScreen() {
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Ionicons name="heart" size={16} color={COLORS.danger} />
+              <Ionicons name="heart" size={16} color={theme.danger} />
               <Text style={styles.statCount}>{likeCount}</Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons name="location" size={16} color={COLORS.accent} />
+              <Ionicons name="location" size={16} color={theme.accent} />
               <Text style={styles.statCount}>{visitCount}</Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons name="chatbubble-outline" size={16} color={COLORS.commentBlue} />
+              <Ionicons name="chatbubble-outline" size={16} color={COMMENT_BLUE} />
               <Text style={styles.statCount}>{comments.length}</Text>
             </View>
           </View>
@@ -507,7 +500,7 @@ export default function GemDetailScreen() {
 
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.navigateButton} onPress={openMaps} activeOpacity={0.8}>
-              <Ionicons name="navigate" size={18} color={COLORS.bg} />
+              <Ionicons name="navigate" size={18} color={theme.background} />
               <Text style={styles.navigateButtonText}>Navigate</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -553,7 +546,7 @@ export default function GemDetailScreen() {
                         <Ionicons
                           name={likeState.likedByMe ? 'heart' : 'heart-outline'}
                           size={14}
-                          color={COLORS.textDim}
+                          color={theme.textTertiary}
                         />
                         <Text style={styles.commentLikeCount}>{likeState.count}</Text>
                       </TouchableOpacity>
@@ -568,19 +561,19 @@ export default function GemDetailScreen() {
 
       <SafeAreaView style={styles.header} edges={['top']} pointerEvents="box-none">
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerRight}>
           {isOwner && (
             <TouchableOpacity style={styles.headerButton} onPress={confirmDelete} activeOpacity={0.8}>
-              <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+              <Ionicons name="trash-outline" size={18} color={theme.danger} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => console.log('Share gem', gem.id)}
             activeOpacity={0.8}>
-            <Ionicons name="share-outline" size={18} color={COLORS.text} />
+            <Ionicons name="share-outline" size={18} color={theme.text} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -589,37 +582,38 @@ export default function GemDetailScreen() {
         <TextInput
           style={styles.commentInput}
           placeholder="Add a comment..."
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={theme.textSecondary}
           value={commentText}
           onChangeText={setCommentText}
         />
         <TouchableOpacity style={styles.sendButton} onPress={handleSendComment} activeOpacity={0.8}>
-          <Ionicons name="send" size={18} color={COLORS.bg} />
+          <Ionicons name="send" size={18} color={theme.background} />
         </TouchableOpacity>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: theme.background,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: theme.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorText: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 20,
   },
   backLink: {
-    color: COLORS.accent,
+    color: theme.accent,
     fontSize: 14,
   },
   scrollView: {
@@ -651,7 +645,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     height: 320,
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: IMAGE_PLACEHOLDER,
     position: 'relative',
   },
   heroImage: {
@@ -662,7 +656,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: IMAGE_PLACEHOLDER,
   },
   heroOverlay: {
     position: 'absolute',
@@ -678,9 +672,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   categoryBadge: {
-    backgroundColor: COLORS.accentSubtle,
+    backgroundColor: theme.accentSubtle,
     borderWidth: 0.5,
-    borderColor: COLORS.accent,
+    borderColor: theme.accent,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 20,
@@ -688,12 +682,12 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLORS.accent,
+    color: theme.accent,
   },
   verifiedBadge: {
-    backgroundColor: COLORS.accentSubtle,
+    backgroundColor: theme.accentSubtle,
     borderWidth: 0.5,
-    borderColor: COLORS.accent,
+    borderColor: theme.accent,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 20,
@@ -701,10 +695,10 @@ const styles = StyleSheet.create({
   verifiedBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLORS.accent,
+    color: theme.accent,
   },
   heroTitle: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 22,
     fontWeight: '700',
   },
@@ -728,17 +722,17 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   authorAvatarText: {
-    color: COLORS.bg,
+    color: theme.background,
     fontSize: 14,
     fontWeight: '700',
   },
   authorName: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -748,12 +742,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   likeCountText: {
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
   likeCountTextActive: {
-    color: COLORS.text,
+    color: theme.text,
   },
   locationRow: {
     flexDirection: 'row',
@@ -762,14 +756,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   locationText: {
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
     fontSize: 13,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderRadius: 12,
     padding: 12,
     marginVertical: 12,
@@ -780,12 +774,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statCount: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: '600',
   },
   description: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 16,
@@ -801,20 +795,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
     borderRadius: 10,
     paddingVertical: 14,
   },
   navigateButtonText: {
-    color: COLORS.bg,
+    color: theme.background,
     fontSize: 14,
     fontWeight: '600',
   },
   beenHereButton: {
     flex: 1,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.accent,
+    borderColor: theme.accent,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -824,21 +818,21 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   beenHereButtonText: {
-    color: COLORS.accent,
+    color: theme.accent,
     fontSize: 14,
     fontWeight: '600',
   },
   beenHereButtonTextVerified: {
-    color: COLORS.accent,
+    color: theme.accent,
   },
   commentsTitle: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
   },
   emptyComments: {
-    color: COLORS.textMuted,
+    color: theme.textSecondary,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 16,
@@ -846,7 +840,7 @@ const styles = StyleSheet.create({
   commentCard: {
     flexDirection: 'row',
     gap: 10,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -855,12 +849,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   commentAvatarText: {
-    color: COLORS.bg,
+    color: theme.background,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -874,17 +868,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   commentUsername: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
   },
   commentTime: {
-    color: COLORS.textDim,
+    color: theme.textTertiary,
     fontSize: 11,
   },
   commentContent: {
-    color: COLORS.accentMuted,
+    color: ACCENT_MUTED,
     fontSize: 13,
     marginTop: 2,
     lineHeight: 18,
@@ -899,7 +893,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   commentLikeCount: {
-    color: COLORS.textDim,
+    color: theme.textTertiary,
     fontSize: 11,
   },
   commentInputBar: {
@@ -907,27 +901,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: COLORS.bg,
+    backgroundColor: theme.background,
     borderTopWidth: 0.5,
-    borderTopColor: COLORS.border,
+    borderTopColor: theme.border,
     gap: 10,
   },
   commentInput: {
     flex: 1,
-    backgroundColor: COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
-    color: COLORS.text,
+    color: theme.text,
   },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.accent,
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },

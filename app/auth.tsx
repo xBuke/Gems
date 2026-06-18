@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,20 +17,12 @@ import { Stack, useRouter } from 'expo-router';
 
 import { supabase } from '@/lib/supabase';
 
-const COLORS = {
-  bg: '#0D0D0D',
-  card: '#141414',
-  accent: '#1D9E75',
-  text: '#F5F5F5',
-  textMuted: '#888888',
-  border: '#222222',
-  error: '#FF4444',
-};
-
 type AuthMode = 'login' | 'register';
 
 export default function AuthScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [mode, setMode] = useState<AuthMode>('login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -129,7 +123,7 @@ export default function AuthScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Username"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={theme.textSecondary}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -140,7 +134,7 @@ export default function AuthScreen() {
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.textSecondary}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -151,7 +145,7 @@ export default function AuthScreen() {
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.textSecondary}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -167,7 +161,7 @@ export default function AuthScreen() {
               disabled={loading}
               activeOpacity={0.8}>
               {loading ? (
-                <ActivityIndicator color={COLORS.bg} />
+                <ActivityIndicator color={theme.background} />
               ) : (
                 <Text style={styles.buttonText}>{mode === 'login' ? 'Login' : 'Register'}</Text>
               )}
@@ -179,89 +173,90 @@ export default function AuthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 32,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    marginTop: 4,
-    marginBottom: 32,
-  },
-  tabRow: {
-    flexDirection: 'row',
-    backgroundColor: '#141414',
-    borderRadius: 10,
-    padding: 4,
-    marginBottom: 24,
-  },
-  tab: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabActive: {
-    backgroundColor: '#1D9E75',
-  },
-  tabInactive: {
-    backgroundColor: 'transparent',
-  },
-  tabText: {
-    fontSize: 14,
-    color: '#888888',
-    textAlign: 'center',
-  },
-  tabTextActive: {
-    color: '#0D0D0D',
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: COLORS.card,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  button: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: COLORS.bg,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    flex: {
+      flex: 1,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: 20,
+      paddingTop: 24,
+      paddingBottom: 32,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginTop: 4,
+      marginBottom: 32,
+    },
+    tabRow: {
+      flexDirection: 'row',
+      backgroundColor: theme.card,
+      borderRadius: 10,
+      padding: 4,
+      marginBottom: 24,
+    },
+    tab: {
+      flex: 1,
+      padding: 10,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabActive: {
+      backgroundColor: theme.accent,
+    },
+    tabInactive: {
+      backgroundColor: 'transparent',
+    },
+    tabText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: 'center',
+    },
+    tabTextActive: {
+      color: theme.background,
+      fontWeight: '600',
+    },
+    input: {
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 14,
+      color: theme.text,
+      marginBottom: 12,
+    },
+    errorText: {
+      color: theme.danger,
+      fontSize: 14,
+      marginBottom: 16,
+    },
+    button: {
+      backgroundColor: theme.accent,
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    buttonDisabled: {
+      opacity: 0.7,
+    },
+    buttonText: {
+      color: theme.background,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+  });

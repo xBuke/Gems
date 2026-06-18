@@ -1,7 +1,9 @@
+import { useTheme } from '@/lib/ThemeContext';
+import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -83,6 +85,8 @@ const timeAgo = (dateString: string) => {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -213,7 +217,7 @@ export default function NotificationsScreen() {
 
     return (
       <View style={styles.gemThumbnailFallback}>
-        <Ionicons name="location" size={20} color="#1D9E75" />
+        <Ionicons name="location" size={20} color={theme.accent} />
       </View>
     );
   };
@@ -249,7 +253,7 @@ export default function NotificationsScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
-          <Ionicons name="arrow-back" size={22} color="#F5F5F5" />
+          <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <TouchableOpacity onPress={handleMarkAllRead} activeOpacity={0.7} style={styles.headerSideRight}>
@@ -259,11 +263,11 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#1D9E75" size="large" />
+          <ActivityIndicator color={theme.accent} size="large" />
         </View>
       ) : notifications.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="notifications-outline" size={56} color="#1D9E75" />
+          <Ionicons name="notifications-outline" size={56} color={theme.accent} />
           <Text style={styles.emptyTitle}>No notifications yet</Text>
           <Text style={styles.emptySubtitle}>Interact with gems to get notified!</Text>
         </View>
@@ -279,137 +283,138 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0D0D0D',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerSide: {
-    width: 80,
-  },
-  headerSideRight: {
-    width: 80,
-    alignItems: 'flex-end',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  markAllRead: {
-    fontSize: 13,
-    color: '#1D9E75',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginTop: 4,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: '#888888',
-    textAlign: 'center',
-  },
-  notificationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#222222',
-    gap: 12,
-  },
-  notificationUnread: {
-    backgroundColor: '#141414',
-  },
-  notificationRead: {
-    backgroundColor: '#0D0D0D',
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notificationContent: {
-    flex: 1,
-    position: 'relative',
-  },
-  notificationTextRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  username: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  actionText: {
-    fontSize: 14,
-    color: '#A8D5BA',
-  },
-  notificationTime: {
-    fontSize: 12,
-    color: '#555555',
-    marginTop: 3,
-  },
-  unreadDot: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#1D9E75',
-  },
-  gemThumbnail: {
-    width: 52,
-    height: 52,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  gemThumbnailFallback: {
-    width: 52,
-    height: 52,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#1A5C3A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initialAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#1D9E75',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initialText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    headerSide: {
+      width: 80,
+    },
+    headerSideRight: {
+      width: 80,
+      alignItems: 'flex-end',
+    },
+    headerTitle: {
+      flex: 1,
+      fontSize: 17,
+      fontWeight: '600',
+      color: theme.text,
+      textAlign: 'center',
+    },
+    markAllRead: {
+      fontSize: 13,
+      color: theme.accent,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingHorizontal: 24,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.text,
+      marginTop: 4,
+    },
+    emptySubtitle: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      textAlign: 'center',
+    },
+    notificationItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderBottomWidth: 0.5,
+      borderBottomColor: theme.border,
+      gap: 12,
+    },
+    notificationUnread: {
+      backgroundColor: theme.card,
+    },
+    notificationRead: {
+      backgroundColor: theme.background,
+    },
+    iconCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    notificationContent: {
+      flex: 1,
+      position: 'relative',
+    },
+    notificationTextRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    username: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    actionText: {
+      fontSize: 14,
+      color: '#A8D5BA',
+    },
+    notificationTime: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      marginTop: 3,
+    },
+    unreadDot: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: theme.accent,
+    },
+    gemThumbnail: {
+      width: 52,
+      height: 52,
+      borderRadius: 8,
+      overflow: 'hidden',
+    },
+    gemThumbnailFallback: {
+      width: 52,
+      height: 52,
+      borderRadius: 8,
+      overflow: 'hidden',
+      backgroundColor: '#1A5C3A',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    initialAvatar: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: theme.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    initialText: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+  });
