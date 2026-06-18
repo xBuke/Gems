@@ -4,12 +4,13 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -20,7 +21,8 @@ const COLORS = {
   card: '#141414',
   accent: '#1D9E75',
   accentSubtle: '#0F3D25',
-  text: '#F5F5F5',
+  accentMuted: '#A8D5BA',
+  text: '#FFFFFF',
   textMuted: '#888888',
   textDim: '#555555',
   border: '#222222',
@@ -40,11 +42,16 @@ type Gem = {
   created_at: string;
 };
 
-type FollowingGem = Gem & {
+type GemWithProfile = Gem & {
   profiles: { username: string } | null;
 };
 
 type FeedTab = 'forYou' | 'following';
+
+type UserCoords = {
+  latitude: number;
+  longitude: number;
+};
 
 const TABS = [
   { key: 'discover', label: 'Discover', icon: 'compass-outline' as const, activeIcon: 'compass' as const },
@@ -65,18 +72,36 @@ const TABS = [
   { key: 'profile', label: 'Profile', icon: 'person-outline' as const, activeIcon: 'person' as const },
 ];
 
+const formatDistanceKm = (meters: number) => {
+  const km = meters / 1000;
+  if (km < 1) return `${Math.round(meters)} m`;
+  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+};
+
+const matchesSearch = (gem: GemWithProfile, query: string) => {
+  if (!query.trim()) return true;
+  const q = query.toLowerCase().trim();
+  return (
+    gem.title.toLowerCase().includes(q) ||
+    gem.category.toLowerCase().includes(q) ||
+    (gem.profiles?.username?.toLowerCase().includes(q) ?? false)
+  );
+};
+
 export default function DiscoverScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('discover');
   const [feedTab, setFeedTab] = useState<FeedTab>('forYou');
+  const [searchQuery, setSearchQuery] = useState('');
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [gemOfTheDay, setGemOfTheDay] = useState<Gem | null>(null);
-  const [trendingGems, setTrendingGems] = useState<Gem[]>([]);
-  const [recentGems, setRecentGems] = useState<Gem[]>([]);
-  const [nearbyGems, setNearbyGems] = useState<Gem[]>([]);
-  const [followingGems, setFollowingGems] = useState<FollowingGem[]>([]);
+  const [gemOfTheDay, setGemOfTheDay] = useState<GemWithProfile | null>(null);
+  const [trendingGems, setTrendingGems] = useState<GemWithProfile[]>([]);
+  const [recentGems, setRecentGems] = useState<GemWithProfile[]>([]);
+  const [nearbyGems, setNearbyGems] = useState<GemWithProfile[]>([]);
+  const [followingGems, setFollowingGems] = useState<GemWithProfile[]>([]);
   const [locationAvailable, setLocationAvailable] = useState(false);
+  const [userCoords, setUserCoords] = useState<UserCoords | null>(null);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
 
   const fetchLikeCounts = useCallback(async (gems: Gem[]) => {
@@ -94,6 +119,19 @@ export default function DiscoverScreen() {
     }
     setLikeCounts((prev) => ({ ...prev, ...counts }));
   }, []);
+
+  const getGemDistance = useCallback(
+    (gem: Gem) => {
+      if (!userCoords) return null;
+      return getDistance(
+        userCoords.latitude,
+        userCoords.longitude,
+        gem.latitude,
+        gem.longitude,
+      );
+    },
+    [userCoords],
+  );
 
   const checkUnreadMessages = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -153,7 +191,7 @@ export default function DiscoverScreen() {
       .order('created_at', { ascending: false });
 
     if (gems) {
-      setFollowingGems(gems as FollowingGem[]);
+      setFollowingGems(gems as GemWithProfile[]);
       fetchLikeCounts(gems as Gem[]);
     }
   }, [fetchLikeCounts]);
@@ -162,12 +200,12 @@ export default function DiscoverScreen() {
     const fetchGemOfTheDay = async () => {
       const { data } = await supabase
         .from('gems')
-        .select('*')
+        .select('*, profiles!gems_user_id_fkey(username)')
         .eq('is_private', false)
         .limit(10);
 
       if (data && data.length > 0) {
-        const random = data[Math.floor(Math.random() * data.length)];
+        const random = data[Math.floor(Math.random() * data.length)] as GemWithProfile;
         setGemOfTheDay(random);
         fetchLikeCounts([random]);
       }
@@ -176,28 +214,28 @@ export default function DiscoverScreen() {
     const fetchTrending = async () => {
       const { data } = await supabase
         .from('gems')
-        .select('*')
+        .select('*, profiles!gems_user_id_fkey(username)')
         .eq('is_private', false)
         .order('created_at', { ascending: false })
         .limit(5);
 
       if (data) {
-        setTrendingGems(data);
-        fetchLikeCounts(data);
+        setTrendingGems(data as GemWithProfile[]);
+        fetchLikeCounts(data as Gem[]);
       }
     };
 
     const fetchRecent = async () => {
       const { data } = await supabase
         .from('gems')
-        .select('*')
+        .select('*, profiles!gems_user_id_fkey(username)')
         .eq('is_private', false)
         .order('created_at', { ascending: false })
         .limit(10);
 
       if (data) {
-        setRecentGems(data);
-        fetchLikeCounts(data);
+        setRecentGems(data as GemWithProfile[]);
+        fetchLikeCounts(data as Gem[]);
       }
     };
 
@@ -205,27 +243,37 @@ export default function DiscoverScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setLocationAvailable(false);
+        setUserCoords(null);
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({});
       setLocationAvailable(true);
+      setUserCoords({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
 
       const { data } = await supabase
         .from('gems')
-        .select('*')
+        .select('*, profiles!gems_user_id_fkey(username)')
         .eq('is_private', false);
 
       if (data) {
-        const nearby = data.filter(
-          (gem) =>
-            getDistance(
+        const nearby = (data as GemWithProfile[])
+          .map((gem) => ({
+            gem,
+            distance: getDistance(
               location.coords.latitude,
               location.coords.longitude,
               gem.latitude,
               gem.longitude,
-            ) < 50000,
-        );
+            ),
+          }))
+          .filter(({ distance }) => distance < 50000)
+          .sort((a, b) => a.distance - b.distance)
+          .map(({ gem }) => gem);
+
         setNearbyGems(nearby);
         fetchLikeCounts(nearby);
       }
@@ -288,106 +336,190 @@ export default function DiscoverScreen() {
     }
   }, [feedTab, fetchFollowingGems]);
 
+  const filteredGemOfTheDay = useMemo(
+    () => (gemOfTheDay && matchesSearch(gemOfTheDay, searchQuery) ? gemOfTheDay : null),
+    [gemOfTheDay, searchQuery],
+  );
+
+  const filteredTrendingGems = useMemo(
+    () => trendingGems.filter((gem) => matchesSearch(gem, searchQuery)),
+    [trendingGems, searchQuery],
+  );
+
+  const filteredRecentGems = useMemo(
+    () => recentGems.filter((gem) => matchesSearch(gem, searchQuery)),
+    [recentGems, searchQuery],
+  );
+
+  const filteredNearbyGems = useMemo(
+    () => nearbyGems.filter((gem) => matchesSearch(gem, searchQuery)),
+    [nearbyGems, searchQuery],
+  );
+
+  const filteredFollowingGems = useMemo(
+    () => followingGems.filter((gem) => matchesSearch(gem, searchQuery)),
+    [followingGems, searchQuery],
+  );
+
   const handleMessagesPress = async () => {
     const proceed = await requireAuth();
     if (!proceed) return;
     router.push('/messages');
   };
 
-  const renderGemCard = (gem: Gem, username?: string) => (
-    <TouchableOpacity
-      key={gem.id}
-      style={styles.gemCard}
-      onPress={() => router.push('/gem/' + gem.id)}
-      activeOpacity={0.7}>
-      <View style={styles.photoPlaceholder}>
-        {gem.image_url ? (
-          <Image source={{ uri: gem.image_url }} style={styles.gemImage} />
-        ) : null}
-        <View style={styles.badgeRow}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>{gem.category}</Text>
-          </View>
-          {gem.verified && (
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
-            </View>
+  const handleNotifications = async () => {
+    const proceed = await requireAuth();
+    if (!proceed) return;
+    router.push('/notifications');
+  };
+
+  const handleProfile = async () => {
+    const proceed = await requireAuth();
+    if (!proceed) return;
+    router.push('/profile');
+  };
+
+  const renderListCard = (gem: GemWithProfile, distanceMeters?: number | null) => {
+    const username = gem.profiles?.username ?? 'unknown';
+
+    return (
+      <TouchableOpacity
+        key={gem.id}
+        style={styles.listCard}
+        onPress={() => router.push('/gem/' + gem.id)}
+        activeOpacity={0.7}>
+        <View style={styles.listCardImageWrap}>
+          {gem.image_url ? (
+            <Image source={{ uri: gem.image_url }} style={styles.listCardImage} />
+          ) : (
+            <View style={[styles.listCardImage, styles.listCardImagePlaceholder]} />
           )}
         </View>
-      </View>
-      <View style={styles.gemInfo}>
-        {username ? <Text style={styles.posterName}>@{username}</Text> : null}
-        <Text style={styles.gemName}>{gem.title}</Text>
-        <View style={styles.gemMeta}>
-          <View style={styles.likeRow}>
-            <Ionicons name="heart-outline" size={12} color={COLORS.textMuted} />
-            <Text style={styles.likeText}>{likeCounts[gem.id] ?? 0}</Text>
+        <View style={styles.listCardContent}>
+          <View style={styles.listCategoryBadge}>
+            <Text style={styles.listCategoryBadgeText}>{gem.category}</Text>
+          </View>
+          <Text style={styles.listCardTitle} numberOfLines={1}>
+            {gem.title}
+          </Text>
+          <Text style={styles.listCardUsername}>@{username}</Text>
+          <View style={styles.listCardMetaRow}>
+            <View style={styles.listCardMetaItem}>
+              <Ionicons name="heart-outline" size={12} color={COLORS.textMuted} />
+              <Text style={styles.listCardMetaText}>{likeCounts[gem.id] ?? 0}</Text>
+            </View>
+            {distanceMeters != null && (
+              <>
+                <Text style={styles.listCardMetaDivider}>|</Text>
+                <View style={styles.listCardMetaItem}>
+                  <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
+                  <Text style={styles.listCardMetaText}>{formatDistanceKm(distanceMeters)}</Text>
+                </View>
+              </>
+            )}
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
+
+  const renderTrendingCard = (gem: GemWithProfile) => {
+    const username = gem.profiles?.username ?? 'unknown';
+
+    return (
+      <TouchableOpacity
+        key={gem.id}
+        style={styles.trendingCard}
+        onPress={() => router.push('/gem/' + gem.id)}
+        activeOpacity={0.7}>
+        <View style={styles.trendingImage}>
+          {gem.image_url ? (
+            <Image source={{ uri: gem.image_url }} style={styles.trendingImageFill} />
+          ) : (
+            <View style={[styles.trendingImageFill, styles.trendingImagePlaceholder]} />
+          )}
+        </View>
+        <View style={styles.trendingBody}>
+          <Text style={styles.trendingTitle} numberOfLines={2}>
+            {gem.title}
+          </Text>
+          <View style={styles.trendingUserRow}>
+            <View style={styles.trendingAvatar}>
+              <Text style={styles.trendingAvatarText}>{username[0]?.toUpperCase() ?? '?'}</Text>
+            </View>
+            <Text style={styles.trendingUsername}>@{username}</Text>
+          </View>
+          <View style={styles.trendingLikeRow}>
+            <Ionicons name="heart-outline" size={12} color={COLORS.textMuted} />
+            <Text style={styles.trendingLikeText}>{likeCounts[gem.id] ?? 0}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderForYouContent = () => (
     <>
-      <Text style={styles.sectionTitle}>Gem of the Day</Text>
-      {gemOfTheDay && (
-        <TouchableOpacity
-          style={styles.gemOfTheDayCard}
-          onPress={() => router.push('/gem/' + gemOfTheDay.id)}
-          activeOpacity={0.7}>
-          <Ionicons name="location" size={24} color={COLORS.accent} />
-          <View style={styles.gemOfTheDayContent}>
-            <Text style={styles.gemOfTheDayLabel}>GEM OF THE DAY</Text>
-            <Text style={styles.gemOfTheDayName}>{gemOfTheDay.title}</Text>
-            <Text style={styles.gemOfTheDayMeta}>
-              {gemOfTheDay.category} · Tap to explore
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-        </TouchableOpacity>
-      )}
-
-      <Text style={styles.sectionTitle}>Trending</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.trendingRow}>
-        {trendingGems.map((gem) => (
+      {filteredGemOfTheDay && (
+        <>
+          <Text style={styles.sectionTitle}>Gem of the Day</Text>
           <TouchableOpacity
-            key={gem.id}
-            style={styles.trendingCard}
-            onPress={() => router.push('/gem/' + gem.id)}
-            activeOpacity={0.7}>
-            <View style={styles.trendingImage}>
-              {gem.image_url ? (
-                <Image source={{ uri: gem.image_url }} style={styles.trendingImageFill} />
-              ) : null}
-              <View style={styles.trendingBadge}>
-                <Text style={styles.trendingBadgeText}>{gem.category}</Text>
-              </View>
+            style={styles.heroCard}
+            onPress={() => router.push('/gem/' + filteredGemOfTheDay.id)}
+            activeOpacity={0.85}>
+            {filteredGemOfTheDay.image_url ? (
+              <Image source={{ uri: filteredGemOfTheDay.image_url }} style={styles.heroImage} />
+            ) : (
+              <View style={[styles.heroImage, styles.heroImagePlaceholder]} />
+            )}
+            <View style={styles.heroOverlay} />
+            <View style={styles.heroLabel}>
+              <Text style={styles.heroLabelText}>GEM OF THE DAY</Text>
             </View>
-            <Text style={styles.trendingTitle} numberOfLines={2}>
-              {gem.title}
-            </Text>
-            <View style={styles.trendingLikeRow}>
-              <Ionicons name="heart-outline" size={12} color={COLORS.textMuted} />
-              <Text style={styles.likeText}>{likeCounts[gem.id] ?? 0}</Text>
+            <View style={styles.heroBottom}>
+              <View style={styles.heroBottomText}>
+                <Text style={styles.heroTitle} numberOfLines={2}>
+                  {filteredGemOfTheDay.title}
+                </Text>
+                <Text style={styles.heroMeta}>
+                  {filteredGemOfTheDay.category}
+                  {getGemDistance(filteredGemOfTheDay) != null
+                    ? ` · ${formatDistanceKm(getGemDistance(filteredGemOfTheDay)!)}`
+                    : ''}
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={20} color={COLORS.text} />
             </View>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        </>
+      )}
 
-      <Text style={styles.sectionTitle}>Recently Added</Text>
-      {recentGems.map((gem) => renderGemCard(gem))}
+      {filteredTrendingGems.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Trending</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.trendingRow}>
+            {filteredTrendingGems.map((gem) => renderTrendingCard(gem))}
+          </ScrollView>
+        </>
+      )}
+
+      {filteredRecentGems.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Recently Added</Text>
+          {filteredRecentGems.map((gem) => renderListCard(gem))}
+        </>
+      )}
 
       {locationAvailable && (
         <>
           <Text style={styles.sectionTitle}>Near You</Text>
-          {nearbyGems.length === 0 ? (
+          {filteredNearbyGems.length === 0 ? (
             <Text style={styles.emptyText}>No gems near you yet — be the first!</Text>
           ) : (
-            nearbyGems.map((gem) => renderGemCard(gem))
+            filteredNearbyGems.map((gem) => renderListCard(gem, getGemDistance(gem)))
           )}
         </>
       )}
@@ -410,9 +542,19 @@ export default function DiscoverScreen() {
       );
     }
 
-    return followingGems.map((gem) =>
-      renderGemCard(gem, gem.profiles?.username ?? 'unknown'),
-    );
+    if (filteredFollowingGems.length === 0) {
+      return <Text style={styles.emptyText}>No gems match your search.</Text>;
+    }
+
+    return filteredFollowingGems.map((gem) => {
+      const username = gem.profiles?.username ?? 'unknown';
+      return (
+        <View key={gem.id} style={styles.followingItem}>
+          <Text style={styles.followingPostLabel}>@{username} posted a new gem</Text>
+          {renderListCard(gem)}
+        </View>
+      );
+    });
   };
 
   return (
@@ -428,6 +570,17 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchBar}>
+        <Ionicons name="search" size={16} color={COLORS.textDim} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search gems..."
+          placeholderTextColor={COLORS.textDim}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
       <View style={styles.feedTabContainer}>
         <TouchableOpacity
           style={[styles.feedTab, feedTab === 'forYou' && styles.feedTabActive]}
@@ -441,7 +594,8 @@ export default function DiscoverScreen() {
           style={[styles.feedTab, feedTab === 'following' && styles.feedTabActive]}
           onPress={() => setFeedTab('following')}
           activeOpacity={0.8}>
-          <Text style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
+          <Text
+            style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
             Following
           </Text>
         </TouchableOpacity>
@@ -471,12 +625,10 @@ export default function DiscoverScreen() {
                   router.push('/add-gem');
                   setActiveTab(tab.key);
                 } else if (tab.key === 'notifications') {
-                  router.push('/notifications');
+                  await handleNotifications();
                   setActiveTab(tab.key);
                 } else if (tab.key === 'profile') {
-                  const proceed = await requireAuth();
-                  if (!proceed) return;
-                  router.push('/profile');
+                  await handleProfile();
                   setActiveTab(tab.key);
                 }
               }}
@@ -515,11 +667,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
     color: COLORS.text,
   },
   messagesButton: {
@@ -534,6 +686,25 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: COLORS.danger,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    height: 40,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    paddingVertical: 0,
   },
   feedTabContainer: {
     flexDirection: 'row',
@@ -571,38 +742,67 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 12,
   },
-  gemOfTheDayCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.accent,
-    borderRadius: 12,
-    padding: 14,
+  heroCard: {
+    width: '100%',
+    height: 180,
+    borderRadius: 16,
+    overflow: 'hidden',
     marginBottom: 24,
-    gap: 12,
+    position: 'relative',
   },
-  gemOfTheDayContent: {
-    flex: 1,
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
-  gemOfTheDayLabel: {
+  heroImagePlaceholder: {
+    backgroundColor: COLORS.imagePlaceholder,
+  },
+  heroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  heroLabel: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: COLORS.accent,
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  heroLabelText: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.accent,
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  gemOfTheDayName: {
-    fontSize: 14,
-    fontWeight: '600',
     color: COLORS.text,
+    letterSpacing: 0.5,
   },
-  gemOfTheDayMeta: {
+  heroBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  heroBottomText: {
+    flex: 1,
+    marginRight: 12,
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  heroMeta: {
     fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 2,
+    color: COLORS.accentMuted,
   },
   trendingRow: {
     gap: 12,
@@ -611,7 +811,7 @@ const styles = StyleSheet.create({
   },
   trendingCard: {
     width: 160,
-    height: 200,
+    height: 210,
     backgroundColor: COLORS.card,
     borderWidth: 0.5,
     borderColor: COLORS.border,
@@ -619,123 +819,131 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   trendingImage: {
-    height: 120,
+    height: 130,
     backgroundColor: COLORS.imagePlaceholder,
-    position: 'relative',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    overflow: 'hidden',
   },
   trendingImageFill: {
     width: '100%',
     height: '100%',
   },
-  trendingBadge: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: COLORS.accentSubtle,
-    borderWidth: 0.5,
-    borderColor: COLORS.accent,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 20,
+  trendingImagePlaceholder: {
+    backgroundColor: COLORS.imagePlaceholder,
   },
-  trendingBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.accent,
+  trendingBody: {
+    flex: 1,
+    padding: 10,
+    justifyContent: 'space-between',
   },
   trendingTitle: {
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.text,
-    paddingHorizontal: 10,
-    paddingTop: 8,
-    paddingBottom: 4,
+  },
+  trendingUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  trendingAvatar: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendingAvatarText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.bg,
+  },
+  trendingUsername: {
+    fontSize: 11,
+    color: COLORS.textMuted,
   },
   trendingLikeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingBottom: 10,
+    marginTop: 4,
   },
-  gemCard: {
+  trendingLikeText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  listCard: {
+    flexDirection: 'row',
+    height: 90,
     backgroundColor: COLORS.card,
     borderWidth: 0.5,
     borderColor: COLORS.border,
     borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  photoPlaceholder: {
-    height: 130,
-    width: '100%',
-    backgroundColor: '#1A1A1A',
+  listCardImageWrap: {
+    width: 90,
+    height: 90,
   },
-  gemImage: {
-    height: 130,
-    width: '100%',
+  listCardImage: {
+    width: 90,
+    height: 90,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
-  badgeRow: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    flexDirection: 'row',
-    gap: 6,
+  listCardImagePlaceholder: {
+    backgroundColor: COLORS.imagePlaceholder,
   },
-  categoryBadge: {
-    backgroundColor: COLORS.accentSubtle,
-    borderWidth: 0.5,
-    borderColor: COLORS.accent,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-  },
-  categoryBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.accent,
-  },
-  verifiedBadge: {
-    backgroundColor: COLORS.accentSubtle,
-    borderWidth: 0.5,
-    borderColor: COLORS.accent,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-  },
-  verifiedBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.accent,
-  },
-  gemInfo: {
+  listCardContent: {
+    flex: 1,
     padding: 12,
+    justifyContent: 'space-between',
   },
-  posterName: {
-    fontSize: 12,
+  listCategoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.accentSubtle,
+    borderWidth: 0.5,
+    borderColor: COLORS.accent,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 20,
+    marginBottom: 2,
+  },
+  listCategoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
     color: COLORS.accent,
-    marginBottom: 4,
-    fontWeight: '500',
   },
-  gemName: {
+  listCardTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 6,
   },
-  gemMeta: {
+  listCardUsername: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  listCardMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
   },
-  likeRow: {
+  listCardMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  likeText: {
-    fontSize: 12,
+  listCardMetaText: {
+    fontSize: 11,
     color: COLORS.textMuted,
+  },
+  listCardMetaDivider: {
+    fontSize: 11,
+    color: COLORS.textDim,
   },
   emptyText: {
     fontSize: 14,
@@ -743,6 +951,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     paddingVertical: 16,
+  },
+  followingItem: {
+    marginBottom: 4,
+  },
+  followingPostLabel: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginBottom: 8,
   },
   followingEmpty: {
     alignItems: 'center',

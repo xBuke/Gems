@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,44 +23,53 @@ type Notification = {
   gem_id: string | null;
   read: boolean;
   created_at: string;
-  sender: { username: string } | null;
+  sender: { username: string; avatar_url: string | null } | null;
+  gem: { title: string; image_url: string | null } | null;
 };
 
 const TYPE_CONFIG: Record<
-  NotificationType,
-  { icon: keyof typeof Ionicons.glyphMap; color: string; text: string }
+  Exclude<NotificationType, 'rating'>,
+  {
+    icon: keyof typeof Ionicons.glyphMap;
+    iconColor: string;
+    bgColor: string;
+    actionText: string;
+  }
 > = {
-  comment: {
-    icon: 'chatbubble',
-    color: '#1D9E75',
-    text: ' commented on your gem',
-  },
-  rating: {
-    icon: 'star',
-    color: '#FFD700',
-    text: ' rated your gem ⭐',
-  },
   like: {
     icon: 'heart',
-    color: '#FF4444',
-    text: ' liked your gem',
+    iconColor: '#FF4444',
+    bgColor: 'rgba(255,68,68,0.2)',
+    actionText: 'liked your gem',
   },
-  follow: {
-    icon: 'person-add',
-    color: '#185FA5',
-    text: ' started following you',
+  comment: {
+    icon: 'chatbubble',
+    iconColor: '#185FA5',
+    bgColor: 'rgba(24,95,165,0.2)',
+    actionText: 'commented on your gem',
   },
   visit: {
     icon: 'location',
-    color: '#D85A30',
-    text: ' visited your gem',
+    iconColor: '#1D9E75',
+    bgColor: 'rgba(29,158,117,0.2)',
+    actionText: 'visited your gem',
+  },
+  follow: {
+    icon: 'person-add',
+    iconColor: '#534AB7',
+    bgColor: 'rgba(83,74,183,0.2)',
+    actionText: 'started following you',
   },
   message: {
-    icon: 'chatbubble',
-    color: '#185FA5',
-    text: ' sent you a message',
+    icon: 'chatbubble-ellipses',
+    iconColor: '#BA7517',
+    bgColor: 'rgba(186,117,23,0.2)',
+    actionText: 'sent you a message',
   },
 };
+
+const NOTIFICATION_SELECT =
+  '*, sender:profiles!notifications_sender_id_fkey(username, avatar_url), gem:gems(title, image_url)';
 
 const timeAgo = (dateString: string) => {
   const now = new Date();
@@ -69,13 +79,6 @@ const timeAgo = (dateString: string) => {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
-};
-
-const hexWithOpacity = (hex: string, opacity: number) => {
-  const alpha = Math.round(opacity * 255)
-    .toString(16)
-    .padStart(2, '0');
-  return `${hex}${alpha}`;
 };
 
 export default function NotificationsScreen() {
@@ -97,7 +100,7 @@ export default function NotificationsScreen() {
 
     const { data } = await supabase
       .from('notifications')
-      .select('*, sender:profiles!notifications_sender_id_fkey(username)')
+      .select(NOTIFICATION_SELECT)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -113,7 +116,7 @@ export default function NotificationsScreen() {
   useEffect(() => {
     if (!currentUserId) return;
 
-    let channel: any = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     channel = supabase
       .channel('notifications-' + currentUserId)
@@ -127,15 +130,17 @@ export default function NotificationsScreen() {
         },
         async (payload) => {
           const newNotification = payload.new as Notification;
-          const { data: sender } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', newNotification.sender_id)
+          const { data: fullNotification } = await supabase
+            .from('notifications')
+            .select(NOTIFICATION_SELECT)
+            .eq('id', newNotification.id)
             .single();
 
+          if (!fullNotification) return;
+
           setNotifications((prev) => {
-            if (prev.some((n) => n.id === newNotification.id)) return prev;
-            return [{ ...newNotification, sender }, ...prev];
+            if (prev.some((n) => n.id === fullNotification.id)) return prev;
+            return [fullNotification, ...prev];
           });
         },
       )
@@ -174,32 +179,68 @@ export default function NotificationsScreen() {
           username: notification.sender?.username,
         },
       });
-    } else if (notification.gem_id) {
-      router.push('/gem/' + notification.gem_id);
+    } else if (notification.type === 'follow') {
+      router.push('/profile?userId=' + notification.sender_id);
+    } else if (
+      notification.type === 'like' ||
+      notification.type === 'comment' ||
+      notification.type === 'visit'
+    ) {
+      if (notification.gem_id) {
+        router.push('/gem/' + notification.gem_id);
+      }
     }
+  };
+
+  const renderRightThumbnail = (item: Notification) => {
+    const username = item.sender?.username ?? 'S';
+
+    if (item.type === 'follow' || item.type === 'message') {
+      return (
+        <View style={styles.initialAvatar}>
+          <Text style={styles.initialText}>{username.charAt(0).toUpperCase()}</Text>
+        </View>
+      );
+    }
+
+    if (!item.gem) return null;
+
+    if (item.gem.image_url) {
+      return (
+        <Image source={{ uri: item.gem.image_url }} style={styles.gemThumbnail} resizeMode="cover" />
+      );
+    }
+
+    return (
+      <View style={styles.gemThumbnailFallback}>
+        <Ionicons name="location" size={20} color="#1D9E75" />
+      </View>
+    );
   };
 
   const renderNotification = ({ item }: { item: Notification }) => {
     if (item.type === 'rating') return null;
 
     const config = TYPE_CONFIG[item.type];
+    const username = item.sender?.username ?? 'Someone';
 
     return (
       <TouchableOpacity
         style={[styles.notificationItem, item.read ? styles.notificationRead : styles.notificationUnread]}
         onPress={() => handleNotificationPress(item)}
         activeOpacity={0.7}>
-        <View style={[styles.iconCircle, { backgroundColor: hexWithOpacity(config.color, 0.2) }]}>
-          <Ionicons name={config.icon} size={20} color={config.color} />
+        <View style={[styles.iconCircle, { backgroundColor: config.bgColor }]}>
+          <Ionicons name={config.icon} size={18} color={config.iconColor} />
         </View>
         <View style={styles.notificationContent}>
-          <Text style={styles.notificationText}>
-            <Text style={styles.usernameBold}>{item.sender?.username ?? 'Someone'}</Text>
-            {config.text}
-          </Text>
+          <View style={styles.notificationTextRow}>
+            <Text style={styles.username}>{username}</Text>
+            <Text style={styles.actionText}> {config.actionText}</Text>
+          </View>
           <Text style={styles.notificationTime}>{timeAgo(item.created_at)}</Text>
+          {!item.read && <View style={styles.unreadDot} />}
         </View>
-        {!item.read && <View style={styles.unreadDot} />}
+        {renderRightThumbnail(item)}
       </TouchableOpacity>
     );
   };
@@ -207,11 +248,11 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+          <Ionicons name="arrow-back" size={22} color="#F5F5F5" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity onPress={handleMarkAllRead} activeOpacity={0.7}>
+        <TouchableOpacity onPress={handleMarkAllRead} activeOpacity={0.7} style={styles.headerSideRight}>
           <Text style={styles.markAllRead}>Mark all read</Text>
         </TouchableOpacity>
       </View>
@@ -222,8 +263,9 @@ export default function NotificationsScreen() {
         </View>
       ) : notifications.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="notifications-outline" size={48} color="#1D9E75" />
-          <Text style={styles.emptyText}>No notifications yet</Text>
+          <Ionicons name="notifications-outline" size={56} color="#1D9E75" />
+          <Text style={styles.emptyTitle}>No notifications yet</Text>
+          <Text style={styles.emptySubtitle}>Interact with gems to get notified!</Text>
         </View>
       ) : (
         <FlatList
@@ -245,17 +287,22 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  headerSide: {
+    width: 80,
+  },
+  headerSideRight: {
+    width: 80,
+    alignItems: 'flex-end',
   },
   headerTitle: {
     flex: 1,
-    fontSize: 24,
+    fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginHorizontal: 8,
   },
   markAllRead: {
     fontSize: 13,
@@ -270,16 +317,24 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 8,
+    paddingHorizontal: 24,
   },
-  emptyText: {
-    fontSize: 14,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 4,
+  },
+  emptySubtitle: {
+    fontSize: 13,
     color: '#888888',
+    textAlign: 'center',
   },
   notificationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 0.5,
     borderBottomColor: '#222222',
@@ -300,23 +355,61 @@ const styles = StyleSheet.create({
   },
   notificationContent: {
     flex: 1,
-    gap: 4,
+    position: 'relative',
   },
-  notificationText: {
+  notificationTextRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  username: {
     fontSize: 14,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
-  usernameBold: {
-    fontWeight: '700',
+  actionText: {
+    fontSize: 14,
+    color: '#A8D5BA',
   },
   notificationTime: {
     fontSize: 12,
     color: '#555555',
+    marginTop: 3,
   },
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4A9EFF',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1D9E75',
+  },
+  gemThumbnail: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  gemThumbnailFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#1A5C3A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initialAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#1D9E75',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initialText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

@@ -11,15 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const COLORS = {
-  bg: '#0D0D0D',
-  accent: '#1D9E75',
-  text: '#F5F5F5',
-  textMuted: '#888888',
-  textDim: '#555555',
-  unread: '#4A9EFF',
-};
-
 type ProfileRef = {
   username: string;
 };
@@ -133,18 +124,18 @@ export default function MessagesScreen() {
         </View>
         <View style={styles.conversationContent}>
           <View style={styles.conversationTopRow}>
-            <Text style={styles.username} numberOfLines={1}>
+            <Text
+              style={[styles.username, item.hasUnread && styles.usernameUnread]}
+              numberOfLines={1}>
               {item.otherUsername}
             </Text>
             <Text style={styles.timeAgo}>{timeAgo(item.lastMessageAt)}</Text>
           </View>
-          <View style={styles.previewRow}>
-            <Text style={styles.preview} numberOfLines={1}>
-              {item.lastMessage}
-            </Text>
-            {item.hasUnread && <View style={styles.unreadDot} />}
-          </View>
+          <Text style={styles.preview} numberOfLines={1}>
+            {item.lastMessage}
+          </Text>
         </View>
+        {item.hasUnread && <View style={styles.unreadDot} />}
       </TouchableOpacity>
     );
   };
@@ -152,27 +143,26 @@ export default function MessagesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+          <Ionicons name="arrow-back" size={22} color="#F5F5F5" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('New message')} activeOpacity={0.7}>
-          <Ionicons name="create-outline" size={24} color={COLORS.accent} />
+        <Text style={styles.headerTitle}>Messages</Text>
+        <TouchableOpacity onPress={() => console.log('New message')} activeOpacity={0.7} style={styles.headerSideRight}>
+          <Ionicons name="create-outline" size={22} color="#1D9E75" />
         </TouchableOpacity>
       </View>
-      <Text style={styles.title}>Messages</Text>
 
       {!loading && conversations.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="chatbubbles-outline" size={48} color={COLORS.accent} />
+          <Ionicons name="chatbubbles-outline" size={64} color="#1D9E75" style={styles.emptyIcon} />
           <Text style={styles.emptyTitle}>No messages yet</Text>
-          <Text style={styles.emptySubtitle}>Find gems and connect with explorers!</Text>
+          <Text style={styles.emptySubtitle}>Connect with other explorers!</Text>
         </View>
       ) : (
         <FlatList
           data={conversations}
           keyExtractor={(item) => item.otherUserId}
           renderItem={renderConversation}
-          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -183,45 +173,49 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#0D0D0D',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  title: {
-    fontSize: 24,
+  headerSide: {
+    width: 40,
+  },
+  headerSideRight: {
+    width: 40,
+    alignItems: 'flex-end',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 17,
     fontWeight: '600',
-    color: COLORS.text,
-    paddingHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#222222',
     gap: 12,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.accent,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1D9E75',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: COLORS.text,
+    color: '#FFFFFF',
   },
   conversationContent: {
     flex: 1,
@@ -231,49 +225,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 4,
+    gap: 8,
   },
   username: {
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.text,
-    marginRight: 8,
+    color: '#FFFFFF',
+  },
+  usernameUnread: {
+    fontWeight: '700',
   },
   timeAgo: {
     fontSize: 12,
-    color: COLORS.textDim,
-  },
-  previewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    color: '#555555',
   },
   preview: {
-    flex: 1,
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: '#888888',
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.unread,
+    backgroundColor: '#1D9E75',
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 8,
+    padding: 60,
+  },
+  emptyIcon: {
+    marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 16,
-    color: COLORS.textMuted,
-    marginTop: 8,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: COLORS.textDim,
+    color: '#888888',
+    marginTop: 6,
     textAlign: 'center',
   },
 });

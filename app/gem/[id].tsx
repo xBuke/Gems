@@ -21,6 +21,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const COLORS = {
+  bg: '#0D0D0D',
+  card: '#141414',
+  accent: '#1D9E75',
+  accentSubtle: '#0F3D25',
+  accentMuted: '#A8D5BA',
+  text: '#FFFFFF',
+  textMuted: '#888888',
+  textDim: '#555555',
+  border: '#222222',
+  danger: '#FF4444',
+  commentBlue: '#185FA5',
+  imagePlaceholder: '#1A5C3A',
+};
+
 type Gem = {
   id: string;
   title: string;
@@ -46,13 +61,16 @@ type CommentLikeState = {
   likedByMe: boolean;
 };
 
-const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  Beach: 'sunny-outline',
-  Graffiti: 'color-palette-outline',
-  Viewpoint: 'eye-outline',
-  Food: 'restaurant-outline',
-  Skate: 'bicycle-outline',
-  Nature: 'leaf-outline',
+const formatTimeAgo = (dateStr: string) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
 };
 
 export default function GemDetailScreen() {
@@ -63,6 +81,7 @@ export default function GemDetailScreen() {
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(true);
   const [visitVerified, setVisitVerified] = useState(false);
+  const [visitCount, setVisitCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [commentLikes, setCommentLikes] = useState<Record<string, CommentLikeState>>({});
@@ -70,6 +89,17 @@ export default function GemDetailScreen() {
   const [locationName, setLocationName] = useState<string | null>(null);
 
   const gemId = Array.isArray(id) ? id[0] : id;
+
+  const fetchVisitCount = async () => {
+    if (!gemId) return;
+
+    const { count } = await supabase
+      .from('gem_visits')
+      .select('*', { count: 'exact', head: true })
+      .eq('gem_id', gemId);
+
+    setVisitCount(count ?? 0);
+  };
 
   const fetchCommentLikes = async (commentIds: string[]) => {
     if (commentIds.length === 0) {
@@ -113,17 +143,13 @@ export default function GemDetailScreen() {
     if (!id) return;
 
     const fetchGem = async () => {
-      const gemId = Array.isArray(id) ? id[0] : id;
-      console.log('Fetching gem with id:', gemId);
+      const resolvedGemId = Array.isArray(id) ? id[0] : id;
 
       const { data, error } = await supabase
         .from('gems')
         .select('*, profiles!gems_user_id_fkey(username)')
-        .eq('id', gemId)
+        .eq('id', resolvedGemId)
         .single();
-
-      console.log('Gem data:', data);
-      console.log('Gem error:', error);
 
       if (data) {
         setGem(data);
@@ -138,7 +164,10 @@ export default function GemDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (gemId) fetchComments();
+    if (gemId) {
+      fetchComments();
+      fetchVisitCount();
+    }
   }, [gemId]);
 
   useEffect(() => {
@@ -186,9 +215,7 @@ export default function GemDetailScreen() {
           'Unknown location';
         setLocationName(name);
       } catch {
-        setLocationName(
-          `${gem.latitude.toFixed(4)}, ${gem.longitude.toFixed(4)}`,
-        );
+        setLocationName(`${gem.latitude.toFixed(4)}, ${gem.longitude.toFixed(4)}`);
       }
     };
 
@@ -218,10 +245,10 @@ export default function GemDetailScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const gemId = Array.isArray(id) ? id[0] : id;
+    const resolvedGemId = Array.isArray(id) ? id[0] : id;
     const { error } = await supabase
       .from('comments')
-      .insert({ gem_id: gemId, user_id: user.id, content: text });
+      .insert({ gem_id: resolvedGemId, user_id: user.id, content: text });
 
     if (!error) {
       if (gem && user.id !== gem.user_id) {
@@ -229,7 +256,7 @@ export default function GemDetailScreen() {
           user_id: gem.user_id,
           sender_id: user.id,
           type: 'comment',
-          gem_id: gemId,
+          gem_id: resolvedGemId,
           read: false,
         });
       }
@@ -248,11 +275,7 @@ export default function GemDetailScreen() {
     if (!user) return;
 
     if (isLiked) {
-      await supabase
-        .from('gem_likes')
-        .delete()
-        .eq('gem_id', gemId)
-        .eq('user_id', user.id);
+      await supabase.from('gem_likes').delete().eq('gem_id', gemId).eq('user_id', user.id);
       setIsLiked(false);
       setLikeCount((prev) => prev - 1);
     } else {
@@ -350,7 +373,7 @@ export default function GemDetailScreen() {
       location.coords.latitude,
       location.coords.longitude,
       gem.latitude,
-      gem.longitude
+      gem.longitude,
     );
 
     if (distance > 1000) {
@@ -358,15 +381,15 @@ export default function GemDetailScreen() {
       return;
     }
 
-    const gemId = Array.isArray(id) ? id[0] : id;
+    const resolvedGemId = Array.isArray(id) ? id[0] : id;
     const { error } = await supabase.from('gem_visits').upsert(
       {
-        gem_id: gemId,
+        gem_id: resolvedGemId,
         user_id: user.id,
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       },
-      { onConflict: 'gem_id,user_id' }
+      { onConflict: 'gem_id,user_id' },
     );
 
     if (!error) {
@@ -374,33 +397,34 @@ export default function GemDetailScreen() {
         user_id: gem.user_id,
         sender_id: user.id,
         type: 'visit',
-        gem_id: gemId,
+        gem_id: resolvedGemId,
         read: false,
       });
       setVisitVerified(true);
+      fetchVisitCount();
     }
   };
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0D0D0D', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color="#1D9E75" size="large" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator color={COLORS.accent} size="large" />
       </View>
     );
   }
 
   if (!gem) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0D0D0D', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: '#F5F5F5' }}>Gem not found</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Gem not found</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ color: '#1D9E75', marginTop: 12 }}>Go back</Text>
+          <Text style={styles.backLink}>Go back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const categoryIcon = CATEGORY_ICONS[gem.category] ?? 'location-outline';
+  const username = gem.profiles?.username ?? 'unknown';
 
   return (
     <KeyboardAvoidingView
@@ -413,101 +437,115 @@ export default function GemDetailScreen() {
             <Image source={{ uri: gem.image_url }} style={styles.heroImage} resizeMode="cover" />
           ) : (
             <View style={styles.heroPlaceholder}>
-              <Ionicons name={categoryIcon} size={64} color="#1D9E75" />
+              <Ionicons name="location-outline" size={64} color={COLORS.accent} />
             </View>
           )}
 
-          <View style={styles.badgeRow}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{gem.category}</Text>
-            </View>
-            {gem.verified && (
-              <View style={styles.verifiedBadge}>
-                <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
+          <View style={styles.heroOverlay}>
+            <View style={styles.badgeRow}>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>{gem.category}</Text>
               </View>
-            )}
+              {gem.verified && (
+                <View style={styles.verifiedBadge}>
+                  <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.heroTitle}>{gem.title}</Text>
           </View>
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.title}>{gem.title}</Text>
-
-          {gem.profiles?.username && (
+          <View style={styles.authorRow}>
             <TouchableOpacity
-              style={styles.authorRow}
+              style={styles.authorLeft}
               onPress={() => router.push('/profile?userId=' + gem.user_id)}
               activeOpacity={0.7}>
               <View style={styles.authorAvatar}>
-                <Text style={styles.authorAvatarText}>
-                  {gem.profiles.username.charAt(0).toUpperCase()}
-                </Text>
+                <Text style={styles.authorAvatarText}>{username.charAt(0).toUpperCase()}</Text>
               </View>
-              <Text style={styles.authorName}>{gem.profiles.username}</Text>
+              <Text style={styles.authorName}>@{username}</Text>
             </TouchableOpacity>
-          )}
+            <TouchableOpacity style={styles.likeButton} onPress={handleToggleLike} activeOpacity={0.7}>
+              <Ionicons
+                name={isLiked ? 'heart' : 'heart-outline'}
+                size={22}
+                color={isLiked ? COLORS.danger : COLORS.textMuted}
+              />
+              <Text style={[styles.likeCountText, isLiked && styles.likeCountTextActive]}>
+                {likeCount}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color="#888888" />
+            <Ionicons name="location-outline" size={14} color={COLORS.accent} />
             <Text style={styles.locationText}>
               {locationName ?? `${gem.latitude.toFixed(4)}, ${gem.longitude.toFixed(4)}`}
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.likeRow} onPress={handleToggleLike} activeOpacity={0.7}>
-            <Ionicons
-              name={isLiked ? 'heart' : 'heart-outline'}
-              size={24}
-              color={isLiked ? '#FF4444' : '#888888'}
-            />
-            <Text style={[styles.likeCountText, isLiked && styles.likeCountTextActive]}>
-              {likeCount}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Ionicons name="heart" size={16} color={COLORS.danger} />
+              <Text style={styles.statCount}>{likeCount}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="location" size={16} color={COLORS.accent} />
+              <Text style={styles.statCount}>{visitCount}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="chatbubble-outline" size={16} color={COLORS.commentBlue} />
+              <Text style={styles.statCount}>{comments.length}</Text>
+            </View>
+          </View>
 
-          <View style={styles.divider} />
+          {gem.description ? (
+            <Text style={styles.description}>{gem.description}</Text>
+          ) : null}
 
-          <Text style={styles.description}>{gem.description || 'No description provided.'}</Text>
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.navigateButton} onPress={openMaps} activeOpacity={0.8}>
+              <Ionicons name="navigate" size={18} color={COLORS.bg} />
+              <Text style={styles.navigateButtonText}>Navigate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.beenHereButton, visitVerified && styles.beenHereButtonVerified]}
+              onPress={handleBeenHere}
+              disabled={visitVerified}
+              activeOpacity={0.8}>
+              <Text
+                style={[
+                  styles.beenHereButtonText,
+                  visitVerified && styles.beenHereButtonTextVerified,
+                ]}>
+                {visitVerified ? 'Visit verified! ✓' : "I've been here"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.navigateButton} onPress={openMaps} activeOpacity={0.8}>
-            <Ionicons name="navigate" size={20} color="#0D0D0D" />
-            <Text style={styles.navigateButtonText}>Navigate</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.beenHereButton, visitVerified && styles.beenHereButtonVerified]}
-            onPress={handleBeenHere}
-            disabled={visitVerified}
-            activeOpacity={0.8}>
-            <Text
-              style={[
-                styles.beenHereButtonText,
-                visitVerified && styles.beenHereButtonTextVerified,
-              ]}>
-              {visitVerified ? 'Visit verified! ✓' : "I've been here"}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.commentsTitle}>Comments</Text>
+          <Text style={styles.commentsTitle}>Comments ({comments.length})</Text>
           {comments.length === 0 ? (
             <Text style={styles.emptyComments}>Be the first to comment!</Text>
           ) : (
             comments.map((comment) => {
-              const username = comment.profiles?.username ?? 'Anonymous';
+              const commentUsername = comment.profiles?.username ?? 'Anonymous';
               const likeState = commentLikes[comment.id] ?? { count: 0, likedByMe: false };
               return (
-                <View key={comment.id} style={styles.commentItem}>
+                <View key={comment.id} style={styles.commentCard}>
                   <View style={styles.commentAvatar}>
                     <Text style={styles.commentAvatarText}>
-                      {username.charAt(0).toUpperCase()}
+                      {commentUsername.charAt(0).toUpperCase()}
                     </Text>
                   </View>
-                  <View style={styles.commentBubble}>
-                    <Text style={styles.commentUsername}>{username}</Text>
+                  <View style={styles.commentBody}>
+                    <View style={styles.commentHeader}>
+                      <Text style={styles.commentUsername}>{commentUsername}</Text>
+                      <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
+                    </View>
                     <Text style={styles.commentContent}>{comment.content}</Text>
-                    <View style={styles.commentFooter}>
-                      <Text style={styles.commentTime}>
-                        {new Date(comment.created_at).toLocaleDateString()}
-                      </Text>
+                    <View style={styles.commentLikeWrap}>
                       <TouchableOpacity
                         style={styles.commentLikeRow}
                         onPress={() => handleToggleCommentLike(comment.id)}
@@ -515,11 +553,9 @@ export default function GemDetailScreen() {
                         <Ionicons
                           name={likeState.likedByMe ? 'heart' : 'heart-outline'}
                           size={14}
-                          color={likeState.likedByMe ? '#FF4444' : '#555555'}
+                          color={COLORS.textDim}
                         />
-                        {likeState.count > 0 && (
-                          <Text style={styles.commentLikeCount}>{likeState.count}</Text>
-                        )}
+                        <Text style={styles.commentLikeCount}>{likeState.count}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -532,19 +568,19 @@ export default function GemDetailScreen() {
 
       <SafeAreaView style={styles.header} edges={['top']} pointerEvents="box-none">
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerRight}>
           {isOwner && (
             <TouchableOpacity style={styles.headerButton} onPress={confirmDelete} activeOpacity={0.8}>
-              <Ionicons name="trash-outline" size={22} color="#FF4444" />
+              <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => console.log('Share gem', gem.id)}
             activeOpacity={0.8}>
-            <Ionicons name="share-outline" size={24} color="#FFFFFF" />
+            <Ionicons name="share-outline" size={18} color={COLORS.text} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -553,12 +589,12 @@ export default function GemDetailScreen() {
         <TextInput
           style={styles.commentInput}
           placeholder="Add a comment..."
-          placeholderTextColor="#888888"
+          placeholderTextColor={COLORS.textMuted}
           value={commentText}
           onChangeText={setCommentText}
         />
         <TouchableOpacity style={styles.sendButton} onPress={handleSendComment} activeOpacity={0.8}>
-          <Ionicons name="send" size={18} color="#0D0D0D" />
+          <Ionicons name="send" size={18} color={COLORS.bg} />
         </TouchableOpacity>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -568,38 +604,22 @@ export default function GemDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: COLORS.bg,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: COLORS.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorText: {
-    color: '#F5F5F5',
+    color: COLORS.text,
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 20,
   },
-  notFoundBackButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#141414',
-    borderWidth: 0.5,
-    borderColor: '#222222',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  notFoundBackText: {
-    color: '#F5F5F5',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   backLink: {
-    color: '#1D9E75',
+    color: COLORS.accent,
     fontSize: 14,
   },
   scrollView: {
@@ -612,6 +632,7 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 8,
   },
@@ -621,18 +642,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(20, 20, 20, 0.85)',
-    borderWidth: 0.5,
-    borderColor: '#222222',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   hero: {
-    height: 280,
-    backgroundColor: '#1A1A1A',
+    height: 320,
+    backgroundColor: COLORS.imagePlaceholder,
+    position: 'relative',
   },
   heroImage: {
     width: '100%',
@@ -642,26 +662,38 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: COLORS.imagePlaceholder,
+  },
+  heroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    padding: 16,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
   },
   categoryBadge: {
-    backgroundColor: '#0F3D25',
+    backgroundColor: COLORS.accentSubtle,
     borderWidth: 0.5,
-    borderColor: '#1D9E75',
+    borderColor: COLORS.accent,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 20,
   },
-  badgeRow: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    flexDirection: 'row',
-    gap: 8,
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.accent,
   },
   verifiedBadge: {
-    backgroundColor: '#0F3D25',
+    backgroundColor: COLORS.accentSubtle,
     borderWidth: 0.5,
-    borderColor: '#1D9E75',
+    borderColor: COLORS.accent,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 20,
@@ -669,176 +701,197 @@ const styles = StyleSheet.create({
   verifiedBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#1D9E75',
+    color: COLORS.accent,
   },
-  categoryBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#1D9E75',
+  heroTitle: {
+    color: COLORS.text,
+    fontSize: 22,
+    fontWeight: '700',
   },
   content: {
-    paddingHorizontal: 20,
+    padding: 16,
     paddingBottom: 100,
-  },
-  title: {
-    color: '#F5F5F5',
-    fontSize: 22,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
   },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
+  authorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
   authorAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1D9E75',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   authorAvatarText: {
-    color: '#0D0D0D',
-    fontSize: 11,
-    fontWeight: '600',
+    color: COLORS.bg,
+    fontSize: 14,
+    fontWeight: '700',
   },
   authorName: {
-    color: '#888888',
-    fontSize: 13,
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  likeCountText: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  likeCountTextActive: {
+    color: COLORS.text,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 16,
+    gap: 6,
+    marginBottom: 4,
   },
   locationText: {
-    color: '#888888',
+    color: COLORS.textMuted,
     fontSize: 13,
   },
-  likeRow: {
+  statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
+    justifyContent: 'space-around',
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 12,
   },
-  likeCountText: {
-    color: '#888888',
-    fontSize: 16,
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statCount: {
+    color: COLORS.text,
+    fontSize: 14,
     fontWeight: '600',
   },
-  likeCountTextActive: {
-    color: '#FFFFFF',
-  },
-  divider: {
-    height: 0.5,
-    backgroundColor: '#222222',
-    marginBottom: 16,
-  },
   description: {
-    color: '#888888',
+    color: COLORS.text,
     fontSize: 14,
     lineHeight: 22,
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
   },
   navigateButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#1D9E75',
+    backgroundColor: COLORS.accent,
     borderRadius: 10,
     paddingVertical: 14,
-    marginBottom: 12,
   },
   navigateButtonText: {
-    color: '#0D0D0D',
+    color: COLORS.bg,
     fontSize: 14,
     fontWeight: '600',
   },
   beenHereButton: {
-    backgroundColor: '#141414',
-    borderWidth: 1,
-    borderColor: '#1D9E75',
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.accent,
     borderRadius: 10,
-    padding: 14,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'center',
   },
   beenHereButtonVerified: {
-    borderColor: '#1D9E75',
     opacity: 0.7,
   },
   beenHereButtonText: {
-    color: '#1D9E75',
+    color: COLORS.accent,
     fontSize: 14,
     fontWeight: '600',
   },
   beenHereButtonTextVerified: {
-    color: '#1D9E75',
+    color: COLORS.accent,
   },
   commentsTitle: {
-    color: '#F5F5F5',
+    color: COLORS.text,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
   },
   emptyComments: {
-    color: '#888888',
+    color: COLORS.textMuted,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 16,
   },
-  commentItem: {
+  commentCard: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 12,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
   },
   commentAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1D9E75',
+    backgroundColor: COLORS.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   commentAvatarText: {
-    color: '#0D0D0D',
+    color: COLORS.bg,
     fontSize: 14,
     fontWeight: '600',
   },
-  commentBubble: {
+  commentBody: {
     flex: 1,
-    backgroundColor: '#141414',
-    borderWidth: 0.5,
-    borderColor: '#222222',
-    borderRadius: 12,
-    padding: 12,
   },
-  commentUsername: {
-    color: '#F5F5F5',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  commentContent: {
-    color: '#888888',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  commentFooter: {
+  commentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
+    gap: 8,
+  },
+  commentUsername: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
   },
   commentTime: {
-    color: '#555555',
+    color: COLORS.textDim,
     fontSize: 11,
+  },
+  commentContent: {
+    color: COLORS.accentMuted,
+    fontSize: 13,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  commentLikeWrap: {
+    alignItems: 'flex-end',
+    marginTop: 6,
   },
   commentLikeRow: {
     flexDirection: 'row',
@@ -846,36 +899,35 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   commentLikeCount: {
-    color: '#555555',
+    color: COLORS.textDim,
     fontSize: 11,
   },
   commentInputBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    backgroundColor: '#0D0D0D',
+    paddingVertical: 12,
+    backgroundColor: COLORS.bg,
     borderTopWidth: 0.5,
-    borderTopColor: '#222222',
-    gap: 8,
+    borderTopColor: COLORS.border,
+    gap: 10,
   },
   commentInput: {
     flex: 1,
-    backgroundColor: '#141414',
+    backgroundColor: COLORS.card,
     borderWidth: 0.5,
-    borderColor: '#222222',
+    borderColor: COLORS.border,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#F5F5F5',
+    color: COLORS.text,
   },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1D9E75',
+    backgroundColor: COLORS.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },

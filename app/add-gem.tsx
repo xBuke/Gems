@@ -7,16 +7,17 @@ import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    ActionSheetIOS,
-    Alert,
-    Image,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActionSheetIOS,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,12 +26,29 @@ const COLORS = {
   card: '#141414',
   accent: '#1D9E75',
   accentSubtle: '#0F3D25',
-  text: '#F5F5F5',
+  accentMuted: '#A8D5BA',
+  text: '#FFFFFF',
+  textLight: '#F5F5F5',
   textMuted: '#888888',
+  textDim: '#555555',
+  placeholder: '#444444',
   border: '#222222',
+  borderDashed: '#333333',
 };
 
 const CATEGORIES = ['Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
+
+const CATEGORY_CONFIG: Record<
+  string,
+  { icon: keyof typeof Ionicons.glyphMap; color: string }
+> = {
+  Beach: { icon: 'water', color: '#185FA5' },
+  Graffiti: { icon: 'color-palette', color: '#D85A30' },
+  Viewpoint: { icon: 'eye', color: '#BA7517' },
+  Food: { icon: 'restaurant', color: '#1D9E75' },
+  Skate: { icon: 'bicycle', color: '#534AB7' },
+  Nature: { icon: 'leaf', color: '#27500A' },
+};
 
 type LocationChoice = 'here' | 'else';
 
@@ -44,7 +62,7 @@ const uploadImage = async (uri: string) => {
     type: 'image/jpeg',
   } as any);
 
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('gem-images')
     .upload(fileName, formData, {
       contentType: 'multipart/form-data',
@@ -55,9 +73,7 @@ const uploadImage = async (uri: string) => {
     return null;
   }
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('gem-images')
-    .getPublicUrl(fileName);
+  const { data: { publicUrl } } = supabase.storage.from('gem-images').getPublicUrl(fileName);
 
   return publicUrl;
 };
@@ -82,6 +98,7 @@ export default function AddGemScreen() {
   const [locationDetected, setLocationDetected] = useState(false);
   const [locationFromMap, setLocationFromMap] = useState(false);
   const [locationChoice, setLocationChoice] = useState<LocationChoice | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (hasMapLocation) {
@@ -219,31 +236,45 @@ export default function AddGemScreen() {
       return;
     }
 
-    const location = await Location.getCurrentPositionAsync({});
-    const distance = getDistance(
-      location.coords.latitude,
-      location.coords.longitude,
-      latitude,
-      longitude
-    );
+    setSubmitting(true);
+    try {
+      const location = await Location.getCurrentPositionAsync({});
+      const distance = getDistance(
+        location.coords.latitude,
+        location.coords.longitude,
+        latitude,
+        longitude,
+      );
 
-    if (distance > 500) {
-      Alert.alert('You seem far from this location. Pin here anyway?', undefined, [
-        { text: 'No', style: 'cancel' },
-        { text: 'Yes', onPress: () => insertGem(false) },
-      ]);
-    } else {
-      await insertGem(true);
+      if (distance > 500) {
+        Alert.alert('You seem far from this location. Pin here anyway?', undefined, [
+          { text: 'No', style: 'cancel' },
+          { text: 'Yes', onPress: () => insertGem(false) },
+        ]);
+      } else {
+        await insertGem(true);
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  const locationStatusText =
+    locationDetected && latitude != null && longitude != null
+      ? locationFromMap
+        ? `Location set from map · ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+        : `Using your current location · ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+      : 'Location not detected yet';
+
+  const showForm = hasMapLocation || locationChoice === 'here';
+
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color={COLORS.textLight} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add a Gem</Text>
+        <Text style={styles.headerTitle}>Drop a Gem</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -253,107 +284,112 @@ export default function AddGemScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
         {!hasMapLocation && (
-          <>
-            <Text style={styles.label}>Where are you dropping this gem?</Text>
+          <View style={styles.locationRow}>
             <TouchableOpacity
-              style={[
-                styles.locationCard,
-                locationChoice === 'here' && styles.locationCardSelected,
-              ]}
+              style={[styles.locationCard, locationChoice === 'here' && styles.locationCardSelected]}
               onPress={handleSelectHere}
               activeOpacity={0.8}>
-              <Ionicons name="locate" size={24} color={COLORS.accent} />
-              <View style={styles.locationCardText}>
-                <Text style={styles.locationCardTitle}>Drop gem at my location</Text>
-                <Text style={styles.locationCardSubtitle}>Use your current GPS location</Text>
-              </View>
+              <Ionicons name="locate" size={22} color={COLORS.accent} style={styles.locationCardIcon} />
+              <Text style={styles.locationCardTitle}>I'm here now</Text>
+              <Text style={styles.locationCardSubtitle}>Use my GPS</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.locationCard,
-                locationChoice === 'else' && styles.locationCardSelectedElse,
-              ]}
+              style={[styles.locationCard, locationChoice === 'else' && styles.locationCardSelected]}
               onPress={handleSelectElse}
               activeOpacity={0.8}>
-              <Ionicons name="map" size={24} color={COLORS.textMuted} />
-              <View style={styles.locationCardText}>
-                <Text style={styles.locationCardTitle}>Drop gem somewhere else</Text>
-                <Text style={styles.locationCardSubtitle}>Pick a location on the map</Text>
-              </View>
+              <Ionicons
+                name="map-outline"
+                size={22}
+                color={COLORS.textMuted}
+                style={styles.locationCardIcon}
+              />
+              <Text style={styles.locationCardTitle}>Pick on map</Text>
+              <Text style={styles.locationCardSubtitle}>Choose location</Text>
             </TouchableOpacity>
-          </>
+          </View>
         )}
 
-        {(hasMapLocation || locationChoice === 'here') && (
+        {showForm && (
           <>
-        <TouchableOpacity style={styles.imagePicker} onPress={handleImagePress} activeOpacity={0.8}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.selectedImage} resizeMode="cover" />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="camera" size={36} color={COLORS.textMuted} />
-              <Text style={styles.imagePlaceholderText}>Tap to add photo</Text>
+            <TouchableOpacity style={styles.imagePicker} onPress={handleImagePress} activeOpacity={0.8}>
+              {imageUri ? (
+                <>
+                  <Image source={{ uri: imageUri }} style={styles.selectedImage} resizeMode="cover" />
+                  <TouchableOpacity
+                    style={styles.imageEditButton}
+                    onPress={handleImagePress}
+                    activeOpacity={0.8}>
+                    <Ionicons name="camera" size={16} color={COLORS.text} />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Ionicons name="camera" size={40} color={COLORS.accent} />
+                  <Text style={styles.imagePlaceholderTitle}>Add a photo</Text>
+                  <Text style={styles.imagePlaceholderSubtitle}>
+                    Tap to choose from library or camera
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.formSection}>
+              <Text style={styles.fieldLabel}>Gem name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Give your gem a name..."
+                placeholderTextColor={COLORS.placeholder}
+                value={name}
+                onChangeText={setName}
+              />
+
+              <Text style={styles.fieldLabel}>What makes this place special?</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Share what makes this spot worth visiting..."
+                placeholderTextColor={COLORS.placeholder}
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                textAlignVertical="top"
+              />
+
+              <Text style={styles.fieldLabel}>Category</Text>
+              <View style={styles.categoryGrid}>
+                {CATEGORIES.map((category) => {
+                  const isSelected = selectedCategory === category;
+                  const config = CATEGORY_CONFIG[category];
+                  return (
+                    <View key={category} style={styles.categoryItemWrap}>
+                      <TouchableOpacity
+                        style={[styles.categoryItem, isSelected && styles.categoryItemSelected]}
+                        onPress={() => setSelectedCategory(category)}
+                        activeOpacity={0.7}>
+                        <Ionicons name={config.icon} size={22} color={config.color} />
+                        <Text style={styles.categoryName}>{category}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
-          )}
-        </TouchableOpacity>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Give your gem a name..."
-          placeholderTextColor={COLORS.textMuted}
-          value={name}
-          onChangeText={setName}
-        />
+            <View style={styles.locationStatus}>
+              <Ionicons name="location" size={16} color={COLORS.accent} />
+              <Text style={styles.locationStatusText}>{locationStatusText}</Text>
+            </View>
 
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="What makes this place special?"
-          placeholderTextColor={COLORS.textMuted}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          textAlignVertical="top"
-        />
-
-        <Text style={styles.label}>Category</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryRow}>
-          {CATEGORIES.map((category) => {
-            const isSelected = selectedCategory === category;
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[styles.categoryPill, isSelected && styles.categoryPillSelected]}
-                onPress={() => setSelectedCategory(category)}
-                activeOpacity={0.7}>
-                <Text style={[styles.categoryText, isSelected && styles.categoryTextSelected]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <Text style={styles.label}>Location</Text>
-        {locationDetected && (
-          <>
-            <Text
-              style={[styles.locationText, !locationFromMap && styles.locationTextOnly]}>
-              {locationFromMap ? '📍 Location set from map' : '📍 Using your current location'}
-            </Text>
-            {locationFromMap && latitude != null && longitude != null && (
-              <Text style={styles.locationPreview}>
-                {latitude.toFixed(2)}, {longitude.toFixed(2)}
-              </Text>
-            )}
-          </>
-        )}
-
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8}>
-          <Text style={styles.submitButtonText}>Drop this Gem 📍</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmit}
+              disabled={submitting}
+              activeOpacity={0.8}>
+              {submitting ? (
+                <ActivityIndicator color={COLORS.text} />
+              ) : (
+                <Text style={styles.submitButtonText}>Drop this Gem</Text>
+              )}
+            </TouchableOpacity>
           </>
         )}
       </ScrollView>
@@ -370,144 +406,180 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: COLORS.bg,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  backButton: {
+    width: 22,
+  },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: COLORS.text,
   },
   headerSpacer: {
-    width: 24,
+    width: 22,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
     paddingBottom: 32,
   },
-  imagePicker: {
-    height: 200,
+  locationRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    gap: 10,
+  },
+  locationCard: {
+    flex: 1,
     backgroundColor: COLORS.card,
-    borderRadius: 12,
     borderWidth: 0.5,
     borderColor: COLORS.border,
-    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 14,
+  },
+  locationCardSelected: {
+    borderColor: COLORS.accent,
+  },
+  locationCardIcon: {
+    marginBottom: 6,
+  },
+  locationCardTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  locationCardSubtitle: {
+    fontSize: 11,
+    color: COLORS.textDim,
+  },
+  imagePicker: {
+    height: 220,
+    borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: COLORS.card,
+    borderWidth: 1.5,
+    borderColor: COLORS.borderDashed,
+    borderStyle: 'dashed',
   },
   imagePlaceholder: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
   },
-  imagePlaceholderText: {
-    fontSize: 14,
-    color: COLORS.textMuted,
+  imagePlaceholderTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.text,
+    marginTop: 8,
+  },
+  imagePlaceholderSubtitle: {
+    fontSize: 12,
+    color: COLORS.textDim,
+    marginTop: 4,
   },
   selectedImage: {
     width: '100%',
     height: '100%',
+  },
+  imageEditButton: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formSection: {
+    marginHorizontal: 16,
+  },
+  fieldLabel: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
     backgroundColor: COLORS.card,
     borderWidth: 0.5,
     borderColor: COLORS.border,
     borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 14,
-    color: COLORS.text,
+    padding: 14,
+    marginBottom: 16,
+    fontSize: 15,
+    color: COLORS.textLight,
   },
   textArea: {
-    height: 80,
+    height: 100,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  locationCard: {
+  categoryGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+    marginBottom: 16,
+  },
+  categoryItemWrap: {
+    width: '33.333%',
+    padding: 4,
+  },
+  categoryItem: {
     backgroundColor: COLORS.card,
     borderWidth: 0.5,
     borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  locationCardSelected: {
-    borderColor: COLORS.accent,
-  },
-  locationCardSelectedElse: {
-    borderColor: COLORS.border,
-  },
-  locationCardText: {
-    flex: 1,
-    gap: 2,
-  },
-  locationCardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  locationCardSubtitle: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-  categoryRow: {
-    gap: 8,
-    marginBottom: 20,
-  },
-  categoryPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 0.5,
-    borderColor: COLORS.accent,
+  categoryItemSelected: {
     backgroundColor: COLORS.accentSubtle,
-  },
-  categoryPillSelected: {
-    backgroundColor: COLORS.accent,
     borderColor: COLORS.accent,
   },
-  categoryText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.accent,
-  },
-  categoryTextSelected: {
-    color: COLORS.bg,
-    fontWeight: '600',
-  },
-  locationText: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    marginBottom: 8,
-  },
-  locationTextOnly: {
-    marginBottom: 24,
-  },
-  locationPreview: {
+  categoryName: {
+    color: COLORS.text,
     fontSize: 12,
-    color: COLORS.textMuted,
-    marginBottom: 24,
+    marginTop: 4,
+  },
+  locationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  locationStatusText: {
+    flex: 1,
+    color: COLORS.accentMuted,
+    fontSize: 13,
   },
   submitButton: {
+    marginHorizontal: 16,
     backgroundColor: COLORS.accent,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
   },
   submitButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.bg,
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
   },
 });

@@ -5,8 +5,20 @@ import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Callout, MapType, Marker } from 'react-native-maps';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import MapView, { MapType, Marker } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const COLORS = {
+  bg: '#0D0D0D',
+  card: '#141414',
+  accent: '#1D9E75',
+  text: '#FFFFFF',
+  textLight: '#F5F5F5',
+  textMuted: '#888888',
+  border: '#222222',
+  overlay: 'rgba(13, 13, 13, 0.85)',
+  cancelBg: '#1A1A1A',
+};
 
 const MAP_TYPES: { type: MapType; label: string }[] = [
   { type: 'standard', label: 'Street' },
@@ -52,11 +64,12 @@ export default function MapScreen() {
   const { placeMode } = useLocalSearchParams<{ placeMode?: string }>();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
-  const [mapTypeIndex, setMapTypeIndex] = useState(0);
+  const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [placingMode, setPlacingMode] = useState(false);
   const [tapLocation, setTapLocation] = useState<TapLocation | null>(null);
+  const [tapLocationName, setTapLocationName] = useState<string | null>(null);
 
   useEffect(() => {
     if (placeMode === 'true') {
@@ -66,10 +79,7 @@ export default function MapScreen() {
 
   useEffect(() => {
     const fetchGems = async () => {
-      const { data, error } = await supabase
-        .from('gems')
-        .select('*')
-        .eq('is_private', false);
+      const { data } = await supabase.from('gems').select('*').eq('is_private', false);
       if (data) setGems(data);
     };
     fetchGems();
@@ -78,6 +88,33 @@ export default function MapScreen() {
   useEffect(() => {
     Location.requestForegroundPermissionsAsync();
   }, []);
+
+  useEffect(() => {
+    if (!tapLocation) {
+      setTapLocationName(null);
+      return;
+    }
+
+    const fetchLocationName = async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${tapLocation.latitude}&lon=${tapLocation.longitude}&format=json`,
+        );
+        const data = await response.json();
+        const name =
+          data.address?.city ||
+          data.address?.town ||
+          data.address?.village ||
+          data.address?.county ||
+          null;
+        setTapLocationName(name);
+      } catch {
+        setTapLocationName(null);
+      }
+    };
+
+    fetchLocationName();
+  }, [tapLocation]);
 
   const currentMapType = MAP_TYPES[mapTypeIndex];
 
@@ -124,6 +161,12 @@ export default function MapScreen() {
     );
   };
 
+  const tapLocationLabel =
+    tapLocationName ??
+    (tapLocation
+      ? `${tapLocation.latitude.toFixed(4)}, ${tapLocation.longitude.toFixed(4)}`
+      : '');
+
   return (
     <View style={styles.container}>
       <MapView
@@ -132,7 +175,7 @@ export default function MapScreen() {
         initialRegion={INITIAL_REGION}
         mapType={currentMapType.type}
         showsUserLocation
-        showsMyLocationButton
+        showsMyLocationButton={false}
         followsUserLocation={false}
         onPress={
           placingMode ? (e) => setTapLocation(e.nativeEvent.coordinate) : undefined
@@ -143,55 +186,34 @@ export default function MapScreen() {
             coordinate={{ latitude: gem.latitude, longitude: gem.longitude }}
             onPress={() => router.push('/gem/' + gem.id)}>
             <View
-              style={[
-                styles.marker,
-                { backgroundColor: getCategoryColor(gem.category) },
-              ]}>
+              style={[styles.marker, { backgroundColor: getCategoryColor(gem.category) }]}>
               <Text style={styles.markerText}>{gem.category.charAt(0)}</Text>
             </View>
-            <Callout>
-              <View style={styles.callout}>
-                <Text style={styles.calloutTitle}>{gem.title}</Text>
-                <View style={styles.calloutBadge}>
-                  <Text style={styles.calloutBadgeText}>{gem.category}</Text>
-                </View>
-                <Text style={styles.calloutLink}>Tap to view details</Text>
-              </View>
-            </Callout>
           </Marker>
         ))}
         {tapLocation && (
           <Marker coordinate={tapLocation}>
-            <Ionicons name="location" size={40} color="#1D9E75" />
+            <Ionicons name="location" size={48} color={COLORS.accent} />
           </Marker>
         )}
       </MapView>
 
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
-        <Ionicons name="arrow-back" size={24} color="#F5F5F5" />
+        <Ionicons name="arrow-back" size={20} color={COLORS.text} />
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[
-          styles.placeButton,
-          placingMode ? styles.placeButtonActive : styles.placeButtonInactive,
-        ]}
+        style={styles.placeButton}
         onPress={togglePlacingMode}
         activeOpacity={0.8}>
-        <Text
-          style={[
-            styles.placeButtonText,
-            placingMode ? styles.placeButtonTextActive : styles.placeButtonTextInactive,
-          ]}>
-          {placingMode ? '✕ Cancel' : '📍 Place Gem'}
+        <Text style={styles.placeButtonText}>
+          {placingMode ? 'Cancel' : 'Place Gem'}
         </Text>
       </TouchableOpacity>
 
-      <SafeAreaView style={styles.controls} edges={['top']} pointerEvents="box-none">
-        <TouchableOpacity style={styles.layerButton} onPress={cycleMapType} activeOpacity={0.8}>
-          <Text style={styles.layerButtonText}>{currentMapType.label}</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <TouchableOpacity style={styles.layerButton} onPress={cycleMapType} activeOpacity={0.8}>
+        <Text style={styles.layerButtonText}>{currentMapType.label}</Text>
+      </TouchableOpacity>
 
       <ScrollView
         horizontal
@@ -214,19 +236,14 @@ export default function MapScreen() {
         })}
       </ScrollView>
 
-      <TouchableOpacity
-        style={[styles.myLocationButton, { bottom: 16 + insets.bottom }]}
-        onPress={handleMyLocation}
-        activeOpacity={0.8}>
-        <Ionicons name="locate" size={22} color="#1D9E75" />
+      <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocation} activeOpacity={0.8}>
+        <Ionicons name="locate" size={22} color={COLORS.accent} />
       </TouchableOpacity>
 
       {tapLocation && (
-        <View style={[styles.actionSheet, { paddingBottom: 16 + insets.bottom }]}>
+        <View style={[styles.actionSheet, { paddingBottom: 20 + insets.bottom }]}>
           <Text style={styles.actionSheetTitle}>Drop a gem here?</Text>
-          <Text style={styles.actionSheetCoords}>
-            {tapLocation.latitude.toFixed(4)}, {tapLocation.longitude.toFixed(4)}
-          </Text>
+          <Text style={styles.actionSheetLocation}>{tapLocationLabel}</Text>
           <View style={styles.actionSheetButtons}>
             <TouchableOpacity
               style={styles.cancelButton}
@@ -234,10 +251,7 @@ export default function MapScreen() {
               activeOpacity={0.8}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleAddGemHere}
-              activeOpacity={0.8}>
+            <TouchableOpacity style={styles.addButton} onPress={handleAddGemHere} activeOpacity={0.8}>
               <Text style={styles.addButtonText}>Add Gem Here</Text>
             </TouchableOpacity>
           </View>
@@ -252,162 +266,139 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   map: {
-    flex: 1,
-  },
-  controls: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
+    ...StyleSheet.absoluteFillObject,
   },
   backButton: {
     position: 'absolute',
-    top: 60,
+    top: 50,
     left: 16,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#141414',
+    backgroundColor: COLORS.overlay,
     borderWidth: 0.5,
-    borderColor: '#222222',
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeButton: {
-    position: 'absolute',
-    top: 108,
-    left: 16,
-    borderRadius: 10,
-    borderWidth: 0.5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  placeButtonInactive: {
-    backgroundColor: '#141414',
-    borderColor: '#222222',
-  },
-  placeButtonActive: {
-    backgroundColor: '#1A1A1A',
-    borderColor: '#FF4444',
-  },
-  placeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  placeButtonTextInactive: {
-    color: '#888888',
-  },
-  placeButtonTextActive: {
-    color: '#FF4444',
-  },
   layerButton: {
     position: 'absolute',
-    top: 60,
+    top: 50,
     right: 16,
-    backgroundColor: '#141414',
+    backgroundColor: COLORS.overlay,
     borderWidth: 0.5,
-    borderColor: '#222222',
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderColor: COLORS.border,
+    borderRadius: 20,
     paddingVertical: 8,
+    paddingHorizontal: 14,
   },
   layerButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  placeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 130,
+    backgroundColor: COLORS.overlay,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  placeButtonActive: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
+  },
+  placeButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  placeButtonTextActive: {
+    color: COLORS.bg,
   },
   categoryBar: {
     position: 'absolute',
-    top: 110,
+    top: 105,
     left: 0,
     right: 0,
   },
   categoryRow: {
     paddingHorizontal: 16,
-    gap: 8,
   },
   categoryPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    backgroundColor: COLORS.overlay,
     borderWidth: 0.5,
-    borderColor: '#222222',
-    backgroundColor: '#141414',
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginRight: 8,
   },
   categoryPillActive: {
-    backgroundColor: '#1D9E75',
-    borderColor: '#1D9E75',
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
   },
   categoryText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#F5F5F5',
+    color: COLORS.textLight,
   },
   categoryTextActive: {
     fontWeight: '600',
-    color: '#F5F5F5',
+    color: COLORS.bg,
   },
   marker: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: COLORS.text,
     alignItems: 'center',
     justifyContent: 'center',
   },
   markerText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  callout: {
-    padding: 8,
-    minWidth: 140,
-  },
-  calloutTitle: {
-    fontWeight: '700',
-    fontSize: 14,
-    marginBottom: 6,
-  },
-  calloutBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#1D9E75',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginBottom: 6,
-  },
-  calloutBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  calloutLink: {
-    color: '#1D9E75',
+    color: COLORS.text,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  myLocationButton: {
+    position: 'absolute',
+    bottom: 40,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.overlay,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionSheet: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#141414',
+    backgroundColor: COLORS.card,
     borderTopWidth: 0.5,
-    borderTopColor: '#222222',
+    borderTopColor: COLORS.border,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    padding: 16,
+    padding: 20,
   },
   actionSheetTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: COLORS.text,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  actionSheetCoords: {
-    color: '#888888',
-    fontSize: 12,
+  actionSheetLocation: {
+    color: COLORS.textMuted,
+    fontSize: 13,
     marginBottom: 16,
   },
   actionSheetButtons: {
@@ -416,40 +407,28 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: COLORS.cancelBg,
     borderWidth: 0.5,
-    borderColor: '#222222',
+    borderColor: COLORS.border,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#888888',
+    color: COLORS.textMuted,
     fontSize: 14,
     fontWeight: '500',
   },
   addButton: {
     flex: 1,
-    backgroundColor: '#1D9E75',
+    backgroundColor: COLORS.accent,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
   },
   addButtonText: {
-    color: '#0D0D0D',
+    color: COLORS.bg,
     fontSize: 14,
     fontWeight: '600',
-  },
-  myLocationButton: {
-    position: 'absolute',
-    right: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#141414',
-    borderWidth: 0.5,
-    borderColor: '#222222',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

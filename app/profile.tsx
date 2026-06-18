@@ -22,13 +22,13 @@ const COLORS = {
   card: '#141414',
   accent: '#1D9E75',
   accentSubtle: '#0F3D25',
-  text: '#F5F5F5',
+  text: '#FFFFFF',
+  textLight: '#F5F5F5',
   textMuted: '#888888',
+  textDim: '#555555',
   border: '#222222',
   danger: '#FF4444',
-  dangerBg: '#1A1A1A',
   imagePlaceholder: '#1A5C3A',
-  avatarText: '#0D0D0D',
 };
 
 type Profile = {
@@ -314,37 +314,39 @@ export default function ProfileScreen() {
           : undefined
       }
       activeOpacity={0.8}>
-      {gem.image_url ? (
-        <Image source={{ uri: gem.image_url }} style={styles.gemImage} resizeMode="cover" />
-      ) : (
-        <View style={styles.gemImagePlaceholder}>
-          <Ionicons name="location" size={24} color={COLORS.accent} />
+      <View style={styles.gemImageArea}>
+        {gem.image_url ? (
+          <Image source={{ uri: gem.image_url }} style={styles.gemImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.gemImagePlaceholder}>
+            <Ionicons name="location" size={28} color={COLORS.accent} />
+          </View>
+        )}
+        <View style={styles.gemOverlay}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>{gem.category}</Text>
+          </View>
+          <Text style={styles.gemTitle} numberOfLines={2}>
+            {gem.title}
+          </Text>
         </View>
-      )}
-      <View style={styles.gemCardFooter}>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>{gem.category}</Text>
-        </View>
-        <Text style={styles.gemTitle} numberOfLines={2}>
-          {gem.title}
-        </Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+          <Ionicons name="arrow-back" size={22} color={COLORS.textLight} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isOwnProfile ? 'Profile' : username}</Text>
+        <Text style={styles.headerTitle}>Profile</Text>
         {isOwnProfile ? (
-          <TouchableOpacity onPress={handleSettings} activeOpacity={0.7}>
-            <Ionicons name="settings-outline" size={22} color={COLORS.text} />
+          <TouchableOpacity onPress={handleSettings} activeOpacity={0.7} style={styles.headerSide}>
+            <Ionicons name="settings-outline" size={22} color={COLORS.textLight} />
           </TouchableOpacity>
         ) : (
-          <View style={styles.headerSpacer} />
+          <View style={styles.headerSide} />
         )}
       </View>
 
@@ -354,26 +356,7 @@ export default function ProfileScreen() {
             <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
           <Text style={styles.username}>{username}</Text>
-
-          {!isOwnProfile && (
-            <>
-              <TouchableOpacity
-                style={isFollowing ? styles.followingButton : styles.followButton}
-                onPress={isFollowing ? handleUnfollow : handleFollow}
-                activeOpacity={0.8}>
-                <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.messageButton}
-                onPress={handleSendMessage}
-                activeOpacity={0.8}>
-                <Ionicons name="chatbubble-outline" size={16} color={COLORS.accent} />
-                <Text style={styles.messageButtonText}>Send Message</Text>
-              </TouchableOpacity>
-            </>
-          )}
+          <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
         </View>
 
         <View style={styles.statsRow}>
@@ -393,18 +376,39 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>My Gems</Text>
+        {!isOwnProfile && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={isFollowing ? styles.followingButton : styles.followButton}
+              onPress={isFollowing ? handleUnfollow : handleFollow}
+              activeOpacity={0.8}>
+              <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.messageButton} onPress={handleSendMessage} activeOpacity={0.8}>
+              <Ionicons name="chatbubble-outline" size={16} color={COLORS.accent} />
+              <Text style={styles.messageButtonText}>Message</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>My Gems</Text>
+          <Text style={styles.sectionCount}>{gems.length}</Text>
+        </View>
 
         {gems.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="location-outline" size={48} color={COLORS.accent} />
-            <Text style={styles.emptyText}>No gems yet</Text>
+            <Ionicons name="location-outline" size={56} color={COLORS.accent} style={styles.emptyIcon} />
+            <Text style={styles.emptyTitle}>No gems yet</Text>
+            <Text style={styles.emptySubtitle}>Start exploring and drop your first gem!</Text>
             {isOwnProfile && (
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => router.push('/add-gem')}
                 activeOpacity={0.8}>
-                <Text style={styles.addButtonText}>Add your first gem</Text>
+                <Text style={styles.addButtonText}>Add Gem</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -479,43 +483,248 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: COLORS.bg,
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  headerSide: {
+    width: 22,
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
     color: COLORS.text,
   },
-  headerSpacer: {
-    width: 22,
-  },
   scrollContent: {
     paddingBottom: 32,
   },
   profileSection: {
     alignItems: 'center',
-    paddingTop: 16,
-    paddingBottom: 8,
+    padding: 20,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: COLORS.accent,
+    borderWidth: 3,
+    borderColor: COLORS.accentSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
-    fontSize: 32,
-    fontWeight: '600',
-    color: COLORS.avatarText,
+    fontSize: 36,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   username: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.text,
     marginTop: 12,
+  },
+  bio: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginVertical: 20,
+    padding: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: COLORS.textDim,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 0.5,
+    height: 30,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  followButton: {
+    flex: 1,
+    backgroundColor: COLORS.accent,
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+  },
+  followButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.bg,
+  },
+  followingButton: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.accent,
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+  },
+  followingButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.accent,
+  },
+  messageButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    padding: 12,
+  },
+  messageButtonText: {
+    fontSize: 14,
+    color: COLORS.textLight,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  sectionCount: {
+    fontSize: 13,
+    color: COLORS.accent,
+  },
+  gemsGrid: {
+    paddingHorizontal: 12,
+  },
+  gemRow: {
+    flexDirection: 'row',
+  },
+  gemCard: {
+    flex: 1,
+    margin: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: COLORS.card,
+  },
+  gemCardSpacer: {
+    flex: 1,
+    margin: 4,
+  },
+  gemImageArea: {
+    height: 140,
+    position: 'relative',
+  },
+  gemImage: {
+    width: '100%',
+    height: 140,
+  },
+  gemImagePlaceholder: {
+    width: '100%',
+    height: 140,
+    backgroundColor: COLORS.imagePlaceholder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gemOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
+  },
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.accent,
+    borderRadius: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.bg,
+  },
+  gemTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginTop: 3,
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyIcon: {
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  addButton: {
+    marginTop: 20,
+    backgroundColor: COLORS.accent,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.bg,
+  },
+  logoutButton: {
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
+    backgroundColor: 'transparent',
+    borderWidth: 0.5,
+    borderColor: COLORS.danger,
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  logoutText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.danger,
   },
   promptOverlay: {
     flex: 1,
@@ -551,7 +760,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: COLORS.text,
+    color: COLORS.textLight,
     marginBottom: 16,
   },
   promptButtons: {
@@ -582,172 +791,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.bg,
-  },
-  followButton: {
-    marginTop: 16,
-    backgroundColor: COLORS.accent,
-    paddingVertical: 10,
-    paddingHorizontal: 32,
-    borderRadius: 10,
-  },
-  followButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.bg,
-  },
-  followingButton: {
-    marginTop: 16,
-    backgroundColor: COLORS.card,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    paddingVertical: 10,
-    paddingHorizontal: 32,
-    borderRadius: 10,
-  },
-  followingButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textMuted,
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-    backgroundColor: COLORS.card,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    padding: 12,
-  },
-  messageButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginVertical: 16,
-    padding: 16,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 0.5,
-    height: 32,
-    backgroundColor: COLORS.border,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  gemsGrid: {
-    paddingHorizontal: 12,
-  },
-  gemRow: {
-    flexDirection: 'row',
-  },
-  gemCard: {
-    flex: 1,
-    height: 150,
-    margin: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: COLORS.card,
-  },
-  gemCardSpacer: {
-    flex: 1,
-    margin: 4,
-  },
-  gemImage: {
-    width: '100%',
-    height: 110,
-  },
-  gemImagePlaceholder: {
-    width: '100%',
-    height: 110,
-    backgroundColor: COLORS.imagePlaceholder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gemCardFooter: {
-    padding: 8,
-  },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.accentSubtle,
-    borderWidth: 0.5,
-    borderColor: COLORS.accent,
-    borderRadius: 10,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-  },
-  categoryBadgeText: {
-    fontSize: 10,
-    color: COLORS.accent,
-  },
-  gemTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginTop: 4,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.textMuted,
-  },
-  addButton: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginTop: 4,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.bg,
-  },
-  logoutButton: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    padding: 14,
-    backgroundColor: COLORS.dangerBg,
-    borderWidth: 0.5,
-    borderColor: COLORS.danger,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  logoutText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: COLORS.danger,
   },
 });
