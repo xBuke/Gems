@@ -93,10 +93,12 @@ export default function ChatScreen() {
   }, [fetchMessages]);
 
   useEffect(() => {
-    if (!myId) return;
+    if (!myId || !userId) return;
 
-    const channel = supabase
-      .channel('messages')
+    let channel: any = null;
+
+    channel = supabase
+      .channel('messages-' + myId + '-' + userId)
       .on(
         'postgres_changes',
         {
@@ -128,7 +130,7 @@ export default function ChatScreen() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [myId, userId]);
 
@@ -159,6 +161,14 @@ export default function ChatScreen() {
 
     if (!error && data) {
       setMessages((prev) => [...prev, data as Message]);
+
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        sender_id: myId,
+        type: 'message',
+        gem_id: null,
+        read: false,
+      });
     }
   };
 
@@ -190,7 +200,10 @@ export default function ChatScreen() {
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
+        <TouchableOpacity
+          style={styles.headerCenter}
+          onPress={() => router.push({ pathname: '/profile', params: { userId: userId } })}
+          activeOpacity={0.7}>
           <View style={styles.headerAvatarWrap}>
             <View style={styles.headerAvatar}>
               <Text style={styles.headerAvatarText}>{initial}</Text>
@@ -198,7 +211,7 @@ export default function ChatScreen() {
             <View style={styles.onlineDot} />
           </View>
           <Text style={styles.headerUsername}>{displayName}</Text>
-        </View>
+        </TouchableOpacity>
         <View style={styles.headerSpacer} />
       </View>
 

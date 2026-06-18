@@ -33,7 +33,6 @@ type Gem = {
   id: string;
   title: string;
   category: string;
-  rating_avg: number | null;
   image_url: string | null;
   verified: boolean;
   latitude: number;
@@ -71,12 +70,30 @@ export default function DiscoverScreen() {
   const [activeTab, setActiveTab] = useState('discover');
   const [feedTab, setFeedTab] = useState<FeedTab>('forYou');
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [gemOfTheDay, setGemOfTheDay] = useState<Gem | null>(null);
   const [trendingGems, setTrendingGems] = useState<Gem[]>([]);
   const [recentGems, setRecentGems] = useState<Gem[]>([]);
   const [nearbyGems, setNearbyGems] = useState<Gem[]>([]);
   const [followingGems, setFollowingGems] = useState<FollowingGem[]>([]);
   const [locationAvailable, setLocationAvailable] = useState(false);
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+
+  const fetchLikeCounts = useCallback(async (gems: Gem[]) => {
+    if (gems.length === 0) return;
+
+    const gemIds = gems.map((gem) => gem.id);
+    const { data } = await supabase.from('gem_likes').select('gem_id').in('gem_id', gemIds);
+
+    const counts: Record<string, number> = {};
+    for (const gemId of gemIds) counts[gemId] = 0;
+    if (data) {
+      for (const row of data) {
+        counts[row.gem_id] = (counts[row.gem_id] ?? 0) + 1;
+      }
+    }
+    setLikeCounts((prev) => ({ ...prev, ...counts }));
+  }, []);
 
   const checkUnreadMessages = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -92,6 +109,22 @@ export default function DiscoverScreen() {
       .eq('read', false);
 
     setHasUnreadMessages(!error && (count ?? 0) > 0);
+  }, []);
+
+  const checkUnreadNotifications = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('read', false);
+
+    setUnreadNotificationCount(!error ? (count ?? 0) : 0);
   }, []);
 
   const fetchFollowingGems = useCallback(async () => {
@@ -119,8 +152,11 @@ export default function DiscoverScreen() {
       .in('user_id', ids)
       .order('created_at', { ascending: false });
 
-    if (gems) setFollowingGems(gems as FollowingGem[]);
-  }, []);
+    if (gems) {
+      setFollowingGems(gems as FollowingGem[]);
+      fetchLikeCounts(gems as Gem[]);
+    }
+  }, [fetchLikeCounts]);
 
   useEffect(() => {
     const fetchGemOfTheDay = async () => {
@@ -133,6 +169,7 @@ export default function DiscoverScreen() {
       if (data && data.length > 0) {
         const random = data[Math.floor(Math.random() * data.length)];
         setGemOfTheDay(random);
+        fetchLikeCounts([random]);
       }
     };
 
@@ -141,10 +178,13 @@ export default function DiscoverScreen() {
         .from('gems')
         .select('*')
         .eq('is_private', false)
-        .order('rating_avg', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
         .limit(5);
 
-      if (data) setTrendingGems(data);
+      if (data) {
+        setTrendingGems(data);
+        fetchLikeCounts(data);
+      }
     };
 
     const fetchRecent = async () => {
@@ -155,7 +195,10 @@ export default function DiscoverScreen() {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (data) setRecentGems(data);
+      if (data) {
+        setRecentGems(data);
+        fetchLikeCounts(data);
+      }
     };
 
     const fetchNearby = async () => {
@@ -184,6 +227,7 @@ export default function DiscoverScreen() {
             ) < 50000,
         );
         setNearbyGems(nearby);
+        fetchLikeCounts(nearby);
       }
     };
 
@@ -192,7 +236,51 @@ export default function DiscoverScreen() {
     fetchRecent();
     fetchNearby();
     checkUnreadMessages();
-  }, [checkUnreadMessages]);
+    checkUnreadNotifications();
+  }, [checkUnreadMessages, checkUnreadNotifications, fetchLikeCounts]);
+
+  useEffect(() => {
+    let channel: any = null;
+    let cancelled = false;
+
+    const setupSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (cancelled) return;
+
+      setUnreadNotificationCount(count || 0);
+
+      channel = supabase
+        .channel('notifications-badge-' + user.id)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            setUnreadNotificationCount((prev) => prev + 1);
+          },
+        )
+        .subscribe();
+    };
+
+    setupSubscription();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     if (feedTab === 'following') {
@@ -231,12 +319,10 @@ export default function DiscoverScreen() {
         {username ? <Text style={styles.posterName}>@{username}</Text> : null}
         <Text style={styles.gemName}>{gem.title}</Text>
         <View style={styles.gemMeta}>
-          {gem.rating_avg != null && (
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={COLORS.star} />
-              <Text style={styles.ratingText}>{gem.rating_avg.toFixed(1)}</Text>
-            </View>
-          )}
+          <View style={styles.likeRow}>
+            <Ionicons name="heart-outline" size={12} color={COLORS.textMuted} />
+            <Text style={styles.likeText}>{likeCounts[gem.id] ?? 0}</Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -284,12 +370,10 @@ export default function DiscoverScreen() {
             <Text style={styles.trendingTitle} numberOfLines={2}>
               {gem.title}
             </Text>
-            {gem.rating_avg != null && (
-              <View style={styles.trendingRatingRow}>
-                <Ionicons name="star" size={12} color={COLORS.star} />
-                <Text style={styles.ratingText}>{gem.rating_avg.toFixed(1)}</Text>
-              </View>
-            )}
+            <View style={styles.trendingLikeRow}>
+              <Ionicons name="heart-outline" size={12} color={COLORS.textMuted} />
+              <Text style={styles.likeText}>{likeCounts[gem.id] ?? 0}</Text>
+            </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -397,11 +481,20 @@ export default function DiscoverScreen() {
                 }
               }}
               activeOpacity={0.7}>
-              <Ionicons
-                name={isActive ? tab.activeIcon : tab.icon}
-                size={isAddButton ? 34 : 24}
-                color={isAddButton ? COLORS.accent : isActive ? COLORS.accent : COLORS.textDim}
-              />
+              <View style={styles.tabIconWrap}>
+                <Ionicons
+                  name={isActive ? tab.activeIcon : tab.icon}
+                  size={isAddButton ? 34 : 24}
+                  color={isAddButton ? COLORS.accent : isActive ? COLORS.accent : COLORS.textDim}
+                />
+                {tab.key === 'notifications' && unreadNotificationCount > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
             </TouchableOpacity>
           );
@@ -558,7 +651,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
   },
-  trendingRatingRow: {
+  trendingLikeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -635,12 +728,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  ratingRow: {
+  likeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  ratingText: {
+  likeText: {
     fontSize: 12,
     color: COLORS.textMuted,
   },
@@ -685,6 +778,26 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: 4,
+  },
+  tabIconWrap: {
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   tabLabel: {
     fontSize: 11,

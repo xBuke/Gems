@@ -141,6 +141,14 @@ export default function ProfileScreen() {
       following_id: userId,
     });
 
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      sender_id: currentUserId,
+      type: 'follow',
+      gem_id: null,
+      read: false,
+    });
+
     setIsFollowing(true);
     await fetchData();
   };

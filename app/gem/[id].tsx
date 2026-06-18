@@ -29,8 +29,6 @@ type Gem = {
   latitude: number;
   longitude: number;
   image_url: string | null;
-  rating_avg: number | null;
-  rating_count: number | null;
   verified: boolean;
   user_id: string;
   profiles: { username: string } | null;
@@ -41,6 +39,11 @@ type Comment = {
   content: string;
   created_at: string;
   profiles: { username: string } | null;
+};
+
+type CommentLikeState = {
+  count: number;
+  likedByMe: boolean;
 };
 
 const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -58,20 +61,50 @@ export default function GemDetailScreen() {
   const [gem, setGem] = useState<Gem | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
-  const [userRating, setUserRating] = useState(0);
   const [loading, setLoading] = useState(true);
   const [visitVerified, setVisitVerified] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [commentLikes, setCommentLikes] = useState<Record<string, CommentLikeState>>({});
+
+  const gemId = Array.isArray(id) ? id[0] : id;
+
+  const fetchCommentLikes = async (commentIds: string[]) => {
+    if (commentIds.length === 0) {
+      setCommentLikes({});
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: likesData } = await supabase
+      .from('comment_likes')
+      .select('*')
+      .in('comment_id', commentIds);
+
+    const likesMap: Record<string, CommentLikeState> = {};
+    for (const commentId of commentIds) {
+      const commentLikesList = (likesData ?? []).filter((like) => like.comment_id === commentId);
+      likesMap[commentId] = {
+        count: commentLikesList.length,
+        likedByMe: user ? commentLikesList.some((like) => like.user_id === user.id) : false,
+      };
+    }
+    setCommentLikes(likesMap);
+  };
 
   const fetchComments = async () => {
-    if (!id) return;
+    if (!gemId) return;
 
     const { data: commentsData } = await supabase
       .from('comments')
       .select('*, profiles(username)')
-      .eq('gem_id', id)
+      .eq('gem_id', gemId)
       .order('created_at', { ascending: true });
 
-    if (commentsData) setComments(commentsData);
+    if (commentsData) {
+      setComments(commentsData);
+      await fetchCommentLikes(commentsData.map((comment) => comment.id));
+    }
   };
 
   useEffect(() => {
@@ -99,9 +132,36 @@ export default function GemDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    const gemId = Array.isArray(id) ? id[0] : id;
     if (gemId) fetchComments();
-  }, [id]);
+  }, [gemId]);
+
+  useEffect(() => {
+    if (!gemId) return;
+
+    const fetchLikes = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { count } = await supabase
+        .from('gem_likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('gem_id', gemId);
+
+      setLikeCount(count || 0);
+
+      if (user) {
+        const { data: existingLike } = await supabase
+          .from('gem_likes')
+          .select('id')
+          .eq('gem_id', gemId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        setIsLiked(!!existingLike);
+      }
+    };
+
+    fetchLikes();
+  }, [gemId]);
 
   const openMaps = () => {
     if (!gem) return;
@@ -126,18 +186,28 @@ export default function GemDetailScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const gemId = Array.isArray(id) ? id[0] : id;
     const { error } = await supabase
       .from('comments')
-      .insert({ gem_id: id, user_id: user.id, content: text });
+      .insert({ gem_id: gemId, user_id: user.id, content: text });
 
     if (!error) {
+      if (gem && user.id !== gem.user_id) {
+        await supabase.from('notifications').insert({
+          user_id: gem.user_id,
+          sender_id: user.id,
+          type: 'comment',
+          gem_id: gemId,
+          read: false,
+        });
+      }
       setCommentText('');
       fetchComments();
     }
   };
 
-  const handleSubmitRating = async () => {
-    if (!userRating || !id) return;
+  const handleToggleLike = async () => {
+    if (!gem || !gemId) return;
 
     const proceed = await requireAuth();
     if (!proceed) return;
@@ -145,33 +215,62 @@ export default function GemDetailScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from('ratings').upsert(
-      {
-        gem_id: id,
-        user_id: user.id,
-        rating: userRating,
-      },
-      { onConflict: 'gem_id,user_id' }
-    );
-
-    if (error) return;
-
-    const { data: ratingsData } = await supabase
-      .from('ratings')
-      .select('rating')
-      .eq('gem_id', id);
-
-    if (ratingsData && ratingsData.length > 0) {
-      const count = ratingsData.length;
-      const average = ratingsData.reduce((sum, r) => sum + r.rating, 0) / count;
-
+    if (isLiked) {
       await supabase
-        .from('gems')
-        .update({ rating_avg: average, rating_count: count })
-        .eq('id', id);
-    }
+        .from('gem_likes')
+        .delete()
+        .eq('gem_id', gemId)
+        .eq('user_id', user.id);
+      setIsLiked(false);
+      setLikeCount((prev) => prev - 1);
+    } else {
+      await supabase.from('gem_likes').insert({ gem_id: gemId, user_id: user.id });
+      setIsLiked(true);
+      setLikeCount((prev) => prev + 1);
 
-    Alert.alert('Rating saved!');
+      if (user.id !== gem.user_id) {
+        await supabase.from('notifications').insert({
+          user_id: gem.user_id,
+          sender_id: user.id,
+          type: 'like',
+          gem_id: gemId,
+          read: false,
+        });
+      }
+    }
+  };
+
+  const handleToggleCommentLike = async (commentId: string) => {
+    const proceed = await requireAuth();
+    if (!proceed) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const current = commentLikes[commentId];
+    if (current?.likedByMe) {
+      await supabase
+        .from('comment_likes')
+        .delete()
+        .eq('comment_id', commentId)
+        .eq('user_id', user.id);
+      setCommentLikes((prev) => ({
+        ...prev,
+        [commentId]: {
+          count: Math.max(0, (prev[commentId]?.count ?? 1) - 1),
+          likedByMe: false,
+        },
+      }));
+    } else {
+      await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: user.id });
+      setCommentLikes((prev) => ({
+        ...prev,
+        [commentId]: {
+          count: (prev[commentId]?.count ?? 0) + 1,
+          likedByMe: true,
+        },
+      }));
+    }
   };
 
   const handleBeenHere = async () => {
@@ -208,6 +307,13 @@ export default function GemDetailScreen() {
     );
 
     if (!error) {
+      await supabase.from('notifications').insert({
+        user_id: gem.user_id,
+        sender_id: user.id,
+        type: 'visit',
+        gem_id: gemId,
+        read: false,
+      });
       setVisitVerified(true);
     }
   };
@@ -259,8 +365,12 @@ export default function GemDetailScreen() {
             )}
           </View>
 
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.8}>
-            <Ionicons name="heart-outline" size={24} color="#FFFFFF" />
+          <TouchableOpacity style={styles.saveButton} onPress={handleToggleLike} activeOpacity={0.8}>
+            <Ionicons
+              name={isLiked ? 'heart' : 'heart-outline'}
+              size={24}
+              color={isLiked ? '#FF4444' : '#FFFFFF'}
+            />
           </TouchableOpacity>
         </View>
 
@@ -288,50 +398,16 @@ export default function GemDetailScreen() {
             </Text>
           </View>
 
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.statText}>
-                {gem.rating_avg != null && gem.rating_avg > 0
-                  ? gem.rating_avg.toFixed(1)
-                  : 'No ratings'}
-              </Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="eye-outline" size={16} color="#888888" />
-              <Text style={styles.statText}>{gem.rating_count ?? 0}</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="heart-outline" size={16} color="#888888" />
-              <Text style={styles.statText}>0</Text>
-            </View>
-          </View>
-
-          <View style={styles.ratingSection}>
-            <Text style={styles.ratingLabel}>Rate this gem</Text>
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => setUserRating(star)}
-                  activeOpacity={0.7}>
-                  <Ionicons
-                    name={star <= userRating ? 'star' : 'star-outline'}
-                    size={32}
-                    color={star <= userRating ? '#FFD700' : '#555555'}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-            {userRating > 0 && (
-              <TouchableOpacity
-                style={styles.submitRatingButton}
-                onPress={handleSubmitRating}
-                activeOpacity={0.8}>
-                <Text style={styles.submitRatingText}>Submit rating</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <TouchableOpacity style={styles.likeRow} onPress={handleToggleLike} activeOpacity={0.7}>
+            <Ionicons
+              name={isLiked ? 'heart' : 'heart-outline'}
+              size={24}
+              color={isLiked ? '#FF4444' : '#888888'}
+            />
+            <Text style={[styles.likeCountText, isLiked && styles.likeCountTextActive]}>
+              {likeCount}
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.divider} />
 
@@ -362,6 +438,7 @@ export default function GemDetailScreen() {
           ) : (
             comments.map((comment) => {
               const username = comment.profiles?.username ?? 'Anonymous';
+              const likeState = commentLikes[comment.id] ?? { count: 0, likedByMe: false };
               return (
                 <View key={comment.id} style={styles.commentItem}>
                   <View style={styles.commentAvatar}>
@@ -372,9 +449,24 @@ export default function GemDetailScreen() {
                   <View style={styles.commentBubble}>
                     <Text style={styles.commentUsername}>{username}</Text>
                     <Text style={styles.commentContent}>{comment.content}</Text>
-                    <Text style={styles.commentTime}>
-                      {new Date(comment.created_at).toLocaleDateString()}
-                    </Text>
+                    <View style={styles.commentFooter}>
+                      <Text style={styles.commentTime}>
+                        {new Date(comment.created_at).toLocaleDateString()}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.commentLikeRow}
+                        onPress={() => handleToggleCommentLike(comment.id)}
+                        activeOpacity={0.7}>
+                        <Ionicons
+                          name={likeState.likedByMe ? 'heart' : 'heart-outline'}
+                          size={14}
+                          color={likeState.likedByMe ? '#FF4444' : '#555555'}
+                        />
+                        {likeState.count > 0 && (
+                          <Text style={styles.commentLikeCount}>{likeState.count}</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               );
@@ -574,53 +666,19 @@ const styles = StyleSheet.create({
     color: '#888888',
     fontSize: 13,
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
+  likeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#141414',
-    borderWidth: 0.5,
-    borderColor: '#222222',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  statText: {
-    color: '#888888',
-    fontSize: 13,
-  },
-  ratingSection: {
+    gap: 8,
     marginBottom: 20,
   },
-  ratingLabel: {
-    color: '#F5F5F5',
-    fontSize: 14,
+  likeCountText: {
+    color: '#888888',
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 10,
   },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  submitRatingButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#1D9E75',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginTop: 12,
-  },
-  submitRatingText: {
-    color: '#0D0D0D',
-    fontSize: 14,
-    fontWeight: '600',
+  likeCountTextActive: {
+    color: '#FFFFFF',
   },
   divider: {
     height: 0.5,
@@ -718,10 +776,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  commentFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
   commentTime: {
     color: '#555555',
     fontSize: 11,
-    marginTop: 6,
+  },
+  commentLikeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  commentLikeCount: {
+    color: '#555555',
+    fontSize: 11,
   },
   commentInputBar: {
     flexDirection: 'row',
