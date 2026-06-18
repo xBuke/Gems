@@ -67,6 +67,7 @@ export default function GemDetailScreen() {
   const [likeCount, setLikeCount] = useState(0);
   const [commentLikes, setCommentLikes] = useState<Record<string, CommentLikeState>>({});
   const [isOwner, setIsOwner] = useState(false);
+  const [locationName, setLocationName] = useState<string | null>(null);
 
   const gemId = Array.isArray(id) ? id[0] : id;
 
@@ -167,6 +168,32 @@ export default function GemDetailScreen() {
 
     fetchLikes();
   }, [gemId]);
+
+  useEffect(() => {
+    if (!gem) return;
+
+    const fetchLocationName = async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${gem.latitude}&lon=${gem.longitude}&format=json`,
+        );
+        const data = await response.json();
+        const name =
+          data.address?.city ||
+          data.address?.town ||
+          data.address?.village ||
+          data.address?.county ||
+          'Unknown location';
+        setLocationName(name);
+      } catch {
+        setLocationName(
+          `${gem.latitude.toFixed(4)}, ${gem.longitude.toFixed(4)}`,
+        );
+      }
+    };
+
+    fetchLocationName();
+  }, [gem]);
 
   const openMaps = () => {
     if (!gem) return;
@@ -400,14 +427,6 @@ export default function GemDetailScreen() {
               </View>
             )}
           </View>
-
-          <TouchableOpacity style={styles.saveButton} onPress={handleToggleLike} activeOpacity={0.8}>
-            <Ionicons
-              name={isLiked ? 'heart' : 'heart-outline'}
-              size={24}
-              color={isLiked ? '#FF4444' : '#FFFFFF'}
-            />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.content}>
@@ -430,7 +449,7 @@ export default function GemDetailScreen() {
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={14} color="#888888" />
             <Text style={styles.locationText}>
-              {gem.latitude}, {gem.longitude}
+              {locationName ?? `${gem.latitude.toFixed(4)}, ${gem.longitude.toFixed(4)}`}
             </Text>
           </View>
 
@@ -656,19 +675,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#1D9E75',
-  },
-  saveButton: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(20, 20, 20, 0.85)',
-    borderWidth: 0.5,
-    borderColor: '#222222',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   content: {
     paddingHorizontal: 20,

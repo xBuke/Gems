@@ -42,7 +42,7 @@ type Gem = {
   category: string;
 };
 
-type MapCenter = {
+type TapLocation = {
   latitude: number;
   longitude: number;
 };
@@ -56,10 +56,7 @@ export default function MapScreen() {
   const [gems, setGems] = useState<Gem[]>([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [placingMode, setPlacingMode] = useState(false);
-  const [mapCenter, setMapCenter] = useState<MapCenter>({
-    latitude: INITIAL_REGION.latitude,
-    longitude: INITIAL_REGION.longitude,
-  });
+  const [tapLocation, setTapLocation] = useState<TapLocation | null>(null);
 
   useEffect(() => {
     if (placeMode === 'true') {
@@ -92,19 +89,23 @@ export default function MapScreen() {
   };
 
   const handleAddGemHere = async () => {
+    if (!tapLocation) return;
+
     const proceed = await requireAuth();
     if (!proceed) return;
 
     router.push({
       pathname: '/add-gem',
-      params: { lat: mapCenter.latitude, lng: mapCenter.longitude },
+      params: { lat: tapLocation.latitude, lng: tapLocation.longitude },
     });
+    setTapLocation(null);
     setPlacingMode(false);
   };
 
   const togglePlacingMode = () => {
     if (placingMode) {
       setPlacingMode(false);
+      setTapLocation(null);
     } else {
       setPlacingMode(true);
     }
@@ -133,8 +134,8 @@ export default function MapScreen() {
         showsUserLocation
         showsMyLocationButton
         followsUserLocation={false}
-        onRegionChangeComplete={(region) =>
-          setMapCenter({ latitude: region.latitude, longitude: region.longitude })
+        onPress={
+          placingMode ? (e) => setTapLocation(e.nativeEvent.coordinate) : undefined
         }>
         {visibleGems.map((gem) => (
           <Marker
@@ -159,16 +160,12 @@ export default function MapScreen() {
             </Callout>
           </Marker>
         ))}
+        {tapLocation && (
+          <Marker coordinate={tapLocation}>
+            <Ionicons name="location" size={40} color="#1D9E75" />
+          </Marker>
+        )}
       </MapView>
-
-      {placingMode && (
-        <View style={styles.crosshairOverlay} pointerEvents="none">
-          <View style={styles.crosshairIconWrap}>
-            <Ionicons name="add-circle" size={40} color="#1D9E75" />
-          </View>
-          <Text style={styles.crosshairLabel}>Move map to position</Text>
-        </View>
-      )}
 
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
         <Ionicons name="arrow-back" size={24} color="#F5F5F5" />
@@ -224,16 +221,16 @@ export default function MapScreen() {
         <Ionicons name="locate" size={22} color="#1D9E75" />
       </TouchableOpacity>
 
-      {placingMode && (
+      {tapLocation && (
         <View style={[styles.actionSheet, { paddingBottom: 16 + insets.bottom }]}>
           <Text style={styles.actionSheetTitle}>Drop a gem here?</Text>
           <Text style={styles.actionSheetCoords}>
-            {mapCenter.latitude.toFixed(2)}, {mapCenter.longitude.toFixed(2)}
+            {tapLocation.latitude.toFixed(4)}, {tapLocation.longitude.toFixed(4)}
           </Text>
           <View style={styles.actionSheetButtons}>
             <TouchableOpacity
               style={styles.cancelButton}
-              onPress={() => setPlacingMode(false)}
+              onPress={() => setTapLocation(null)}
               activeOpacity={0.8}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -389,25 +386,6 @@ const styles = StyleSheet.create({
     color: '#1D9E75',
     fontSize: 13,
     fontWeight: '600',
-  },
-  crosshairOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  crosshairIconWrap: {
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    borderRadius: 22,
-  },
-  crosshairLabel: {
-    color: '#FFFFFF',
-    backgroundColor: '#0D0D0D80',
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    fontSize: 12,
-    marginTop: 8,
   },
   actionSheet: {
     position: 'absolute',

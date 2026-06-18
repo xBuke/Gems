@@ -180,6 +180,8 @@ export default function NotificationsScreen() {
   };
 
   const renderNotification = ({ item }: { item: Notification }) => {
+    if (item.type === 'rating') return null;
+
     const config = TYPE_CONFIG[item.type];
 
     return (
