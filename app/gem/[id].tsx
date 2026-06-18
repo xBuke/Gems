@@ -1,3 +1,4 @@
+import { requireAuth } from '@/lib/authGuard';
 import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,6 +120,9 @@ export default function GemDetailScreen() {
     const text = commentText.trim();
     if (!text || !id) return;
 
+    const proceed = await requireAuth();
+    if (!proceed) return;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -134,6 +138,9 @@ export default function GemDetailScreen() {
 
   const handleSubmitRating = async () => {
     if (!userRating || !id) return;
+
+    const proceed = await requireAuth();
+    if (!proceed) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -170,11 +177,11 @@ export default function GemDetailScreen() {
   const handleBeenHere = async () => {
     if (!gem) return;
 
+    const proceed = await requireAuth();
+    if (!proceed) return;
+
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to verify a visit.');
-      return;
-    }
+    if (!user) return;
 
     const location = await Location.getCurrentPositionAsync({});
     const distance = getDistance(

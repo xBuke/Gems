@@ -1,9 +1,10 @@
+import { requireAuth } from '@/lib/authGuard';
 import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     ActionSheetIOS,
@@ -61,6 +62,7 @@ const uploadImage = async (uri: string) => {
 
 export default function AddGemScreen() {
   const router = useRouter();
+  const { lat, lng } = useLocalSearchParams<{ lat?: string; lng?: string }>();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -68,8 +70,21 @@ export default function AddGemScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationDetected, setLocationDetected] = useState(false);
+  const [locationFromMap, setLocationFromMap] = useState(false);
 
   useEffect(() => {
+    if (lat && lng) {
+      const parsedLat = parseFloat(lat);
+      const parsedLng = parseFloat(lng);
+      if (!Number.isNaN(parsedLat) && !Number.isNaN(parsedLng)) {
+        setLatitude(parsedLat);
+        setLongitude(parsedLng);
+        setLocationDetected(true);
+        setLocationFromMap(true);
+        return;
+      }
+    }
+
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -80,8 +95,9 @@ export default function AddGemScreen() {
       setLatitude(location.coords.latitude);
       setLongitude(location.coords.longitude);
       setLocationDetected(true);
+      setLocationFromMap(false);
     })();
-  }, []);
+  }, [lat, lng]);
 
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -174,6 +190,9 @@ export default function AddGemScreen() {
   };
 
   const handleSubmit = async () => {
+    const proceed = await requireAuth();
+    if (!proceed) return;
+
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a gem name.');
       return;
@@ -269,7 +288,9 @@ export default function AddGemScreen() {
 
         <Text style={styles.label}>Location</Text>
         {locationDetected && (
-          <Text style={styles.locationText}>📍 Using your current location</Text>
+          <Text style={styles.locationText}>
+            {locationFromMap ? '📍 Location set from map' : '📍 Using your current location'}
+          </Text>
         )}
 
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8}>

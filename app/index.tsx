@@ -1,3 +1,4 @@
+import { requireAuth } from '@/lib/authGuard';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -255,14 +256,18 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={tab.key}
               style={styles.tabItem}
-              onPress={() => {
+              onPress={async () => {
                 if (tab.key === 'map') {
                   router.push('/map');
                 } else if (tab.key === 'add') {
+                  const proceed = await requireAuth();
+                  if (!proceed) return;
                   router.push('/add-gem');
                 } else if (tab.key === 'messages') {
                   router.push('/messages');
                 } else if (tab.key === 'profile') {
+                  const proceed = await requireAuth();
+                  if (!proceed) return;
                   router.push('/profile');
                 }
                 setActiveTab(tab.key);
