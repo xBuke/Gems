@@ -1,6 +1,12 @@
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
 import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customCategories';
+import {
+  applyCommunityGemFilter,
+  fetchMyCommunityIds,
+  GEM_SELECT_WITH_COMMUNITY,
+  type CommunityGemInfo,
+} from '@/lib/gemVisibility';
 import { PENDING_PREFS_KEY } from '@/lib/onboarding';
 import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
@@ -44,6 +50,8 @@ type Category = (typeof CATEGORIES)[number];
 
 type GemWithProfile = Gem & {
   profiles: { username: string } | null;
+  community_id?: string | null;
+  communities?: CommunityGemInfo | null;
 };
 
 type FeedTab = 'forYou' | 'following';
@@ -187,7 +195,7 @@ export default function DiscoverScreen() {
     setUnreadNotificationCount(!error ? (count ?? 0) : 0);
   }, []);
 
-  const fetchFollowingGems = useCallback(async () => {
+  const fetchFollowingGems = useCallback(async (myCommunityIds: string[] = []) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setFollowingGems([]);
@@ -204,13 +212,17 @@ export default function DiscoverScreen() {
       return;
     }
 
-    const ids = followingIds.map((f) => f.following_id);
+    const ids = followingIds.map((f: { following_id: string }) => f.following_id);
 
-    const { data: gems } = await supabase
+    let query = supabase
       .from('gems')
-      .select('*, profiles!gems_user_id_fkey(username)')
+      .select(GEM_SELECT_WITH_COMMUNITY)
       .in('user_id', ids)
       .order('created_at', { ascending: false });
+
+    query = applyCommunityGemFilter(query, myCommunityIds);
+
+    const { data: gems } = await query;
 
     if (gems) {
       setFollowingGems(gems as GemWithProfile[]);
@@ -218,13 +230,17 @@ export default function DiscoverScreen() {
     }
   }, [fetchLikeCounts]);
 
-  const refreshDiscoverData = useCallback(async () => {
+  const refreshDiscoverData = useCallback(async (myCommunityIds: string[] = []) => {
     const fetchGemOfTheDay = async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('gems')
-        .select('*, profiles!gems_user_id_fkey(username)')
+        .select(GEM_SELECT_WITH_COMMUNITY)
         .eq('is_private', false)
         .limit(10);
+
+      query = applyCommunityGemFilter(query, myCommunityIds);
+
+      const { data } = await query;
 
       if (data && data.length > 0) {
         const random = data[Math.floor(Math.random() * data.length)] as GemWithProfile;
@@ -234,12 +250,16 @@ export default function DiscoverScreen() {
     };
 
     const fetchTrending = async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('gems')
-        .select('*, profiles!gems_user_id_fkey(username)')
+        .select(GEM_SELECT_WITH_COMMUNITY)
         .eq('is_private', false)
         .order('created_at', { ascending: false })
         .limit(5);
+
+      query = applyCommunityGemFilter(query, myCommunityIds);
+
+      const { data } = await query;
 
       if (data) {
         setTrendingGems(data as GemWithProfile[]);
@@ -248,12 +268,16 @@ export default function DiscoverScreen() {
     };
 
     const fetchRecent = async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('gems')
-        .select('*, profiles!gems_user_id_fkey(username)')
+        .select(GEM_SELECT_WITH_COMMUNITY)
         .eq('is_private', false)
         .order('created_at', { ascending: false })
         .limit(10);
+
+      query = applyCommunityGemFilter(query, myCommunityIds);
+
+      const { data } = await query;
 
       if (data) {
         setRecentGems(data as GemWithProfile[]);
@@ -262,10 +286,14 @@ export default function DiscoverScreen() {
     };
 
     const fetchAllGems = async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('gems')
-        .select('*, profiles!gems_user_id_fkey(username)')
+        .select(GEM_SELECT_WITH_COMMUNITY)
         .eq('is_private', false);
+
+      query = applyCommunityGemFilter(query, myCommunityIds);
+
+      const { data } = await query;
 
       if (data) setAllGems(data as GemWithProfile[]);
     };
@@ -285,10 +313,14 @@ export default function DiscoverScreen() {
         longitude: location.coords.longitude,
       });
 
-      const { data } = await supabase
+      let query = supabase
         .from('gems')
-        .select('*, profiles!gems_user_id_fkey(username)')
+        .select(GEM_SELECT_WITH_COMMUNITY)
         .eq('is_private', false);
+
+      query = applyCommunityGemFilter(query, myCommunityIds);
+
+      const { data } = await query;
 
       if (data) {
         const nearby = (data as GemWithProfile[])
@@ -359,13 +391,23 @@ export default function DiscoverScreen() {
   }, []);
 
   useEffect(() => {
-    refreshDiscoverData();
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+      refreshDiscoverData(myCommunityIds);
+    };
+    load();
   }, [refreshDiscoverData]);
 
   useFocusEffect(
     useCallback(() => {
-      refreshDiscoverData();
-      fetchFollowingGems();
+      const load = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+        refreshDiscoverData(myCommunityIds);
+        fetchFollowingGems(myCommunityIds);
+      };
+      load();
     }, [refreshDiscoverData, fetchFollowingGems]),
   );
 
@@ -413,9 +455,13 @@ export default function DiscoverScreen() {
   }, []);
 
   useEffect(() => {
-    if (feedTab === 'following') {
-      fetchFollowingGems();
-    }
+    if (feedTab !== 'following') return;
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+      fetchFollowingGems(myCommunityIds);
+    };
+    load();
   }, [feedTab, fetchFollowingGems]);
 
   useEffect(() => {
@@ -505,6 +551,12 @@ export default function DiscoverScreen() {
     router.push('/messages');
   };
 
+  const handleCommunitiesPress = async () => {
+    const proceed = await requireAuth('/communities');
+    if (!proceed) return;
+    router.push('/communities');
+  };
+
   const handleNotifications = async () => {
     const proceed = await requireAuth('/notifications');
     if (!proceed) return;
@@ -515,6 +567,28 @@ export default function DiscoverScreen() {
     const proceed = await requireAuth('/profile');
     if (!proceed) return;
     router.push('/profile');
+  };
+
+  const renderCommunityBadge = (gem: GemWithProfile) => {
+    if (!gem.community_id || !gem.communities) return null;
+    const { name, icon, color } = gem.communities;
+
+    return (
+      <View
+        style={[
+          styles.communityBadge,
+          { backgroundColor: color + '20', borderColor: color },
+        ]}>
+        <Ionicons
+          name={icon as keyof typeof Ionicons.glyphMap}
+          size={10}
+          color={color}
+        />
+        <Text style={[styles.communityBadgeText, { color }]} numberOfLines={1}>
+          {name}
+        </Text>
+      </View>
+    );
   };
 
   const renderListCard = (gem: GemWithProfile, distanceMeters?: number | null) => {
@@ -534,6 +608,7 @@ export default function DiscoverScreen() {
           )}
         </View>
         <View style={styles.listCardContent}>
+          {renderCommunityBadge(gem)}
           <View style={styles.listCategoryBadge}>
             <Text style={styles.listCategoryBadgeText}>{gem.category}</Text>
           </View>
@@ -578,6 +653,7 @@ export default function DiscoverScreen() {
           )}
         </View>
         <View style={styles.trendingBody}>
+          {renderCommunityBadge(gem)}
           <Text style={styles.trendingTitle} numberOfLines={2}>
             {gem.title}
           </Text>
@@ -710,6 +786,12 @@ export default function DiscoverScreen() {
               color={isPremium ? theme.coral : theme.text}
             />
             {!isPremium && <View style={styles.proBadgeDot} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleCommunitiesPress}
+            activeOpacity={0.7}>
+            <Ionicons name="people-circle-outline" size={22} color={theme.text} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIconButton}
@@ -1219,6 +1301,23 @@ const createStyles = (theme: Theme) =>
     paddingHorizontal: 8,
     borderRadius: 20,
     marginBottom: 2,
+  },
+  communityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 4,
+    maxWidth: '100%',
+  },
+  communityBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   listCategoryBadgeText: {
     fontSize: 10,

@@ -59,6 +59,9 @@ function RootNavigator() {
         <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="paywall" options={{ headerShown: false }} />
         <Stack.Screen name="gem-swipe" options={{ headerShown: false }} />
+        <Stack.Screen name="communities" options={{ headerShown: false }} />
+        <Stack.Screen name="create-community" options={{ headerShown: false }} />
+        <Stack.Screen name="community/[id]" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>

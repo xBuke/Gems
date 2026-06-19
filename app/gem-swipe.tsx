@@ -1,5 +1,10 @@
 import { CATEGORIES } from '@/lib/categories';
 import { getDistance } from '@/lib/distance';
+import {
+  applyCommunityGemFilter,
+  fetchMyCommunityIds,
+  GEM_SELECT_WITH_COMMUNITY,
+} from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/ThemeContext';
@@ -324,11 +329,15 @@ export default function GemSwipeScreen() {
 
     const seenIds = alreadySeen?.map((s: { gem_id: string }) => s.gem_id) ?? [];
 
+    const myCommunityIds = await fetchMyCommunityIds(myId);
+
     let query = supabase
       .from('gems')
-      .select('*, profiles!gems_user_id_fkey(username)')
+      .select(GEM_SELECT_WITH_COMMUNITY)
       .eq('is_private', false)
       .neq('user_id', myId);
+
+    query = applyCommunityGemFilter(query, myCommunityIds);
 
     if (categoryFilter) {
       query = query.eq('category', categoryFilter);

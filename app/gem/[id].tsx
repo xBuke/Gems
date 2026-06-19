@@ -1,4 +1,8 @@
 import { requireAuth } from '@/lib/authGuard';
+import {
+  GEM_SELECT_WITH_COMMUNITY,
+  type CommunityGemInfo,
+} from '@/lib/gemVisibility';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
@@ -37,6 +41,8 @@ type Gem = {
   image_url: string | null;
   verified: boolean;
   user_id: string;
+  community_id?: string | null;
+  communities?: CommunityGemInfo | null;
   profiles: { username: string } | null;
 };
 
@@ -139,7 +145,7 @@ export default function GemDetailScreen() {
 
     const { data, error } = await supabase
       .from('gems')
-      .select('*, profiles!gems_user_id_fkey(username)')
+      .select(GEM_SELECT_WITH_COMMUNITY)
       .eq('id', resolvedGemId)
       .single();
 
@@ -454,6 +460,27 @@ export default function GemDetailScreen() {
                   <Text style={styles.verifiedBadgeText}>Verified</Text>
                 </View>
               )}
+              {gem.community_id && gem.communities && (
+                <TouchableOpacity
+                  style={[
+                    styles.communityBadge,
+                    {
+                      backgroundColor: gem.communities.color + '20',
+                      borderColor: gem.communities.color,
+                    },
+                  ]}
+                  onPress={() => router.push('/community/' + gem.community_id)}
+                  activeOpacity={0.7}>
+                  <Ionicons
+                    name={gem.communities.icon as keyof typeof Ionicons.glyphMap}
+                    size={10}
+                    color={gem.communities.color}
+                  />
+                  <Text style={[styles.communityBadgeText, { color: gem.communities.color }]}>
+                    {gem.communities.name}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
             <Text style={styles.heroTitle}>{gem.title}</Text>
           </View>
@@ -709,6 +736,19 @@ const createStyles = (theme: Theme) =>
     fontSize: 11,
     fontWeight: '600',
     color: theme.coral,
+  },
+  communityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  communityBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   heroTitle: {
     color: theme.text,

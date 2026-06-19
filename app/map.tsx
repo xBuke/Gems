@@ -1,6 +1,11 @@
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
 import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customCategories';
+import {
+  applyCommunityGemFilter,
+  fetchMyCommunityIds,
+  GEM_SELECT_MAP,
+} from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -73,7 +78,13 @@ export default function MapScreen() {
   }, [placeMode]);
 
   const fetchGems = useCallback(async () => {
-    const { data } = await supabase.from('gems').select('*').eq('is_private', false);
+    const { data: { user } } = await supabase.auth.getUser();
+    const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+
+    let query = supabase.from('gems').select(GEM_SELECT_MAP).eq('is_private', false);
+    query = applyCommunityGemFilter(query, myCommunityIds);
+
+    const { data } = await query;
     if (data) setGems(data);
   }, []);
 

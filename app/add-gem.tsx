@@ -66,7 +66,7 @@ export default function AddGemScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
-  const { lat, lng } = useLocalSearchParams<{ lat?: string; lng?: string }>();
+  const { lat, lng, communityId } = useLocalSearchParams<{ lat?: string; lng?: string; communityId?: string }>();
   const parsedLat = lat ? parseFloat(lat) : NaN;
   const parsedLng = lng ? parseFloat(lng) : NaN;
   const hasMapLocation =
@@ -90,6 +90,7 @@ export default function AddGemScreen() {
   const [locationFromMap, setLocationFromMap] = useState(false);
   const [locationChoice, setLocationChoice] = useState<LocationChoice | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [communityName, setCommunityName] = useState<string | null>(null);
 
   useEffect(() => {
     if (hasMapLocation) {
@@ -110,6 +111,19 @@ export default function AddGemScreen() {
     };
     loadCustomCategories();
   }, []);
+
+  useEffect(() => {
+    if (!communityId) return;
+    const loadCommunity = async () => {
+      const { data } = await supabase
+        .from('communities')
+        .select('name')
+        .eq('id', communityId)
+        .single();
+      if (data?.name) setCommunityName(data.name);
+    };
+    loadCommunity();
+  }, [communityId]);
 
   const detectCurrentLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -205,6 +219,8 @@ export default function AddGemScreen() {
 
     const imageUrl = imageUri ? await uploadImage(imageUri) : null;
 
+    const communityField = communityId ? { community_id: communityId } : {};
+
     const gemPayload = selectedCustomCategory
       ? {
           title: name.trim(),
@@ -216,6 +232,7 @@ export default function AddGemScreen() {
           user_id: user.id,
           image_url: imageUrl,
           verified,
+          ...communityField,
         }
       : {
           title: name.trim(),
@@ -228,6 +245,7 @@ export default function AddGemScreen() {
           user_id: user.id,
           image_url: imageUrl,
           verified,
+          ...communityField,
         };
 
     const { error } = await supabase.from('gems').insert(gemPayload);
@@ -237,7 +255,8 @@ export default function AddGemScreen() {
       return;
     }
 
-    Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace('/map') }]);
+    const successRoute = communityId ? '/community/' + communityId : '/map';
+    Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace(successRoute) }]);
   };
 
   const handleCategorySelect = async (category: Category) => {
@@ -359,6 +378,13 @@ export default function AddGemScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
+        {communityName && (
+          <View style={styles.communityBanner}>
+            <Ionicons name="people" size={16} color="#FFFFFF" />
+            <Text style={styles.communityBannerText}>Posting to {communityName}</Text>
+          </View>
+        )}
+
         {!hasMapLocation && (
           <View style={styles.locationRow}>
             <TouchableOpacity
@@ -585,6 +611,21 @@ const createStyles = (theme: Theme) =>
   },
   scrollContent: {
     paddingBottom: 32,
+  },
+  communityBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.coral,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  communityBannerText: {
+    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
   locationRow: {
     flexDirection: 'row',
