@@ -204,11 +204,10 @@ export default function AdminScreen() {
 
   const fetchReports = useCallback(async () => {
     setReportsLoading(true);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('reports')
       .select('*')
       .order('created_at', { ascending: false });
-    console.log('Admin reports raw fetch:', data, error);
     setReports((data as Report[]) ?? []);
     setReportsLoading(false);
   }, []);

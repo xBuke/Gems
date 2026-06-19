@@ -82,7 +82,7 @@ const uploadAvatar = async (uri: string, userId: string) => {
   });
 
   if (error) {
-    console.log('Avatar upload error:', error);
+    console.error('Avatar upload error:', error);
     return null;
   }
 
@@ -451,13 +451,11 @@ export default function ProfileScreen() {
 
   const handleAcceptRequest = async (followerId: string) => {
     if (!currentUserId) return;
-    console.log('Accepting:', { followerId, currentUserId });
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('follows')
       .update({ status: 'accepted' })
       .eq('follower_id', followerId)
       .eq('following_id', currentUserId);
-    console.log('Update result:', data, error);
     if (!error) {
       hapticSuccess();
       setFollowRequests((prev) => prev.filter((r) => r.follower_id !== followerId));
@@ -468,8 +466,6 @@ export default function ProfileScreen() {
         .eq('following_id', currentUserId)
         .eq('status', 'accepted');
       setFollowersCount(followers ?? 0);
-    } else {
-      console.log('Accept failed with error:', JSON.stringify(error));
     }
   };
 

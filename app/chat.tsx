@@ -191,25 +191,34 @@ export default function ChatScreen() {
   }, [messages.length, scrollToBottom]);
 
   const handleSend = async () => {
-    const text = inputText.trim();
-    if (!text || !myId || !userId || sending) return;
+    if (!inputText.trim()) return;
+    if (!myId || !userId || sending) return;
+
+    const textToSend = inputText.trim();
+    setInputText('');
 
     setSending(true);
-    setInputText('');
 
     const { data, error } = await supabase
       .from('messages')
       .insert({
         sender_id: myId,
         receiver_id: userId,
-        content: text,
+        content: textToSend,
       })
       .select('*, sender:profiles!messages_sender_id_fkey(username)')
       .single();
 
     setSending(false);
 
-    if (!error && data) {
+    if (error) {
+      console.log('Send message error:', error);
+      Alert.alert('Message not sent', 'Please check your connection and try again.');
+      setInputText(textToSend);
+      return;
+    }
+
+    if (data) {
       hapticLight();
       setMessages((prev) => [...prev, data as Message]);
 

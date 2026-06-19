@@ -27,7 +27,7 @@ export const searchCities = async (query: string): Promise<{ name: string; lat: 
       })
       .filter((item: any) => item.name && item.name !== ', ')
   } catch (error) {
-    console.log('City search error:', error)
+    console.error('City search failed:', error)
     return []
   }
 }

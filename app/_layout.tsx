@@ -57,7 +57,6 @@ function RootNavigator() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="auth" />
-        <Stack.Screen name="discover" options={{ headerShown: false }} />
         <Stack.Screen name="map" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen
@@ -68,6 +67,7 @@ function RootNavigator() {
         <Stack.Screen name="chat" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="legal-document" options={{ headerShown: false }} />
         <Stack.Screen name="blocked-users" options={{ headerShown: false }} />
         <Stack.Screen
           name="edit-hometown"

@@ -22,7 +22,6 @@ export const createReport = async (
     reason,
     details: details || null,
   });
-  console.log('Report insert result:', data, error);
   return { data, error };
 };
 

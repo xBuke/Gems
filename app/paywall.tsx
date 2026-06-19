@@ -33,6 +33,33 @@ const checkLifetimeSlotsRemaining = async () => {
   return Math.max(0, 1000 - (count || 0));
 };
 
+const showPremiumComingSoonAlert = (message: string) => {
+  Alert.alert('Coming Soon', message, [
+    { text: 'Not now', style: 'cancel' },
+    {
+      text: 'Notify me',
+      onPress: async () => {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .update({ wants_premium_notification: true })
+            .eq('id', user.id);
+        }
+        Alert.alert('Got it!', "We'll let you know as soon as Premium is available.");
+      },
+    },
+  ]);
+};
+
+const PREMIUM_COMING_SOON_MESSAGE =
+  'In-app payments are launching soon as we prepare for our official release. Want us to notify you the moment Premium goes live?';
+
+const LIFETIME_COMING_SOON_MESSAGE =
+  'In-app payments are launching soon as we prepare for our official release. Lifetime deal slots are reserved in order of signup once payments launch. Want us to notify you the moment Premium goes live?';
+
 export default function PaywallScreen() {
   const router = useRouter();
   const { theme } = useTheme();
@@ -51,7 +78,7 @@ export default function PaywallScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm',
-          onPress: () => Alert.alert('Payment integration coming soon! 🚀'),
+          onPress: () => showPremiumComingSoonAlert(LIFETIME_COMING_SOON_MESSAGE),
         },
       ],
     );
@@ -95,7 +122,7 @@ export default function PaywallScreen() {
             </View>
             <TouchableOpacity
               style={styles.monthlyButton}
-              onPress={() => Alert.alert('Payment integration coming soon! 🚀')}
+              onPress={() => showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE)}
               activeOpacity={0.8}>
               <Text style={styles.monthlyButtonText}>Start Monthly</Text>
             </TouchableOpacity>
@@ -113,7 +140,7 @@ export default function PaywallScreen() {
             <Text style={styles.saveLabel}>Save 37%</Text>
             <TouchableOpacity
               style={styles.yearlyButton}
-              onPress={() => Alert.alert('Payment integration coming soon! 🚀')}
+              onPress={() => showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE)}
               activeOpacity={0.8}>
               <Text style={styles.yearlyButtonText}>Start Yearly</Text>
             </TouchableOpacity>

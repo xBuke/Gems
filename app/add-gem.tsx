@@ -17,7 +17,6 @@ import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -59,7 +58,7 @@ const uploadImage = async (uri: string) => {
     });
 
   if (error) {
-    console.log('Upload error:', error);
+    console.error('Upload error:', error);
     return null;
   }
 
@@ -228,20 +227,7 @@ export default function AddGemScreen() {
       return;
     }
 
-    console.log('Original image URI:', imageUri);
-
     const compressedUri = imageUri ? await compressImage(imageUri) : null;
-    console.log('Compressed image URI:', compressedUri);
-
-    if (compressedUri) {
-      const fileInfo = await FileSystem.getInfoAsync(compressedUri);
-      console.log('Compressed file size:', fileInfo.exists ? fileInfo.size : 'unknown', 'bytes');
-    }
-
-    if (imageUri) {
-      const originalInfo = await FileSystem.getInfoAsync(imageUri);
-      console.log('Original file size:', originalInfo.exists ? originalInfo.size : 'unknown', 'bytes');
-    }
 
     const imageUrl = compressedUri ? await uploadImage(compressedUri) : null;
 

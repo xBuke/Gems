@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -180,7 +181,7 @@ export default function MessagesScreen() {
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity onPress={() => console.log('New message')} activeOpacity={0.7} style={styles.headerSideRight}>
+        <TouchableOpacity onPress={() => Alert.alert('Coming Soon', 'Starting new conversations from here is coming soon. For now, message someone by visiting their profile and tapping "Send Message".')} activeOpacity={0.7} style={styles.headerSideRight}>
           <Ionicons name="create-outline" size={22} color={theme.accent} />
         </TouchableOpacity>
       </View>

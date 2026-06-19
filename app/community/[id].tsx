@@ -203,13 +203,11 @@ export default function CommunityDetailScreen() {
       setIsMember(false)
     }
 
-    console.log('Fetching gems for community:', id)
-    const { data: gemsData, error: gemsError } = await supabase
+    const { data: gemsData } = await supabase
       .from('gems')
       .select('*, profiles!gems_user_id_fkey(username)')
       .eq('community_id', id)
       .order('created_at', { ascending: false })
-    console.log('Community gems result:', gemsData, gemsError)
 
     const gemList = (gemsData ?? []) as Gem[]
     setGems(gemList)

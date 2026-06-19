@@ -25,6 +25,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -145,6 +146,8 @@ export default function DiscoverScreen() {
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
   const [isPremium, setIsPremium] = useState(false);
   const [streakBannerText, setStreakBannerText] = useState<string | null>(null);
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const streakBannerOpacity = useRef(new Animated.Value(0)).current;
 
   const showStreakBanner = useCallback(
@@ -288,7 +291,15 @@ export default function DiscoverScreen() {
 
       query = applyCommunityGemFilter(query, myCommunityIds);
 
-      const { data } = await query;
+      const { data, error } = await query;
+
+      if (error) {
+        console.log('Fetch error:', error);
+        setFeedError('Something went wrong loading your feed. Pull down to refresh.');
+        return;
+      }
+
+      setFeedError(null);
 
       if (data) {
         const filtered = (data as GemWithProfile[]).filter((g) => !blockedIds.has(g.user_id));
@@ -345,7 +356,15 @@ export default function DiscoverScreen() {
 
       query = applyCommunityGemFilter(query, myCommunityIds);
 
-      const { data } = await query;
+      const { data, error } = await query;
+
+      if (error) {
+        console.log('Fetch error:', error);
+        setFeedError('Something went wrong loading your feed. Pull down to refresh.');
+        return;
+      }
+
+      setFeedError(null);
 
       if (data && locationCoords) {
         const nearby = filterBlocked(data as GemWithProfile[], blockedIds)
@@ -409,7 +428,15 @@ export default function DiscoverScreen() {
 
     query = applyCommunityGemFilter(query, myCommunityIds);
 
-    const { data: gems } = await query;
+    const { data: gems, error } = await query;
+
+    if (error) {
+      console.log('Fetch error:', error);
+      setFeedError('Something went wrong loading your feed. Pull down to refresh.');
+      return;
+    }
+
+    setFeedError(null);
 
     if (gems) {
       const filtered = (gems as GemWithProfile[]).filter((g) => !blockedIds.has(g.user_id));
@@ -445,7 +472,15 @@ export default function DiscoverScreen() {
 
       query = applyCommunityGemFilter(query, myCommunityIds);
 
-      const { data } = await query;
+      const { data, error } = await query;
+
+      if (error) {
+        console.log('Fetch error:', error);
+        setFeedError('Something went wrong loading your feed. Pull down to refresh.');
+        return;
+      }
+
+      setFeedError(null);
 
       if (data && data.length > 0) {
         const eligible = filterBlockedLocal(data as GemWithProfile[]);
@@ -469,7 +504,15 @@ export default function DiscoverScreen() {
 
       query = applyCommunityGemFilter(query, myCommunityIds);
 
-      const { data } = await query;
+      const { data, error } = await query;
+
+      if (error) {
+        console.log('Fetch error:', error);
+        setFeedError('Something went wrong loading your feed. Pull down to refresh.');
+        return;
+      }
+
+      setFeedError(null);
 
       if (data) {
         const filtered = filterBlockedLocal(data as GemWithProfile[]);
@@ -486,7 +529,15 @@ export default function DiscoverScreen() {
 
       query = applyCommunityGemFilter(query, myCommunityIds);
 
-      const { data } = await query;
+      const { data, error } = await query;
+
+      if (error) {
+        console.log('Fetch error:', error);
+        setFeedError('Something went wrong loading your feed. Pull down to refresh.');
+        return;
+      }
+
+      setFeedError(null);
 
       if (data) setAllGems(filterBlockedLocal(data as GemWithProfile[]));
     };
@@ -497,11 +548,13 @@ export default function DiscoverScreen() {
     setHasMoreNearby(true);
 
     fetchMysteryGem();
-    fetchGemOfTheDay();
-    fetchTrending();
-    fetchRecentGems(0, myCommunityIds);
-    fetchAllGems();
-    fetchNearbyGems(0, myCommunityIds);
+    await Promise.all([
+      fetchGemOfTheDay(),
+      fetchTrending(),
+      fetchRecentGems(0, myCommunityIds),
+      fetchAllGems(),
+      fetchNearbyGems(0, myCommunityIds),
+    ]);
     checkUnreadMessages();
     checkUnreadNotifications();
 
@@ -513,6 +566,27 @@ export default function DiscoverScreen() {
     };
     loadCustomCategories();
   }, [checkUnreadMessages, checkUnreadNotifications, fetchLikeCounts, fetchRecentGems, fetchNearbyGems]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+    await Promise.all([
+      refreshDiscoverData(myCommunityIds),
+      fetchFollowingGems(myCommunityIds),
+    ]);
+    setRefreshing(false);
+  }, [fetchFollowingGems, refreshDiscoverData]);
+
+  const handleRetryFeed = useCallback(async () => {
+    setFeedError(null);
+    const { data: { user } } = await supabase.auth.getUser();
+    const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+    await Promise.all([
+      refreshDiscoverData(myCommunityIds),
+      fetchFollowingGems(myCommunityIds),
+    ]);
+  }, [fetchFollowingGems, refreshDiscoverData]);
 
   const handleLoadMoreRecent = useCallback(async () => {
     if (loadingMoreRecent || !hasMoreRecent) return;
@@ -1359,9 +1433,34 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
+      {feedError && (
+        <View
+          style={{
+            backgroundColor: theme.card,
+            borderRadius: 12,
+            padding: 14,
+            marginHorizontal: 16,
+            marginBottom: 12,
+            borderWidth: 0.5,
+            borderColor: theme.danger,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+          <Ionicons name="alert-circle-outline" size={20} color={theme.danger} />
+          <Text style={{ color: theme.text, fontSize: 13, flex: 1 }}>{feedError}</Text>
+          <TouchableOpacity onPress={handleRetryFeed}>
+            <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '600' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}>
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
+        }>
         {feedTab === 'forYou' ? renderForYouContent() : renderFollowingContent()}
       </ScrollView>
 

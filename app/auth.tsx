@@ -20,6 +20,11 @@ import { supabase } from '@/lib/supabase';
 
 type AuthMode = 'login' | 'register';
 
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email.trim())
+}
+
 export default function AuthScreen() {
   const router = useRouter();
   const { redirectTo } = useLocalSearchParams();
@@ -39,6 +44,20 @@ export default function AuthScreen() {
 
   const handleLogin = async () => {
     setError('');
+
+    if (!email.trim()) {
+      setError('Please enter your email')
+      return
+    }
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+    if (!password) {
+      setError('Please enter your password')
+      return
+    }
+
     setLoading(true);
 
     const { data, error: loginError } = await supabase.auth.signInWithPassword({
@@ -76,6 +95,37 @@ export default function AuthScreen() {
 
   const handleRegister = async () => {
     setError('');
+
+    if (!email.trim()) {
+      setError('Please enter your email')
+      return
+    }
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+    if (!username.trim()) {
+      setError('Please choose a username')
+      return
+    }
+    if (username.trim().length < 3) {
+      setError('Username must be at least 3 characters')
+      return
+    }
+    if (username.trim().length > 20) {
+      setError('Username must be 20 characters or less')
+      return
+    }
+    const usernameRegex = /^[a-zA-Z0-9_]+$/
+    if (!usernameRegex.test(username.trim())) {
+      setError('Username can only contain letters, numbers, and underscores')
+      return
+    }
+
     setLoading(true);
 
     const { data, error: signUpError } = await supabase.auth.signUp({

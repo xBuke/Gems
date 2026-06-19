@@ -193,7 +193,6 @@ export default function GemDetailScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       setIsOwner(user?.id === data.user_id);
     }
-    if (error) console.log('Error details:', JSON.stringify(error));
     setLoading(false);
   }, [id]);
 
