@@ -2,7 +2,7 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
@@ -109,6 +109,12 @@ export default function MessagesScreen() {
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchConversations();
+    }, [fetchConversations]),
+  );
 
   const renderConversation = ({ item }: { item: Conversation }) => {
     const initial = item.otherUsername.charAt(0).toUpperCase();

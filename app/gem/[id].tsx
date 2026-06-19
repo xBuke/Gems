@@ -5,8 +5,8 @@ import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -117,7 +117,7 @@ export default function GemDetailScreen() {
     setCommentLikes(likesMap);
   };
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     if (!gemId) return;
 
     const { data: commentsData } = await supabase
@@ -130,66 +130,75 @@ export default function GemDetailScreen() {
       setComments(commentsData);
       await fetchCommentLikes(commentsData.map((comment) => comment.id));
     }
-  };
+  }, [gemId]);
 
-  useEffect(() => {
+  const fetchGem = useCallback(async () => {
     if (!id) return;
 
-    const fetchGem = async () => {
-      const resolvedGemId = Array.isArray(id) ? id[0] : id;
+    const resolvedGemId = Array.isArray(id) ? id[0] : id;
 
-      const { data, error } = await supabase
-        .from('gems')
-        .select('*, profiles!gems_user_id_fkey(username)')
-        .eq('id', resolvedGemId)
-        .single();
+    const { data, error } = await supabase
+      .from('gems')
+      .select('*, profiles!gems_user_id_fkey(username)')
+      .eq('id', resolvedGemId)
+      .single();
 
-      if (data) {
-        setGem(data);
-        const { data: { user } } = await supabase.auth.getUser();
-        setIsOwner(user?.id === data.user_id);
-      }
-      if (error) console.log('Error details:', JSON.stringify(error));
-      setLoading(false);
-    };
-
-    fetchGem();
+    if (data) {
+      setGem(data);
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsOwner(user?.id === data.user_id);
+    }
+    if (error) console.log('Error details:', JSON.stringify(error));
+    setLoading(false);
   }, [id]);
+
+  const fetchLikes = useCallback(async () => {
+    if (!gemId) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { count } = await supabase
+      .from('gem_likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('gem_id', gemId);
+
+    setLikeCount(count || 0);
+
+    if (user) {
+      const { data: existingLike } = await supabase
+        .from('gem_likes')
+        .select('id')
+        .eq('gem_id', gemId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      setIsLiked(!!existingLike);
+    }
+  }, [gemId]);
+
+  useEffect(() => {
+    fetchGem();
+  }, [fetchGem]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchGem();
+      fetchComments();
+      fetchVisitCount();
+      fetchLikes();
+    }, [fetchGem, fetchComments, fetchLikes]),
+  );
 
   useEffect(() => {
     if (gemId) {
       fetchComments();
       fetchVisitCount();
     }
-  }, [gemId]);
+  }, [gemId, fetchComments]);
 
   useEffect(() => {
-    if (!gemId) return;
-
-    const fetchLikes = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      const { count } = await supabase
-        .from('gem_likes')
-        .select('*', { count: 'exact', head: true })
-        .eq('gem_id', gemId);
-
-      setLikeCount(count || 0);
-
-      if (user) {
-        const { data: existingLike } = await supabase
-          .from('gem_likes')
-          .select('id')
-          .eq('gem_id', gemId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        setIsLiked(!!existingLike);
-      }
-    };
-
     fetchLikes();
-  }, [gemId]);
+  }, [fetchLikes]);
 
   useEffect(() => {
     if (!gem) return;

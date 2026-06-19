@@ -1,9 +1,11 @@
 import { requireAuth } from '@/lib/authGuard';
+import type { CustomCategory } from '@/lib/customCategories';
+import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -50,6 +52,34 @@ export default function ProfileScreen() {
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
+
+  const fetchMyCustomCategories = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const isOwn = !userId || userId === user.id;
+    if (!isOwn) {
+      setIsPremium(false);
+      setCustomCategories([]);
+      return;
+    }
+
+    const premium = await checkIsPremium();
+    setIsPremium(premium);
+
+    if (premium) {
+      const { data: categoriesData } = await supabase
+        .from('custom_categories')
+        .select('*')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false });
+      setCustomCategories((categoriesData as CustomCategory[]) ?? []);
+    } else {
+      setCustomCategories([]);
+    }
+  }, [userId]);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -60,6 +90,8 @@ export default function ProfileScreen() {
 
     setIsOwnProfile(isOwn);
     setCurrentUserId(user.id);
+
+    await fetchMyCustomCategories();
 
     const { data: profileData } = await supabase
       .from('profiles')
@@ -99,11 +131,17 @@ export default function ProfileScreen() {
     } else {
       setIsFollowing(false);
     }
-  }, [userId]);
+  }, [userId, fetchMyCustomCategories]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData]),
+  );
 
   const username = profile?.username ?? 'User';
   const initials = username.charAt(0).toUpperCase();
@@ -280,6 +318,52 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Followers</Text>
           </TouchableOpacity>
         </View>
+
+        {isOwnProfile && isPremium && (
+          <View style={styles.categoriesSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>My Categories</Text>
+              <Text style={styles.sectionCount}>{customCategories.length}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.newCategoryButton}
+              onPress={() => router.push('/create-category')}
+              activeOpacity={0.8}>
+              <Ionicons name="add" size={18} color={theme.accent} />
+              <Text style={styles.newCategoryButtonText}>New Category</Text>
+            </TouchableOpacity>
+
+            {customCategories.length > 0 && (
+              <View style={styles.categoryChips}>
+                {customCategories.map((category) => (
+                  <TouchableOpacity
+                    key={category.id}
+                    style={[styles.categoryChip, { borderColor: category.color }]}
+                    onPress={() =>
+                      Alert.alert(
+                        category.name,
+                        `${category.visibility === 'public' ? 'Public' : 'Private'} category · Tap to view gems coming soon`,
+                      )
+                    }
+                    activeOpacity={0.7}>
+                    <Ionicons
+                      name={category.icon as keyof typeof Ionicons.glyphMap}
+                      size={14}
+                      color={category.color}
+                    />
+                    <Text style={styles.categoryChipText}>{category.name}</Text>
+                    <Ionicons
+                      name={category.visibility === 'public' ? 'globe' : 'lock-closed'}
+                      size={12}
+                      color={theme.textTertiary}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {!isOwnProfile && (
           <View style={styles.actionRow}>
@@ -488,6 +572,50 @@ const createStyles = (theme: Theme) =>
   sectionCount: {
     fontSize: 13,
     color: theme.accent,
+  },
+  categoriesSection: {
+    marginBottom: 8,
+  },
+  newCategoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.card,
+    borderWidth: 1.5,
+    borderColor: theme.accent,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  newCategoryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.accent,
+  },
+  categoryChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  categoryChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.text,
   },
   gemsGrid: {
     paddingHorizontal: 12,

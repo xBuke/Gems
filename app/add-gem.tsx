@@ -1,5 +1,10 @@
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES, TAGS } from '@/lib/categories';
+import {
+  canAddToCustomCategory,
+  fetchVisibleCustomCategories,
+  type CustomCategory,
+} from '@/lib/customCategories';
 import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -75,6 +80,9 @@ export default function AddGemScreen() {
   const [description, setDescription] = useState('');
   const [selectedMainCategory, setSelectedMainCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [selectedCustomCategory, setSelectedCustomCategory] = useState<CustomCategory | null>(null);
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -91,6 +99,17 @@ export default function AddGemScreen() {
       setLocationFromMap(true);
     }
   }, [hasMapLocation, parsedLat, parsedLng]);
+
+  useEffect(() => {
+    const loadCustomCategories = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+      const categories = await fetchVisibleCustomCategories(user.id);
+      setCustomCategories(categories);
+    };
+    loadCustomCategories();
+  }, []);
 
   const detectCurrentLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -186,18 +205,32 @@ export default function AddGemScreen() {
 
     const imageUrl = imageUri ? await uploadImage(imageUri) : null;
 
-    const { error } = await supabase.from('gems').insert({
-      title: name.trim(),
-      description: description.trim(),
-      category: selectedMainCategory!.id,
-      subcategory: selectedSubcategory,
-      tags: selectedTags.length > 0 ? selectedTags : null,
-      latitude,
-      longitude,
-      user_id: user.id,
-      image_url: imageUrl,
-      verified,
-    });
+    const gemPayload = selectedCustomCategory
+      ? {
+          title: name.trim(),
+          description: description.trim(),
+          custom_category_id: selectedCustomCategory.id,
+          tags: selectedTags.length > 0 ? selectedTags : null,
+          latitude,
+          longitude,
+          user_id: user.id,
+          image_url: imageUrl,
+          verified,
+        }
+      : {
+          title: name.trim(),
+          description: description.trim(),
+          category: selectedMainCategory!.id,
+          subcategory: selectedSubcategory,
+          tags: selectedTags.length > 0 ? selectedTags : null,
+          latitude,
+          longitude,
+          user_id: user.id,
+          image_url: imageUrl,
+          verified,
+        };
+
+    const { error } = await supabase.from('gems').insert(gemPayload);
 
     if (error) {
       Alert.alert('Error', error.message);
@@ -219,6 +252,24 @@ export default function AddGemScreen() {
       }
     }
     setSelectedMainCategory(category);
+    setSelectedSubcategory(null);
+    setSelectedCustomCategory(null);
+  };
+
+  const handleCustomCategorySelect = async (category: CustomCategory) => {
+    if (!userId) return;
+
+    const allowed = await canAddToCustomCategory(category, userId);
+    if (!allowed) {
+      Alert.alert('This category is for Premium members', undefined, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Go Premium', onPress: () => router.push('/paywall') },
+      ]);
+      return;
+    }
+
+    setSelectedCustomCategory(category);
+    setSelectedMainCategory(null);
     setSelectedSubcategory(null);
   };
 
@@ -246,12 +297,12 @@ export default function AddGemScreen() {
       return;
     }
 
-    if (!selectedMainCategory) {
+    if (!selectedCustomCategory && !selectedMainCategory) {
       Alert.alert('Error', 'Please select a category.');
       return;
     }
 
-    if (!selectedSubcategory) {
+    if (!selectedCustomCategory && !selectedSubcategory) {
       Alert.alert('Error', 'Please select a subcategory.');
       return;
     }
@@ -405,6 +456,32 @@ export default function AddGemScreen() {
                   );
                 })}
               </View>
+
+              {customCategories.length > 0 && (
+                <>
+                  <Text style={styles.fieldLabel}>Custom Categories</Text>
+                  <View style={styles.categoryGrid}>
+                    {customCategories.map((category) => {
+                      const isSelected = selectedCustomCategory?.id === category.id;
+                      return (
+                        <View key={category.id} style={styles.categoryItemWrap}>
+                          <TouchableOpacity
+                            style={[styles.categoryItem, isSelected && styles.categoryItemSelected]}
+                            onPress={() => handleCustomCategorySelect(category)}
+                            activeOpacity={0.7}>
+                            <Ionicons
+                              name={category.icon as keyof typeof Ionicons.glyphMap}
+                              size={22}
+                              color={category.color}
+                            />
+                            <Text style={styles.categoryName}>{category.name}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
 
               {selectedMainCategory && (
                 <>

@@ -1,13 +1,14 @@
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
+import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customCategories';
 import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { MapType, Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +40,7 @@ type Gem = {
   title: string;
   category: string;
   subcategory?: string | null;
+  custom_category_id?: string | null;
 };
 
 type TapLocation = {
@@ -58,6 +60,8 @@ export default function MapScreen() {
   const [gems, setGems] = useState<Gem[]>([]);
   const [activeMainCategory, setActiveMainCategory] = useState<Category | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  const [activeCustomCategory, setActiveCustomCategory] = useState<CustomCategory | null>(null);
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
   const [placingMode, setPlacingMode] = useState(false);
   const [tapLocation, setTapLocation] = useState<TapLocation | null>(null);
   const [tapLocationName, setTapLocationName] = useState<string | null>(null);
@@ -68,13 +72,28 @@ export default function MapScreen() {
     }
   }, [placeMode]);
 
-  useEffect(() => {
-    const fetchGems = async () => {
-      const { data } = await supabase.from('gems').select('*').eq('is_private', false);
-      if (data) setGems(data);
-    };
-    fetchGems();
+  const fetchGems = useCallback(async () => {
+    const { data } = await supabase.from('gems').select('*').eq('is_private', false);
+    if (data) setGems(data);
   }, []);
+
+  useEffect(() => {
+    fetchGems();
+
+    const loadCustomCategories = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const categories = await fetchVisibleCustomCategories(user.id);
+      setCustomCategories(categories);
+    };
+    loadCustomCategories();
+  }, [fetchGems]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchGems();
+    }, [fetchGems]),
+  );
 
   useEffect(() => {
     Location.requestForegroundPermissionsAsync();
@@ -121,13 +140,28 @@ export default function MapScreen() {
     } else {
       setActiveMainCategory(cat);
       setActiveSubcategory(null);
+      setActiveCustomCategory(null);
+    }
+  };
+
+  const handleCustomCategoryPress = (category: CustomCategory) => {
+    if (activeCustomCategory?.id === category.id) {
+      setActiveCustomCategory(null);
+    } else {
+      setActiveCustomCategory(category);
+      setActiveMainCategory(null);
+      setActiveSubcategory(null);
     }
   };
 
   const currentMapType = MAP_TYPES[mapTypeIndex];
 
   const visibleGems = gems.filter((gem) => {
-    if (activeMainCategory && gem.category !== activeMainCategory.id) return false;
+    if (activeCustomCategory) {
+      if (gem.custom_category_id !== activeCustomCategory.id) return false;
+    } else if (activeMainCategory && gem.category !== activeMainCategory.id) {
+      return false;
+    }
     if (activeSubcategory && gem.subcategory !== activeSubcategory) return false;
     return true;
   });
@@ -238,13 +272,17 @@ export default function MapScreen() {
               paddingVertical: 10,
               borderRadius: 20,
               marginRight: 10,
-              backgroundColor: activeMainCategory === null ? '#1D9E75' : 'rgba(255,255,255,0.15)',
+              backgroundColor:
+                activeMainCategory === null && activeCustomCategory === null
+                  ? '#1D9E75'
+                  : 'rgba(255,255,255,0.15)',
               borderWidth: 1,
               borderColor: 'rgba(255,255,255,0.4)',
             }}
             onPress={() => {
               setActiveMainCategory(null);
               setActiveSubcategory(null);
+              setActiveCustomCategory(null);
             }}>
             <Text
               style={{
@@ -286,9 +324,39 @@ export default function MapScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+
+          {customCategories.map((cat) => (
+            <TouchableOpacity
+              key={cat.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 18,
+                paddingVertical: 10,
+                borderRadius: 20,
+                marginRight: 10,
+                backgroundColor:
+                  activeCustomCategory?.id === cat.id ? cat.color : 'rgba(255,255,255,0.15)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.4)',
+              }}
+              onPress={() => handleCustomCategoryPress(cat)}
+              activeOpacity={0.7}>
+              <Ionicons name={cat.icon as any} size={14} color="#FFFFFF" aria-hidden={true} />
+              <Text
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}>
+                {cat.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
 
-        {activeMainCategory && (
+        {activeMainCategory && !activeCustomCategory && (
           <View style={{ marginBottom: 4 }}>
             <Text
               style={{

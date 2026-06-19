@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
+import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customCategories';
 import { PENDING_PREFS_KEY } from '@/lib/onboarding';
 import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
@@ -9,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
@@ -31,6 +32,7 @@ type Gem = {
   description?: string | null;
   category: string;
   subcategory?: string | null;
+  custom_category_id?: string | null;
   image_url: string | null;
   verified: boolean;
   latitude: number;
@@ -105,6 +107,8 @@ export default function DiscoverScreen() {
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [activeMainCategory, setActiveMainCategory] = useState<Category | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  const [activeCustomCategory, setActiveCustomCategory] = useState<CustomCategory | null>(null);
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
   const [allGems, setAllGems] = useState<GemWithProfile[]>([]);
   const [filteredGems, setFilteredGems] = useState<GemWithProfile[]>([]);
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
@@ -214,38 +218,7 @@ export default function DiscoverScreen() {
     }
   }, [fetchLikeCounts]);
 
-  useEffect(() => {
-    checkIsPremium().then(setIsPremium);
-  }, []);
-
-  useEffect(() => {
-    const fetchPreferredCategories = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('preferred_categories')
-          .eq('id', user.id)
-          .single();
-        if (data?.preferred_categories?.length) {
-          setPreferredCategories(data.preferred_categories);
-        }
-        return;
-      }
-
-      const raw = await AsyncStorage.getItem(PENDING_PREFS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as { preferred_categories?: string[] };
-        if (parsed.preferred_categories?.length) {
-          setPreferredCategories(parsed.preferred_categories);
-        }
-      }
-    };
-
-    fetchPreferredCategories();
-  }, []);
-
-  useEffect(() => {
+  const refreshDiscoverData = useCallback(async () => {
     const fetchGemOfTheDay = async () => {
       const { data } = await supabase
         .from('gems')
@@ -344,7 +317,57 @@ export default function DiscoverScreen() {
     fetchNearby();
     checkUnreadMessages();
     checkUnreadNotifications();
+
+    const loadCustomCategories = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const categories = await fetchVisibleCustomCategories(user.id);
+      setCustomCategories(categories);
+    };
+    loadCustomCategories();
   }, [checkUnreadMessages, checkUnreadNotifications, fetchLikeCounts]);
+
+  useEffect(() => {
+    checkIsPremium().then(setIsPremium);
+  }, []);
+
+  useEffect(() => {
+    const fetchPreferredCategories = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('preferred_categories')
+          .eq('id', user.id)
+          .single();
+        if (data?.preferred_categories?.length) {
+          setPreferredCategories(data.preferred_categories);
+        }
+        return;
+      }
+
+      const raw = await AsyncStorage.getItem(PENDING_PREFS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { preferred_categories?: string[] };
+        if (parsed.preferred_categories?.length) {
+          setPreferredCategories(parsed.preferred_categories);
+        }
+      }
+    };
+
+    fetchPreferredCategories();
+  }, []);
+
+  useEffect(() => {
+    refreshDiscoverData();
+  }, [refreshDiscoverData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshDiscoverData();
+      fetchFollowingGems();
+    }, [refreshDiscoverData, fetchFollowingGems]),
+  );
 
   useEffect(() => {
     let channel: any = null;
@@ -397,7 +420,9 @@ export default function DiscoverScreen() {
 
   useEffect(() => {
     let results = allGems;
-    if (activeMainCategory) {
+    if (activeCustomCategory) {
+      results = results.filter((g) => g.custom_category_id === activeCustomCategory.id);
+    } else if (activeMainCategory) {
       results = results.filter((g) => g.category === activeMainCategory.id);
     }
     if (activeSubcategory) {
@@ -411,7 +436,7 @@ export default function DiscoverScreen() {
       );
     }
     setFilteredGems(results);
-  }, [activeMainCategory, activeSubcategory, searchQuery, allGems]);
+  }, [activeCustomCategory, activeMainCategory, activeSubcategory, searchQuery, allGems]);
 
   const filteredGemOfTheDay = useMemo(
     () => (gemOfTheDay && matchesSearch(gemOfTheDay, searchQuery) ? gemOfTheDay : null),
@@ -453,6 +478,17 @@ export default function DiscoverScreen() {
       setActiveSubcategory(null);
     } else {
       setActiveMainCategory(cat);
+      setActiveSubcategory(null);
+      setActiveCustomCategory(null);
+    }
+  };
+
+  const handleCustomCategoryPress = (category: CustomCategory) => {
+    if (activeCustomCategory?.id === category.id) {
+      setActiveCustomCategory(null);
+    } else {
+      setActiveCustomCategory(category);
+      setActiveMainCategory(null);
       setActiveSubcategory(null);
     }
   };
@@ -707,13 +743,17 @@ export default function DiscoverScreen() {
             paddingVertical: 10,
             borderRadius: 20,
             marginRight: 10,
-            backgroundColor: activeMainCategory === null ? '#1D9E75' : 'rgba(255,255,255,0.15)',
+            backgroundColor:
+              activeMainCategory === null && activeCustomCategory === null
+                ? '#1D9E75'
+                : 'rgba(255,255,255,0.15)',
             borderWidth: 1,
             borderColor: 'rgba(255,255,255,0.4)',
           }}
           onPress={() => {
             setActiveMainCategory(null);
             setActiveSubcategory(null);
+            setActiveCustomCategory(null);
           }}>
           <Text
             style={{
@@ -753,9 +793,43 @@ export default function DiscoverScreen() {
             </Text>
           </TouchableOpacity>
         ))}
+
+        {customCategories.map((cat) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+              borderRadius: 20,
+              marginRight: 10,
+              backgroundColor:
+                activeCustomCategory?.id === cat.id ? cat.color : 'rgba(255,255,255,0.15)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.4)',
+            }}
+            onPress={() => handleCustomCategoryPress(cat)}>
+            <Ionicons
+              name={cat.icon as keyof typeof Ionicons.glyphMap}
+              size={14}
+              color="#FFFFFF"
+              aria-hidden={true}
+            />
+            <Text
+              style={{
+                color: '#FFFFFF',
+                fontSize: 14,
+                fontWeight: '600',
+              }}>
+              {cat.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
 
-      {activeMainCategory && (
+      {activeMainCategory && !activeCustomCategory && (
         <View style={{ marginVertical: 10 }}>
           <Text
             style={{
