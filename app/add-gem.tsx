@@ -11,9 +11,12 @@ import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
+import { hapticError, hapticLight, hapticSuccess } from '@/lib/haptics';
+import { compressImage } from '@/lib/imageCompress';
 import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -162,11 +165,13 @@ export default function AddGemScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
+      hapticLight();
       setImageUri(result.assets[0].uri);
     }
   };
@@ -180,12 +185,13 @@ export default function AddGemScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
+      allowsEditing: false,
+      quality: 1,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
+      hapticLight();
       setImageUri(result.assets[0].uri);
     }
   };
@@ -222,7 +228,22 @@ export default function AddGemScreen() {
       return;
     }
 
-    const imageUrl = imageUri ? await uploadImage(imageUri) : null;
+    console.log('Original image URI:', imageUri);
+
+    const compressedUri = imageUri ? await compressImage(imageUri) : null;
+    console.log('Compressed image URI:', compressedUri);
+
+    if (compressedUri) {
+      const fileInfo = await FileSystem.getInfoAsync(compressedUri);
+      console.log('Compressed file size:', fileInfo.exists ? fileInfo.size : 'unknown', 'bytes');
+    }
+
+    if (imageUri) {
+      const originalInfo = await FileSystem.getInfoAsync(imageUri);
+      console.log('Original file size:', originalInfo.exists ? originalInfo.size : 'unknown', 'bytes');
+    }
+
+    const imageUrl = compressedUri ? await uploadImage(compressedUri) : null;
 
     const isLocal = await checkIsLocalPick(user.id, latitude!, longitude!);
 
@@ -267,6 +288,7 @@ export default function AddGemScreen() {
       return;
     }
 
+    hapticSuccess();
     await addStreakBonus(user.id, 10);
 
     const successRoute = communityId ? '/community/' + communityId : '/map';
@@ -356,6 +378,7 @@ export default function AddGemScreen() {
       );
 
       if (distance > 500) {
+        hapticError();
         Alert.alert('You seem far from this location. Pin here anyway?', undefined, [
           { text: 'No', style: 'cancel' },
           { text: 'Yes', onPress: () => insertGem(false) },

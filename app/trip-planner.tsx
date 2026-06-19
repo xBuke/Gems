@@ -372,24 +372,33 @@ export default function TripPlannerScreen() {
 
         {hasSearched && (
           <View style={styles.resultsSection}>
-            <Text style={styles.resultsSummary}>
-              {results.length} gem{results.length !== 1 ? 's' : ''} found near {destName}
-            </Text>
-
-            {results.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
-                  No gems found in this area yet. Be the first to add one!
-                </Text>
-                <TouchableOpacity
-                  style={styles.addGemButton}
-                  onPress={() => router.push('/add-gem')}
-                  activeOpacity={0.8}>
-                  <Text style={styles.addGemButtonText}>Add a Gem</Text>
-                </TouchableOpacity>
+            {searching ? (
+              <View style={styles.searchingState}>
+                <ActivityIndicator size="large" color={theme.accent} />
+                <Text style={styles.searchingText}>Searching nearby gems...</Text>
               </View>
             ) : (
-              results.map((gem) => renderGemCard(gem))
+              <>
+                <Text style={styles.resultsSummary}>
+                  {results.length} gem{results.length !== 1 ? 's' : ''} found near {destName}
+                </Text>
+
+                {results.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>
+                      No gems found in this area yet. Be the first to add one!
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.addGemButton}
+                      onPress={() => router.push('/add-gem')}
+                      activeOpacity={0.8}>
+                      <Text style={styles.addGemButtonText}>Add a Gem</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  results.map((gem) => renderGemCard(gem))
+                )}
+              </>
             )}
           </View>
         )}
@@ -561,6 +570,18 @@ const createStyles = (theme: Theme) =>
     },
     resultsSection: {
       marginTop: 24,
+    },
+    searchingState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 40,
+      paddingTop: 60,
+      gap: 16,
+    },
+    searchingText: {
+      fontSize: 15,
+      color: theme.textSecondary,
+      textAlign: 'center',
     },
     resultsSummary: {
       fontSize: 13,

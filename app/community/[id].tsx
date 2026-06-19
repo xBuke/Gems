@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/authGuard'
 import { CATEGORIES } from '@/lib/categories'
 import { canJoinMoreCommunities, getCommunityMemberCount } from '@/lib/communities'
+import { hapticLight } from '@/lib/haptics'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
@@ -110,6 +111,8 @@ export default function CommunityDetailScreen() {
   const styles = useMemo(() => createStyles(theme), [theme])
 
   const [loading, setLoading] = useState(true)
+  const [loadingFeed, setLoadingFeed] = useState(true)
+  const [loadingChat, setLoadingChat] = useState(true)
   const [community, setCommunity] = useState<Community | null>(null)
   const [memberCount, setMemberCount] = useState(0)
   const [isMember, setIsMember] = useState(false)
@@ -161,6 +164,8 @@ export default function CommunityDetailScreen() {
     if (!id) return
 
     setLoading(true)
+    setLoadingFeed(true)
+    setLoadingChat(true)
 
     const {
       data: { user },
@@ -174,6 +179,8 @@ export default function CommunityDetailScreen() {
       .single()
 
     if (!communityData) {
+      setLoadingFeed(false)
+      setLoadingChat(false)
       setLoading(false)
       return
     }
@@ -207,6 +214,7 @@ export default function CommunityDetailScreen() {
     const gemList = (gemsData ?? []) as Gem[]
     setGems(gemList)
     await fetchLikeCounts(gemList)
+    setLoadingFeed(false)
 
     const { data: messagesData } = await supabase
       .from('community_messages')
@@ -215,6 +223,7 @@ export default function CommunityDetailScreen() {
       .order('created_at', { ascending: true })
 
     setMessages((messagesData ?? []) as CommunityMessage[])
+    setLoadingChat(false)
     setLoading(false)
   }, [id, fetchLikeCounts])
 
@@ -400,6 +409,7 @@ export default function CommunityDetailScreen() {
     setSending(false)
 
     if (!error && data) {
+      hapticLight()
       setMessages((prev) => {
         if (prev.some((m) => m.id === data.id)) return prev
         return [...prev, data as CommunityMessage]
@@ -477,7 +487,16 @@ export default function CommunityDetailScreen() {
     return renderMessage(item.data)
   }
 
-  const renderFeed = () => (
+  const renderFeed = () => {
+    if (loadingFeed) {
+      return (
+        <View style={styles.tabLoading}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      )
+    }
+
+    return (
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.feedContent}>
@@ -492,9 +511,18 @@ export default function CommunityDetailScreen() {
         gems.map(renderGemCard)
       )}
     </ScrollView>
-  )
+    )
+  }
 
   const renderChat = () => {
+    if (loadingChat) {
+      return (
+        <View style={styles.tabLoading}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      )
+    }
+
     if (!isMember) {
       return (
         <View style={styles.chatGate}>
@@ -567,7 +595,7 @@ export default function CommunityDetailScreen() {
   if (loading && !community) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.centered}>
+        <View style={[styles.centered, { paddingTop: 60 }]}>
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </SafeAreaView>
@@ -823,6 +851,12 @@ const createStyles = (theme: Theme) =>
     },
     tabContent: {
       flex: 1,
+    },
+    tabLoading: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: 60,
     },
     feedContent: {
       paddingHorizontal: 16,

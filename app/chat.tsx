@@ -1,4 +1,5 @@
 import { blockUser } from '@/lib/safety';
+import { hapticLight } from '@/lib/haptics';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +12,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -92,6 +94,7 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+  const [otherAvatarUrl, setOtherAvatarUrl] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
 
   const chatItems = useMemo(() => buildChatItems(messages), [messages]);
@@ -107,6 +110,14 @@ export default function ChatScreen() {
     if (!user || !userId) return;
 
     setMyId(user.id);
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', userId)
+      .single();
+
+    setOtherAvatarUrl(profileData?.avatar_url ?? null);
 
     const { data } = await supabase
       .from('messages')
@@ -199,6 +210,7 @@ export default function ChatScreen() {
     setSending(false);
 
     if (!error && data) {
+      hapticLight();
       setMessages((prev) => [...prev, data as Message]);
 
       await supabase.from('notifications').insert({
@@ -321,7 +333,11 @@ export default function ChatScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerCenter} onPress={goToProfile} activeOpacity={0.7}>
           <View style={styles.headerAvatar}>
-            <Text style={styles.headerAvatarText}>{initial}</Text>
+            {otherAvatarUrl ? (
+              <Image source={{ uri: otherAvatarUrl }} style={styles.headerAvatarImage} />
+            ) : (
+              <Text style={styles.headerAvatarText}>{initial}</Text>
+            )}
           </View>
           <Text style={styles.headerUsername}>{displayName}</Text>
         </TouchableOpacity>
@@ -419,6 +435,12 @@ const createStyles = (theme: Theme) =>
       backgroundColor: theme.accent,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    headerAvatarImage: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
     },
     headerAvatarText: {
       fontSize: 14,

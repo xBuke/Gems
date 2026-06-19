@@ -1,12 +1,12 @@
 import { requireAuth } from '@/lib/authGuard';
 import {
-  GEM_SELECT_WITH_COMMUNITY,
   type CommunityGemInfo,
 } from '@/lib/gemVisibility';
 import { blockUser, getMyBlockedUsers } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
+import { hapticLight, hapticMedium, hapticSuccess } from '@/lib/haptics';
 import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import ReportSheet from '@/components/ReportSheet';
@@ -36,6 +36,9 @@ const IMAGE_PLACEHOLDER = '#1A5C3A';
 const COMMENT_BLUE = '#185FA5';
 const LOCAL_PICK_COLOR = '#7F77DD';
 
+const GEM_DETAIL_SELECT =
+  '*, profiles!gems_user_id_fkey(username, avatar_url), communities(name, icon, color)';
+
 type Gem = {
   id: string;
   title: string;
@@ -50,7 +53,7 @@ type Gem = {
   user_id: string;
   community_id?: string | null;
   communities?: CommunityGemInfo | null;
-  profiles: { username: string } | null;
+  profiles: { username: string; avatar_url?: string | null } | null;
 };
 
 type Comment = {
@@ -175,7 +178,7 @@ export default function GemDetailScreen() {
 
     const { data, error } = await supabase
       .from('gems')
-      .select(GEM_SELECT_WITH_COMMUNITY)
+      .select(GEM_DETAIL_SELECT)
       .eq('id', resolvedGemId)
       .single();
 
@@ -292,6 +295,7 @@ export default function GemDetailScreen() {
       .insert({ gem_id: resolvedGemId, user_id: user.id, content: text });
 
     if (!error) {
+      hapticSuccess();
       if (gem && user.id !== gem.user_id) {
         await supabase.from('notifications').insert({
           user_id: gem.user_id,
@@ -315,6 +319,8 @@ export default function GemDetailScreen() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    hapticLight();
 
     if (isLiked) {
       await supabase.from('gem_likes').delete().eq('gem_id', gemId).eq('user_id', user.id);
@@ -374,6 +380,8 @@ export default function GemDetailScreen() {
 
   const handleDelete = async () => {
     if (!gem || !gemId) return;
+
+    hapticMedium();
 
     try {
       if (gem.image_url) {
@@ -437,6 +445,7 @@ export default function GemDetailScreen() {
     );
 
     if (!error) {
+      hapticSuccess();
       await supabase.from('notifications').insert({
         user_id: gem.user_id,
         sender_id: user.id,
@@ -620,7 +629,11 @@ export default function GemDetailScreen() {
               onPress={() => router.push('/profile?userId=' + gem.user_id)}
               activeOpacity={0.7}>
               <View style={styles.authorAvatar}>
-                <Text style={styles.authorAvatarText}>{username.charAt(0).toUpperCase()}</Text>
+                {gem.profiles?.avatar_url ? (
+                  <Image source={{ uri: gem.profiles.avatar_url }} style={styles.authorAvatarImage} />
+                ) : (
+                  <Text style={styles.authorAvatarText}>{username.charAt(0).toUpperCase()}</Text>
+                )}
               </View>
               <Text style={styles.authorName}>@{username}</Text>
             </TouchableOpacity>
@@ -788,6 +801,7 @@ export default function GemDetailScreen() {
           targetType={reportTarget.type}
           targetId={reportTarget.id}
           reporterId={currentUserId}
+          onReportSuccess={hapticSuccess}
         />
       )}
     </KeyboardAvoidingView>
@@ -957,6 +971,12 @@ const createStyles = (theme: Theme) =>
     backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  authorAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   authorAvatarText: {
     color: theme.background,

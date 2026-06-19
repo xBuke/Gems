@@ -405,10 +405,6 @@ export default function AdminScreen() {
   };
 
   const renderOverview = () => {
-    if (statsLoading) {
-      return <ActivityIndicator color={theme.accent} style={styles.loader} />;
-    }
-
     const items = [
       { label: 'Total Users', value: stats.totalUsers ?? 0 },
       { label: 'Premium Users', value: stats.premiumUsers ?? 0 },
@@ -625,10 +621,25 @@ export default function AdminScreen() {
 
   const renderTabContent = () => {
     if (activeTab === 'overview') {
+      if (statsLoading) {
+        return (
+          <View style={styles.tabLoading}>
+            <ActivityIndicator size="large" color={theme.accent} />
+          </View>
+        );
+      }
       return <ScrollView contentContainerStyle={styles.tabContent}>{renderOverview()}</ScrollView>;
     }
 
     if (activeTab === 'users') {
+      if (usersLoading) {
+        return (
+          <View style={styles.tabLoading}>
+            <ActivityIndicator size="large" color={theme.accent} />
+          </View>
+        );
+      }
+
       return (
         <FlatList
           data={filteredUsers}
@@ -648,17 +659,21 @@ export default function AdminScreen() {
             />
           }
           ListEmptyComponent={
-            usersLoading ? (
-              <ActivityIndicator color={theme.accent} style={styles.loader} />
-            ) : (
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No users found</Text>
-            )
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No users found</Text>
           }
         />
       );
     }
 
     if (activeTab === 'reports') {
+      if (reportsLoading) {
+        return (
+          <View style={styles.tabLoading}>
+            <ActivityIndicator size="large" color={theme.accent} />
+          </View>
+        );
+      }
+
       return (
         <FlatList
           data={filteredReports}
@@ -691,17 +706,21 @@ export default function AdminScreen() {
             </ScrollView>
           }
           ListEmptyComponent={
-            reportsLoading ? (
-              <ActivityIndicator color={theme.accent} style={styles.loader} />
-            ) : (
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No reports</Text>
-            )
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No reports</Text>
           }
         />
       );
     }
 
     if (activeTab === 'gems') {
+      if (gemsLoading) {
+        return (
+          <View style={styles.tabLoading}>
+            <ActivityIndicator size="large" color={theme.accent} />
+          </View>
+        );
+      }
+
       return (
         <FlatList
           data={filteredGems}
@@ -766,13 +785,17 @@ export default function AdminScreen() {
             </View>
           }
           ListEmptyComponent={
-            gemsLoading ? (
-              <ActivityIndicator color={theme.accent} style={styles.loader} />
-            ) : (
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No gems</Text>
-            )
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No gems</Text>
           }
         />
+      );
+    }
+
+    if (communitiesLoading) {
+      return (
+        <View style={styles.tabLoading}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
       );
     }
 
@@ -783,11 +806,7 @@ export default function AdminScreen() {
         renderItem={renderCommunityRow}
         contentContainerStyle={styles.tabContent}
         ListEmptyComponent={
-          communitiesLoading ? (
-            <ActivityIndicator color={theme.accent} style={styles.loader} />
-          ) : (
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No communities</Text>
-          )
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No communities</Text>
         }
       />
     );
@@ -796,7 +815,9 @@ export default function AdminScreen() {
   if (checkingAccess) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-        <ActivityIndicator color={theme.accent} style={styles.fullLoader} />
+        <View style={styles.tabLoading}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -921,12 +942,11 @@ function createStyles(theme: Theme) {
     statCardWrap: {
       width: '48%',
     },
-    loader: {
-      marginTop: 24,
-    },
-    fullLoader: {
+    tabLoading: {
       flex: 1,
       justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: 60,
     },
     deniedWrap: {
       flex: 1,

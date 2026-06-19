@@ -32,6 +32,7 @@ export default function EditHomeTownScreen() {
   const [selectedLng, setSelectedLng] = useState<number | null>(null)
   const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [searchingCities, setSearchingCities] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -69,13 +70,16 @@ export default function EditHomeTownScreen() {
     if (text.length < 2) {
       setShowSuggestions(false)
       setCitySuggestions([])
+      setSearchingCities(false)
       return
     }
 
+    setSearchingCities(true)
     debounceRef.current = setTimeout(async () => {
       const results = await searchCities(text)
       setCitySuggestions(results)
       setShowSuggestions(results.length > 0)
+      setSearchingCities(false)
     }, 400)
   }, [])
 
@@ -138,6 +142,11 @@ export default function EditHomeTownScreen() {
               placeholderTextColor={theme.textSecondary}
               autoCorrect={false}
             />
+            {searchingCities && (
+              <View style={styles.searchingIndicator}>
+                <ActivityIndicator size="small" color={theme.accent} />
+              </View>
+            )}
             {showSuggestions && citySuggestions.length > 0 && (
               <View style={styles.suggestions}>
                 <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
@@ -225,6 +234,10 @@ const createStyles = (theme: Theme) =>
       padding: 14,
       fontSize: 16,
       color: theme.text,
+    },
+    searchingIndicator: {
+      marginTop: 8,
+      alignItems: 'flex-start',
     },
     suggestions: {
       backgroundColor: theme.card,

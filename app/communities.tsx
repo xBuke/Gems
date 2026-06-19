@@ -4,6 +4,7 @@ import {
   fetchMyCommunities,
   getCommunityMemberCount,
 } from '@/lib/communities'
+import { hapticLight } from '@/lib/haptics'
 import { checkIsPremium } from '@/lib/paywall'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
@@ -112,6 +113,7 @@ export default function CommunitiesScreen() {
     }
 
     setJoiningId(communityId)
+    hapticLight()
     try {
       const { error } = await supabase.from('community_members').insert({
         user_id: userId,
@@ -282,6 +284,7 @@ const createStyles = (theme: Theme) =>
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
+      paddingTop: 60,
     },
     header: {
       flexDirection: 'row',

@@ -7,6 +7,7 @@ import {
   GEM_SELECT_MAP,
 } from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
+import { hapticLight, hapticSelection } from '@/lib/haptics';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -196,6 +197,7 @@ export default function MapScreen() {
   };
 
   const togglePlacingMode = () => {
+    hapticSelection();
     if (placingMode) {
       setPlacingMode(false);
       setTapLocation(null);
@@ -240,7 +242,10 @@ export default function MapScreen() {
           <Marker
             key={gem.id}
             coordinate={{ latitude: gem.latitude, longitude: gem.longitude }}
-            onPress={() => router.push('/gem/' + gem.id)}>
+            onPress={() => {
+              hapticLight();
+              router.push('/gem/' + gem.id);
+            }}>
             <View
               style={[styles.marker, { backgroundColor: getCategoryColor(gem.category) }]}>
               <Text style={styles.markerText}>{gem.category.charAt(0)}</Text>

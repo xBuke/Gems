@@ -4,7 +4,6 @@ import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customC
 import {
   applyCommunityGemFilter,
   fetchMyCommunityIds,
-  GEM_SELECT_WITH_COMMUNITY,
   type CommunityGemInfo,
 } from '@/lib/gemVisibility';
 import { PENDING_PREFS_KEY } from '@/lib/onboarding';
@@ -12,6 +11,7 @@ import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
+import { hapticSelection } from '@/lib/haptics';
 import { getMysteryGemOfTheWeek } from '@/lib/mysteryGem';
 import { getMyBlockedUsers } from '@/lib/safety';
 import { consumeLastStreakResult } from '@/lib/streak';
@@ -37,6 +37,9 @@ const ACCENT_MUTED = '#A8D5BA';
 const IMAGE_PLACEHOLDER = '#1A5C3A';
 const LOCAL_PICK_COLOR = '#7F77DD';
 
+const DISCOVER_GEM_SELECT =
+  '*, profiles!gems_user_id_fkey(username, avatar_url), communities(name, icon, color)';
+
 type Gem = {
   id: string;
   title: string;
@@ -57,7 +60,7 @@ type Category = (typeof CATEGORIES)[number];
 
 type GemWithProfile = Gem & {
   user_id: string;
-  profiles: { username: string } | null;
+  profiles: { username: string; avatar_url?: string | null } | null;
   community_id?: string | null;
   communities?: CommunityGemInfo | null;
 };
@@ -274,7 +277,7 @@ export default function DiscoverScreen() {
 
     let query = supabase
       .from('gems')
-      .select(GEM_SELECT_WITH_COMMUNITY)
+      .select(DISCOVER_GEM_SELECT)
       .in('user_id', ids)
       .order('created_at', { ascending: false });
 
@@ -310,7 +313,7 @@ export default function DiscoverScreen() {
     const fetchGemOfTheDay = async () => {
       let query = supabase
         .from('gems')
-        .select(GEM_SELECT_WITH_COMMUNITY)
+        .select(DISCOVER_GEM_SELECT)
         .eq('is_private', false)
         .limit(10);
 
@@ -333,7 +336,7 @@ export default function DiscoverScreen() {
     const fetchTrending = async () => {
       let query = supabase
         .from('gems')
-        .select(GEM_SELECT_WITH_COMMUNITY)
+        .select(DISCOVER_GEM_SELECT)
         .eq('is_private', false)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -352,7 +355,7 @@ export default function DiscoverScreen() {
     const fetchRecent = async () => {
       let query = supabase
         .from('gems')
-        .select(GEM_SELECT_WITH_COMMUNITY)
+        .select(DISCOVER_GEM_SELECT)
         .eq('is_private', false)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -371,7 +374,7 @@ export default function DiscoverScreen() {
     const fetchAllGems = async () => {
       let query = supabase
         .from('gems')
-        .select(GEM_SELECT_WITH_COMMUNITY)
+        .select(DISCOVER_GEM_SELECT)
         .eq('is_private', false);
 
       query = applyCommunityGemFilter(query, myCommunityIds);
@@ -398,7 +401,7 @@ export default function DiscoverScreen() {
 
       let query = supabase
         .from('gems')
-        .select(GEM_SELECT_WITH_COMMUNITY)
+        .select(DISCOVER_GEM_SELECT)
         .eq('is_private', false);
 
       query = applyCommunityGemFilter(query, myCommunityIds);
@@ -605,6 +608,7 @@ export default function DiscoverScreen() {
         return;
       }
     }
+    hapticSelection();
     if (activeMainCategory?.id === cat.id) {
       setActiveMainCategory(null);
       setActiveSubcategory(null);
@@ -616,6 +620,7 @@ export default function DiscoverScreen() {
   };
 
   const handleCustomCategoryPress = (category: CustomCategory) => {
+    hapticSelection();
     if (activeCustomCategory?.id === category.id) {
       setActiveCustomCategory(null);
     } else {
@@ -780,9 +785,13 @@ export default function DiscoverScreen() {
             {gem.title}
           </Text>
           <View style={styles.trendingUserRow}>
-            <View style={styles.trendingAvatar}>
-              <Text style={styles.trendingAvatarText}>{username[0]?.toUpperCase() ?? '?'}</Text>
-            </View>
+            {gem.profiles?.avatar_url ? (
+              <Image source={{ uri: gem.profiles.avatar_url }} style={styles.trendingAvatarImage} />
+            ) : (
+              <View style={styles.trendingAvatar}>
+                <Text style={styles.trendingAvatarText}>{username[0]?.toUpperCase() ?? '?'}</Text>
+              </View>
+            )}
             <Text style={styles.trendingUsername}>@{username}</Text>
           </View>
           <View style={styles.trendingLikeRow}>
@@ -1015,6 +1024,7 @@ export default function DiscoverScreen() {
             borderColor: 'rgba(255,255,255,0.4)',
           }}
           onPress={() => {
+            hapticSelection();
             setActiveMainCategory(null);
             setActiveSubcategory(null);
             setActiveCustomCategory(null);
@@ -1120,7 +1130,10 @@ export default function DiscoverScreen() {
                   paddingVertical: 10,
                   marginRight: 10,
                 }}
-                onPress={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
+                onPress={() => {
+                  hapticSelection();
+                  setActiveSubcategory(activeSubcategory === sub ? null : sub);
+                }}
                 activeOpacity={0.7}>
                 <Text
                   style={{
@@ -1169,6 +1182,7 @@ export default function DiscoverScreen() {
               key={tab.key}
               style={styles.tabItem}
               onPress={async () => {
+                hapticSelection();
                 if (tab.key === 'discover') {
                   setActiveTab('discover');
                 } else if (tab.key === 'map') {
@@ -1518,6 +1532,11 @@ const createStyles = (theme: Theme) =>
     backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  trendingAvatarImage: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
   },
   trendingAvatarText: {
     fontSize: 9,

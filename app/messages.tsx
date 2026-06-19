@@ -7,6 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ProfileRef = {
   username: string;
+  avatar_url?: string | null;
 };
 
 type Message = {
@@ -32,6 +34,7 @@ type Message = {
 type Conversation = {
   otherUserId: string;
   otherUsername: string;
+  otherAvatarUrl: string | null;
   lastMessage: string;
   lastMessageAt: string;
   hasUnread: boolean;
@@ -67,7 +70,7 @@ export default function MessagesScreen() {
     const { data: messages } = await supabase
       .from('messages')
       .select(
-        '*, sender:profiles!messages_sender_id_fkey(username), receiver:profiles!messages_receiver_id_fkey(username)',
+        '*, sender:profiles!messages_sender_id_fkey(username, avatar_url), receiver:profiles!messages_receiver_id_fkey(username, avatar_url)',
       )
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
@@ -91,6 +94,9 @@ export default function MessagesScreen() {
       const otherUsername = isSentByMe
         ? message.receiver?.username ?? 'Unknown'
         : message.sender?.username ?? 'Unknown';
+      const otherAvatarUrl = isSentByMe
+        ? message.receiver?.avatar_url ?? null
+        : message.sender?.avatar_url ?? null;
 
       const existing = conversationMap.get(otherUserId);
       const isUnread = !isSentByMe && !message.read;
@@ -99,6 +105,7 @@ export default function MessagesScreen() {
         conversationMap.set(otherUserId, {
           otherUserId,
           otherUsername,
+          otherAvatarUrl,
           lastMessage: message.content,
           lastMessageAt: message.created_at,
           hasUnread: isUnread,
@@ -136,7 +143,11 @@ export default function MessagesScreen() {
         }
         activeOpacity={0.7}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
+          {item.otherAvatarUrl ? (
+            <Image source={{ uri: item.otherAvatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{initial}</Text>
+          )}
         </View>
         <View style={styles.conversationContent}>
           <View style={styles.conversationTopRow}>
@@ -228,6 +239,12 @@ const createStyles = (theme: Theme) =>
       backgroundColor: theme.accent,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
     },
     avatarText: {
       fontSize: 20,

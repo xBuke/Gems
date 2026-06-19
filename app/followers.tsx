@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type ProfileSummary = {
   id: string;
   username: string;
+  avatar_url?: string | null;
 };
 
 type FollowRow = {
@@ -60,7 +62,7 @@ export default function FollowersScreen() {
     if (isFollowers) {
       const { data } = await supabase
         .from('follows')
-        .select('*, follower:profiles!follows_follower_id_fkey(id, username)')
+        .select('*, follower:profiles!follows_follower_id_fkey(id, username, avatar_url)')
         .eq('following_id', userId)
         .eq('status', 'accepted');
 
@@ -69,7 +71,7 @@ export default function FollowersScreen() {
     } else {
       const { data } = await supabase
         .from('follows')
-        .select('*, following:profiles!follows_following_id_fkey(id, username)')
+        .select('*, following:profiles!follows_following_id_fkey(id, username, avatar_url)')
         .eq('follower_id', userId)
         .eq('status', 'accepted');
 
@@ -136,7 +138,11 @@ export default function FollowersScreen() {
         onPress={() => router.push({ pathname: '/profile', params: { userId: item.id } })}
         activeOpacity={0.7}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
+          {item.avatar_url ? (
+            <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{initials}</Text>
+          )}
         </View>
         <Text style={styles.username} numberOfLines={1}>
           {item.username}
@@ -235,6 +241,12 @@ const createStyles = (theme: Theme) =>
       backgroundColor: theme.accent,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
     },
     avatarText: {
       fontSize: 18,

@@ -449,6 +449,7 @@ export default function OnboardingScreen() {
           <Text style={styles.prefsTitle}>What calls to you?</Text>
           <Text style={styles.prefsSubtitle}>Pick as many as you like</Text>
           <ScrollView
+            style={styles.categoryScroll}
             contentContainerStyle={styles.categoryGrid}
             showsVerticalScrollIndicator={false}>
             {CATEGORIES.map((cat) => renderCategoryCard(cat))}
@@ -710,6 +711,9 @@ const createStyles = (theme: Theme) =>
     prefsContainer: {
       flex: 1,
       paddingTop: 72,
+    },
+    categoryScroll: {
+      flex: 1,
     },
     prefsTitle: {
       fontFamily: 'SpaceGrotesk-Bold',

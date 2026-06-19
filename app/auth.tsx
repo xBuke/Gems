@@ -1,5 +1,6 @@
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -47,6 +48,7 @@ export default function AuthScreen() {
 
     if (loginError) {
       setLoading(false);
+      hapticError();
       setError(loginError.message);
       return;
     }
@@ -61,12 +63,14 @@ export default function AuthScreen() {
       if (profile?.is_banned) {
         await supabase.auth.signOut();
         setLoading(false);
+        hapticError();
         setError('This account has been suspended.');
         return;
       }
     }
 
     setLoading(false);
+    hapticSuccess();
     router.replace(redirectTo ? String(redirectTo) : '/');
   };
 
@@ -81,6 +85,7 @@ export default function AuthScreen() {
 
     if (signUpError) {
       setLoading(false);
+      hapticError();
       setError(signUpError.message);
       return;
     }
@@ -93,12 +98,14 @@ export default function AuthScreen() {
 
       if (profileError) {
         setLoading(false);
+        hapticError();
         setError(profileError.message);
         return;
       }
     }
 
     setLoading(false);
+    hapticSuccess();
     router.replace(redirectTo ? String(redirectTo) : '/');
   };
 

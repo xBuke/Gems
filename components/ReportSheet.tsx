@@ -19,6 +19,7 @@ type ReportSheetProps = {
   targetType: 'gem' | 'comment' | 'message' | 'user'
   targetId: string
   reporterId: string
+  onReportSuccess?: () => void
 }
 
 export default function ReportSheet({
@@ -27,6 +28,7 @@ export default function ReportSheet({
   targetType,
   targetId,
   reporterId,
+  onReportSuccess,
 }: ReportSheetProps) {
   const { theme } = useTheme()
   const styles = useMemo(() => createStyles(theme), [theme])
@@ -41,6 +43,7 @@ export default function ReportSheet({
       Alert.alert('Error', 'Could not submit report. Please try again.');
       return;
     }
+    onReportSuccess?.();
     Alert.alert('Report submitted. Thank you for keeping the community safe.');
   };
 

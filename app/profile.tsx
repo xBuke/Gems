@@ -1,5 +1,7 @@
 import { requireAuth } from '@/lib/authGuard';
 import type { CustomCategory } from '@/lib/customCategories';
+import { hapticLight, hapticSuccess } from '@/lib/haptics';
+import { compressImage } from '@/lib/imageCompress';
 import { checkIsPremium } from '@/lib/paywall';
 import { blockUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
@@ -7,6 +9,7 @@ import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import {
@@ -27,6 +30,7 @@ const IMAGE_PLACEHOLDER = '#1A5C3A';
 type Profile = {
   id: string;
   username: string;
+  avatar_url?: string | null;
   current_streak?: number;
   is_private?: boolean;
 };
@@ -52,6 +56,33 @@ const chunk = <T,>(items: T[], size: number): T[][] => {
   return rows;
 };
 
+const uploadAvatar = async (uri: string, userId: string) => {
+  const compressedUri = await compressImage(uri);
+  const fileName = `avatar_${userId}_${Date.now()}.jpg`;
+
+  const formData = new FormData();
+  formData.append('file', {
+    uri: compressedUri,
+    name: fileName,
+    type: 'image/jpeg',
+  } as any);
+
+  const { error } = await supabase.storage.from('avatars').upload(fileName, formData, {
+    contentType: 'multipart/form-data',
+  });
+
+  if (error) {
+    console.log('Avatar upload error:', error);
+    return null;
+  }
+
+  const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+  await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId);
+
+  return publicUrl;
+};
+
 export default function ProfileScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -70,6 +101,7 @@ export default function ProfileScreen() {
   const [followRequests, setFollowRequests] = useState<FollowRequest[]>([]);
   const [followRequestsExpanded, setFollowRequestsExpanded] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const fetchMyCustomCategories = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -177,6 +209,117 @@ export default function ProfileScreen() {
   const initials = username.charAt(0).toUpperCase();
   const gemRows = chunk(gems, 2);
 
+  const handleAvatarPicked = async (uri: string) => {
+    if (!currentUserId) return;
+
+    setUploadingAvatar(true);
+    const publicUrl = await uploadAvatar(uri, currentUserId);
+    setUploadingAvatar(false);
+
+    if (!publicUrl) {
+      Alert.alert('Error', 'Could not upload profile photo');
+      return;
+    }
+
+    await fetchData();
+  };
+
+  const openAvatarCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Camera access is required to take a photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await handleAvatarPicked(result.assets[0].uri);
+    }
+  };
+
+  const openAvatarGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Gallery access is required to choose a photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await handleAvatarPicked(result.assets[0].uri);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!currentUserId) return;
+
+    await supabase.from('profiles').update({ avatar_url: null }).eq('id', currentUserId);
+    await fetchData();
+  };
+
+  const handleAvatarPress = () => {
+    if (!isOwnProfile || uploadingAvatar) return;
+
+    const hasAvatar = !!profile?.avatar_url;
+    const options = hasAvatar
+      ? ['Take Photo', 'Choose from Library', 'Remove Photo', 'Cancel']
+      : ['Take Photo', 'Choose from Library', 'Cancel'];
+    const cancelIndex = options.length - 1;
+    const removeIndex = hasAvatar ? 2 : -1;
+
+    const handleSelection = (index: number) => {
+      if (index === 0) openAvatarCamera();
+      else if (index === 1) openAvatarGallery();
+      else if (hasAvatar && index === removeIndex) {
+        Alert.alert('Remove Photo', 'Remove your profile photo?', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Remove', style: 'destructive', onPress: handleRemoveAvatar },
+        ]);
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: cancelIndex,
+          destructiveButtonIndex: hasAvatar ? removeIndex : undefined,
+        },
+        handleSelection,
+      );
+    } else {
+      const buttons = [
+        { text: 'Take Photo', onPress: openAvatarCamera },
+        { text: 'Choose from Library', onPress: openAvatarGallery },
+      ];
+      if (hasAvatar) {
+        buttons.push({
+          text: 'Remove Photo',
+          onPress: () => {
+            Alert.alert('Remove Photo', 'Remove your profile photo?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Remove', style: 'destructive', onPress: handleRemoveAvatar },
+            ]);
+          },
+        });
+      }
+      buttons.push({ text: 'Cancel', style: 'cancel' });
+      Alert.alert('Profile Photo', 'Choose an option', buttons);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Log out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
@@ -193,6 +336,8 @@ export default function ProfileScreen() {
 
   const handleFollow = async () => {
     if (!currentUserId || !userId || !profile) return;
+
+    hapticLight();
 
     const isPrivate = profile.is_private === true;
 
@@ -221,6 +366,8 @@ export default function ProfileScreen() {
   const handleUnfollow = async () => {
     if (!currentUserId || !userId) return;
 
+    hapticLight();
+
     await supabase
       .from('follows')
       .delete()
@@ -242,6 +389,7 @@ export default function ProfileScreen() {
       .eq('following_id', currentUserId);
     console.log('Update result:', data, error);
     if (!error) {
+      hapticSuccess();
       setFollowRequests((prev) => prev.filter((r) => r.follower_id !== followerId));
 
       const { count: followers } = await supabase
@@ -257,6 +405,8 @@ export default function ProfileScreen() {
 
   const handleDeclineRequest = async (followerId: string) => {
     if (!currentUserId) return;
+
+    hapticLight();
 
     await supabase
       .from('follows')
@@ -422,9 +572,34 @@ export default function ProfileScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarInitials}>{initials}</Text>
-          </View>
+          {isOwnProfile ? (
+            <TouchableOpacity
+              onPress={handleAvatarPress}
+              activeOpacity={0.8}
+              disabled={uploadingAvatar}
+              style={styles.avatarWrap}>
+              {profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarInitials}>{initials}</Text>
+                </View>
+              )}
+              <View style={[styles.avatarCameraBadge, { backgroundColor: theme.accent }]}>
+                <Ionicons name="camera" size={12} color={theme.background} />
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.avatarWrap}>
+              {profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarInitials}>{initials}</Text>
+                </View>
+              )}
+            </View>
+          )}
           <Text style={styles.username}>{username}</Text>
           <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
           {(profile?.current_streak ?? 0) > 0 && (
@@ -671,6 +846,9 @@ const createStyles = (theme: Theme) =>
     alignItems: 'center',
     padding: 20,
   },
+  avatarWrap: {
+    position: 'relative',
+  },
   avatar: {
     width: 88,
     height: 88,
@@ -678,6 +856,23 @@ const createStyles = (theme: Theme) =>
     backgroundColor: theme.accent,
     borderWidth: 3,
     borderColor: theme.accentSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3,
+    borderColor: theme.accentSubtle,
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },

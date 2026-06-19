@@ -90,7 +90,7 @@ export default function BlockedUsersScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator color={theme.accent} />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       ) : blockedUsers.length === 0 ? (
         <View style={styles.centered}>
@@ -137,6 +137,7 @@ const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       gap: 12,
       padding: 40,
+      paddingTop: 60,
     },
     emptyText: {
       fontSize: 15,

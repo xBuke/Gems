@@ -6,6 +6,7 @@ import {
   GEM_SELECT_WITH_COMMUNITY,
 } from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
+import { hapticLight, hapticMedium } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -309,7 +310,7 @@ export default function GemSwipeScreen() {
 
   const [checkingPremium, setCheckingPremium] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
-  const [loadingDeck, setLoadingDeck] = useState(false);
+  const [loadingDeck, setLoadingDeck] = useState(true);
   const [deck, setDeck] = useState<Gem[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -402,6 +403,12 @@ export default function GemSwipeScreen() {
       processingRef.current = true;
 
       const currentGem = deck[0];
+
+      if (action === 'save') {
+        hapticMedium();
+      } else {
+        hapticLight();
+      }
 
       if (action === 'save') {
         await supabase.from('saved_gems').insert({
@@ -535,6 +542,7 @@ export default function GemSwipeScreen() {
       {loadingDeck ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.accent} />
+          <Text style={styles.loadingText}>Finding gems for you...</Text>
         </View>
       ) : deck.length === 0 ? (
         <View style={styles.centered}>
@@ -624,6 +632,13 @@ const createStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 32,
+      paddingTop: 60,
+    },
+    loadingText: {
+      fontSize: 15,
+      color: theme.textSecondary,
+      marginTop: 16,
+      textAlign: 'center',
     },
     premiumPrompt: {
       flex: 1,
