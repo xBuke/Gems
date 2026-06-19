@@ -32,8 +32,8 @@ type Profile = {
 };
 
 type FollowRequest = {
-  id: string;
   follower_id: string;
+  following_id: string;
   follower: { username: string } | null;
 };
 
@@ -232,19 +232,39 @@ export default function ProfileScreen() {
     await fetchData();
   };
 
-  const handleAcceptRequest = async (request: FollowRequest) => {
-    await supabase
+  const handleAcceptRequest = async (followerId: string) => {
+    if (!currentUserId) return;
+    console.log('Accepting:', { followerId, currentUserId });
+    const { error, data } = await supabase
       .from('follows')
       .update({ status: 'accepted' })
-      .eq('id', request.id);
+      .eq('follower_id', followerId)
+      .eq('following_id', currentUserId);
+    console.log('Update result:', data, error);
+    if (!error) {
+      setFollowRequests((prev) => prev.filter((r) => r.follower_id !== followerId));
 
-    setFollowRequests((prev) => prev.filter((r) => r.id !== request.id));
-    setFollowersCount((prev) => prev + 1);
+      const { count: followers } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', currentUserId)
+        .eq('status', 'accepted');
+      setFollowersCount(followers ?? 0);
+    } else {
+      console.log('Accept failed with error:', JSON.stringify(error));
+    }
   };
 
-  const handleDeclineRequest = async (request: FollowRequest) => {
-    await supabase.from('follows').delete().eq('id', request.id);
-    setFollowRequests((prev) => prev.filter((r) => r.id !== request.id));
+  const handleDeclineRequest = async (followerId: string) => {
+    if (!currentUserId) return;
+
+    await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', followerId)
+      .eq('following_id', currentUserId);
+
+    setFollowRequests((prev) => prev.filter((r) => r.follower_id !== followerId));
   };
 
   const showProfileMenu = () => {
@@ -544,7 +564,7 @@ export default function ProfileScreen() {
                 const requestUsername = request.follower?.username ?? 'User';
                 const initial = requestUsername.charAt(0).toUpperCase();
                 return (
-                  <View key={request.id} style={styles.followRequestRow}>
+                  <View key={request.follower_id} style={styles.followRequestRow}>
                     <View style={styles.followRequestAvatar}>
                       <Text style={styles.followRequestAvatarText}>{initial}</Text>
                     </View>
@@ -553,13 +573,13 @@ export default function ProfileScreen() {
                     </Text>
                     <TouchableOpacity
                       style={styles.acceptButton}
-                      onPress={() => handleAcceptRequest(request)}
+                      onPress={() => handleAcceptRequest(request.follower_id)}
                       activeOpacity={0.8}>
                       <Text style={styles.acceptButtonText}>Accept</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.declineButton}
-                      onPress={() => handleDeclineRequest(request)}
+                      onPress={() => handleDeclineRequest(request.follower_id)}
                       activeOpacity={0.8}>
                       <Text style={styles.declineButtonText}>Decline</Text>
                     </TouchableOpacity>

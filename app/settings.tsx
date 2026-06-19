@@ -84,6 +84,7 @@ export default function SettingsScreen() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [language, setLanguage] = useState('en');
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [promptVisible, setPromptVisible] = useState(false);
   const [promptMode, setPromptMode] = useState<'username' | 'password' | null>(null);
   const [promptValue, setPromptValue] = useState('');
@@ -102,7 +103,7 @@ export default function SettingsScreen() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username, home_town, is_private, language')
+      .select('username, home_town, is_private, language, is_admin')
       .eq('id', user.id)
       .single();
 
@@ -110,6 +111,7 @@ export default function SettingsScreen() {
       setUsername(profile.username ?? '');
       setHomeTown(profile.home_town ?? '');
       setIsPrivate(profile.is_private ?? false);
+      setIsAdmin(profile.is_admin ?? false);
       if (profile.language) {
         setLanguage(profile.language);
         await AsyncStorage.setItem(LANGUAGE_KEY, profile.language);
@@ -414,6 +416,23 @@ export default function SettingsScreen() {
             theme={theme}
           />
         </View>
+
+        {isAdmin ? (
+          <>
+            <SectionHeader title="Admin" theme={theme} />
+            <View style={styles.sectionGroup}>
+              <TouchableOpacity onPress={() => router.push('/admin')} activeOpacity={0.7}>
+                <View style={[styles.settingItem, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+                  <Ionicons name="shield-checkmark-outline" size={20} color={theme.accent} />
+                  <Text style={[styles.settingLabel, { color: theme.text, flex: 1 }]}>
+                    Admin Dashboard
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : null}
       </ScrollView>
 
       <Modal visible={promptVisible} transparent animationType="fade">

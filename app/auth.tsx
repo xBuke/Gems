@@ -40,18 +40,33 @@ export default function AuthScreen() {
     setError('');
     setLoading(true);
 
-    const { error: loginError } = await supabase.auth.signInWithPassword({
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
 
-    setLoading(false);
-
     if (loginError) {
+      setLoading(false);
       setError(loginError.message);
       return;
     }
 
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_banned')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profile?.is_banned) {
+        await supabase.auth.signOut();
+        setLoading(false);
+        setError('This account has been suspended.');
+        return;
+      }
+    }
+
+    setLoading(false);
     router.replace(redirectTo ? String(redirectTo) : '/');
   };
 

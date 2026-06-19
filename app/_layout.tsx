@@ -67,6 +67,7 @@ function RootNavigator() {
         <Stack.Screen name="communities" options={{ headerShown: false }} />
         <Stack.Screen name="create-community" options={{ headerShown: false }} />
         <Stack.Screen name="community/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="admin" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>

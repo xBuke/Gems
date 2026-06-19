@@ -32,10 +32,17 @@ export default function ReportSheet({
   const styles = useMemo(() => createStyles(theme), [theme])
 
   const handleSelectReason = async (reason: string) => {
-    await createReport(reporterId, targetType, targetId, reason)
-    onClose()
-    Alert.alert('Report submitted. Thank you for keeping the community safe.')
-  }
+    console.log('Attempting to create report:', { reporterId, targetType, targetId, reason });
+    const result = await createReport(reporterId, targetType, targetId, reason);
+    console.log('Report creation full result:', JSON.stringify(result));
+    const { error } = result;
+    onClose();
+    if (error) {
+      Alert.alert('Error', 'Could not submit report. Please try again.');
+      return;
+    }
+    Alert.alert('Report submitted. Thank you for keeping the community safe.');
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>

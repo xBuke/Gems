@@ -15,14 +15,16 @@ export const createReport = async (
   reason: string,
   details?: string,
 ) => {
-  return await supabase.from('reports').insert({
+  const { data, error } = await supabase.from('reports').insert({
     reporter_id: reporterId,
     target_type: targetType,
     target_id: targetId,
     reason,
     details: details || null,
-  })
-}
+  });
+  console.log('Report insert result:', data, error);
+  return { data, error };
+};
 
 export const blockUser = async (blockerId: string, blockedId: string) => {
   return await supabase.from('blocked_users').insert({ blocker_id: blockerId, blocked_id: blockedId })
