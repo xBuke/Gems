@@ -30,6 +30,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const ACCENT_MUTED = '#A8D5BA';
 const IMAGE_PLACEHOLDER = '#1A5C3A';
 const COMMENT_BLUE = '#185FA5';
+const LOCAL_PICK_COLOR = '#7F77DD';
 
 type Gem = {
   id: string;
@@ -40,6 +41,7 @@ type Gem = {
   longitude: number;
   image_url: string | null;
   verified: boolean;
+  is_local_pick?: boolean;
   user_id: string;
   community_id?: string | null;
   communities?: CommunityGemInfo | null;
@@ -460,6 +462,12 @@ export default function GemDetailScreen() {
                   <Text style={styles.verifiedBadgeText}>Verified</Text>
                 </View>
               )}
+              {gem.is_local_pick && (
+                <View style={styles.localPickBadge}>
+                  <Ionicons name="home" size={11} color={LOCAL_PICK_COLOR} />
+                  <Text style={styles.localPickBadgeText}>Local&apos;s Pick</Text>
+                </View>
+              )}
               {gem.community_id && gem.communities && (
                 <TouchableOpacity
                   style={[
@@ -736,6 +744,22 @@ const createStyles = (theme: Theme) =>
     fontSize: 11,
     fontWeight: '600',
     color: theme.coral,
+  },
+  localPickBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: LOCAL_PICK_COLOR + '20',
+    borderWidth: 0.5,
+    borderColor: LOCAL_PICK_COLOR,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+  },
+  localPickBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: LOCAL_PICK_COLOR,
   },
   communityBadge: {
     flexDirection: 'row',

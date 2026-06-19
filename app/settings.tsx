@@ -79,11 +79,12 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { theme, isDark, toggleTheme } = useTheme();
   const [username, setUsername] = useState('');
+  const [homeTown, setHomeTown] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [language, setLanguage] = useState('en');
   const [userId, setUserId] = useState<string | null>(null);
   const [promptVisible, setPromptVisible] = useState(false);
-  const [promptMode, setPromptMode] = useState<'username' | 'password' | null>(null);
+  const [promptMode, setPromptMode] = useState<'username' | 'password' | 'hometown' | null>(null);
   const [promptValue, setPromptValue] = useState('');
 
   const languageLabel = language === 'hr' ? 'Hrvatski' : 'English';
@@ -100,12 +101,13 @@ export default function SettingsScreen() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username, is_private, language')
+      .select('username, home_town, is_private, language')
       .eq('id', user.id)
       .single();
 
     if (profile) {
       setUsername(profile.username ?? '');
+      setHomeTown(profile.home_town ?? '');
       setIsPrivate(profile.is_private ?? false);
       if (profile.language) {
         setLanguage(profile.language);
@@ -150,6 +152,23 @@ export default function SettingsScreen() {
     setUsername(trimmed);
   };
 
+  const handleUpdateHomeTown = async (newHomeTown: string) => {
+    const trimmed = newHomeTown.trim();
+    if (!trimmed || !userId) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ home_town: trimmed })
+      .eq('id', userId);
+
+    if (error) {
+      Alert.alert('Error', 'Could not update home town');
+      return;
+    }
+
+    setHomeTown(trimmed);
+  };
+
   const handleChangePassword = async (newPassword: string) => {
     if (!newPassword || newPassword.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters');
@@ -185,6 +204,31 @@ export default function SettingsScreen() {
     setPromptVisible(true);
   };
 
+  const showHomeTownPrompt = () => {
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'Home Town',
+        'Enter your city',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Save',
+            onPress: (value) => {
+              if (value) handleUpdateHomeTown(value);
+            },
+          },
+        ],
+        'plain-text',
+        homeTown,
+      );
+      return;
+    }
+
+    setPromptValue(homeTown);
+    setPromptMode('hometown');
+    setPromptVisible(true);
+  };
+
   const showPasswordPrompt = () => {
     if (Platform.OS === 'ios') {
       Alert.prompt(
@@ -212,6 +256,8 @@ export default function SettingsScreen() {
 
     if (mode === 'username') {
       await handleUpdateUsername(value);
+    } else if (mode === 'hometown') {
+      await handleUpdateHomeTown(value);
     } else if (mode === 'password') {
       await handleChangePassword(value);
     }
@@ -296,6 +342,14 @@ export default function SettingsScreen() {
             value={username}
             showChevron
             onPress={showUsernamePrompt}
+            theme={theme}
+          />
+          <SettingItem
+            icon="home-outline"
+            label="Home Town"
+            value={homeTown || 'Not set'}
+            showChevron
+            onPress={showHomeTownPrompt}
             theme={theme}
           />
           <SettingItem
@@ -400,10 +454,18 @@ export default function SettingsScreen() {
         <View style={styles.promptOverlay}>
           <View style={[styles.promptBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Text style={[styles.promptTitle, { color: theme.text }]}>
-              {promptMode === 'password' ? 'Change Password' : 'Edit Username'}
+              {promptMode === 'password'
+                ? 'Change Password'
+                : promptMode === 'hometown'
+                  ? 'Home Town'
+                  : 'Edit Username'}
             </Text>
             <Text style={[styles.promptMessage, { color: theme.textSecondary }]}>
-              {promptMode === 'password' ? 'Enter your new password' : 'Enter your new username'}
+              {promptMode === 'password'
+                ? 'Enter your new password'
+                : promptMode === 'hometown'
+                  ? 'Enter your city'
+                  : 'Enter your new username'}
             </Text>
             <TextInput
               style={[

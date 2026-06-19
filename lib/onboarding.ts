@@ -8,6 +8,9 @@ export type PendingPrefs = {
   preferred_categories: string[]
   explore_preference?: 'urban' | 'nature'
   discover_style?: 'solo' | 'social'
+  home_town?: string
+  home_lat?: number
+  home_lng?: number
 }
 
 export async function hasCompletedOnboarding(): Promise<boolean> {
@@ -44,6 +47,9 @@ export async function syncPendingPreferences(userId: string) {
     .update({
       preferred_categories: prefs.preferred_categories,
       has_completed_onboarding: true,
+      ...(prefs.home_town != null && { home_town: prefs.home_town }),
+      ...(prefs.home_lat != null && { home_lat: prefs.home_lat }),
+      ...(prefs.home_lng != null && { home_lng: prefs.home_lng }),
     })
     .eq('id', userId)
 
@@ -57,6 +63,9 @@ export async function savePreferences(userId: string | null, prefs: PendingPrefs
       .update({
         preferred_categories: prefs.preferred_categories,
         has_completed_onboarding: true,
+        ...(prefs.home_town != null && { home_town: prefs.home_town }),
+        ...(prefs.home_lat != null && { home_lat: prefs.home_lat }),
+        ...(prefs.home_lng != null && { home_lng: prefs.home_lng }),
       })
       .eq('id', userId)
   } else {

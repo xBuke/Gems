@@ -5,6 +5,7 @@ import {
   fetchVisibleCustomCategories,
   type CustomCategory,
 } from '@/lib/customCategories';
+import { checkIsLocalPick } from '@/lib/localBadge';
 import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -219,6 +220,8 @@ export default function AddGemScreen() {
 
     const imageUrl = imageUri ? await uploadImage(imageUri) : null;
 
+    const isLocal = await checkIsLocalPick(user.id, latitude!, longitude!);
+
     const communityField = communityId ? { community_id: communityId } : {};
 
     const gemPayload = selectedCustomCategory
@@ -232,6 +235,7 @@ export default function AddGemScreen() {
           user_id: user.id,
           image_url: imageUrl,
           verified,
+          is_local_pick: isLocal,
           ...communityField,
         }
       : {
@@ -245,6 +249,7 @@ export default function AddGemScreen() {
           user_id: user.id,
           image_url: imageUrl,
           verified,
+          is_local_pick: isLocal,
           ...communityField,
         };
 

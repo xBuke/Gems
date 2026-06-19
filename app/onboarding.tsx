@@ -9,6 +9,7 @@ import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as Location from 'expo-location'
 import { useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -21,12 +22,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-const TOTAL_STEPS = 9
+const TOTAL_STEPS = 10
 const STORY_TEXTS = [
   "Most places worth seeing aren't on any map.",
   "The best ones get passed between people who've actually been there.",
@@ -80,6 +82,9 @@ export default function OnboardingScreen() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [explorePreference, setExplorePreference] = useState<'urban' | 'nature' | null>(null)
   const [discoverStyle, setDiscoverStyle] = useState<'solo' | 'social' | null>(null)
+  const [homeTown, setHomeTown] = useState('')
+  const [homeLat, setHomeLat] = useState<number | null>(null)
+  const [homeLng, setHomeLng] = useState<number | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [prefsSaved, setPrefsSaved] = useState(false)
 
@@ -102,7 +107,7 @@ export default function OnboardingScreen() {
 
   const advance = useCallback(() => {
     if (step >= TOTAL_STEPS - 1) return
-    if (step === 3 || step === 6 || step === 7) return
+    if (step === 3 || step === 6 || step === 7 || step === 8) return
     animateStepChange(step + 1)
   }, [animateStepChange, step])
 
@@ -118,8 +123,11 @@ export default function OnboardingScreen() {
       preferred_categories: categories,
       explore_preference: explorePreference ?? undefined,
       discover_style: discoverStyle ?? undefined,
+      home_town: homeTown.trim() || undefined,
+      home_lat: homeLat ?? undefined,
+      home_lng: homeLng ?? undefined,
     }
-  }, [selectedCategories, explorePreference, discoverStyle])
+  }, [selectedCategories, explorePreference, discoverStyle, homeTown, homeLat, homeLng])
 
   const completeWithDefaults = useCallback(async () => {
     const allIds = CATEGORIES.map((c) => c.id)
@@ -189,7 +197,32 @@ export default function OnboardingScreen() {
   }, [])
 
   useEffect(() => {
-    if (step !== 6 || prefsSaved) return
+    if (step !== 6) return
+
+    const detectHomeTown = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync()
+        if (status !== 'granted') return
+
+        const location = await Location.getCurrentPositionAsync({})
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${location.coords.latitude}&lon=${location.coords.longitude}&format=json`,
+        )
+        const data = await response.json()
+        const detectedCity =
+          data.address?.city || data.address?.town || data.address?.village || ''
+        setHomeTown(detectedCity)
+        setHomeLat(location.coords.latitude)
+        setHomeLng(location.coords.longitude)
+      } catch {
+        // Location detection is optional
+      }
+    }
+    detectHomeTown()
+  }, [step])
+
+  useEffect(() => {
+    if (step !== 7 || prefsSaved) return
 
     const save = async () => {
       await savePreferences(userId, buildPrefs())
@@ -197,12 +230,12 @@ export default function OnboardingScreen() {
     }
     save()
 
-    const timer = setTimeout(() => animateStepChange(7), 1800)
+    const timer = setTimeout(() => animateStepChange(8), 1800)
     return () => clearTimeout(timer)
   }, [step, prefsSaved, userId, buildPrefs, animateStepChange])
 
   useEffect(() => {
-    if (step !== 6) return
+    if (step !== 7) return
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.15, duration: 700, useNativeDriver: true }),
@@ -237,6 +270,11 @@ export default function OnboardingScreen() {
     setTimeout(() => animateStepChange(6), 300)
   }
 
+  const continueFromHomeTown = () => {
+    if (!homeTown.trim()) return
+    animateStepChange(7)
+  }
+
   const startTrial = async () => {
     if (userId) {
       const trialEnd = new Date()
@@ -246,7 +284,7 @@ export default function OnboardingScreen() {
         .update({ is_premium: true, trial_ends_at: trialEnd.toISOString() })
         .eq('id', userId)
     }
-    animateStepChange(8)
+    animateStepChange(9)
   }
 
   const finishOnboarding = async () => {
@@ -258,8 +296,8 @@ export default function OnboardingScreen() {
     }
   }
 
-  const showSkip = !loading && step < 7
-  const showProgress = !loading && step < 8
+  const showSkip = !loading && step < 8
+  const showProgress = !loading && step < 9
   const tapToAdvance = !loading && step < 3
 
   const renderStoryStep = (index: number) => {
@@ -423,6 +461,32 @@ export default function OnboardingScreen() {
 
     if (step === 6) {
       return (
+        <View style={styles.prefsContainer}>
+          <Text style={styles.prefsTitle}>Where do you call home?</Text>
+          <Text style={styles.prefsSubtitle}>We&apos;ll use this to recognize you as a local</Text>
+          <View style={styles.homeTownInputWrap}>
+            <TextInput
+              style={styles.homeTownInput}
+              value={homeTown}
+              onChangeText={setHomeTown}
+              placeholder="Your city"
+              placeholderTextColor={theme.textSecondary}
+            />
+            <Text style={styles.homeTownHint}>Detected automatically — tap to edit</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.continueButton, !homeTown.trim() && styles.continueButtonDisabled]}
+            disabled={!homeTown.trim()}
+            onPress={continueFromHomeTown}
+            activeOpacity={0.8}>
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      )
+    }
+
+    if (step === 7) {
+      return (
         <View style={styles.centered}>
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <Ionicons name="sparkles" size={48} color={theme.accent} />
@@ -442,7 +506,7 @@ export default function OnboardingScreen() {
       )
     }
 
-    if (step === 7) {
+    if (step === 8) {
       return (
         <ScrollView contentContainerStyle={styles.trialContent} showsVerticalScrollIndicator={false}>
           <Ionicons name="diamond" size={56} color={theme.coral} />
@@ -459,7 +523,7 @@ export default function OnboardingScreen() {
           <TouchableOpacity style={styles.trialButton} onPress={startTrial} activeOpacity={0.8}>
             <Text style={styles.trialButtonText}>Start free trial</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => animateStepChange(8)} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => animateStepChange(9)} activeOpacity={0.7}>
             <Text style={styles.maybeLater}>Maybe later</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -679,6 +743,25 @@ const createStyles = (theme: Theme) =>
       color: theme.accentText,
       fontSize: 16,
       fontWeight: '700',
+    },
+    homeTownInputWrap: {
+      paddingHorizontal: 16,
+      marginTop: 8,
+    },
+    homeTownInput: {
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 10,
+      padding: 14,
+      fontSize: 16,
+      color: theme.text,
+    },
+    homeTownHint: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginTop: 8,
+      textAlign: 'center',
     },
     exploreRow: {
       flexDirection: 'row',

@@ -31,6 +31,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ACCENT_MUTED = '#A8D5BA';
 const IMAGE_PLACEHOLDER = '#1A5C3A';
+const LOCAL_PICK_COLOR = '#7F77DD';
 
 type Gem = {
   id: string;
@@ -41,6 +42,7 @@ type Gem = {
   custom_category_id?: string | null;
   image_url: string | null;
   verified: boolean;
+  is_local_pick?: boolean;
   latitude: number;
   longitude: number;
   created_at: string;
@@ -569,6 +571,13 @@ export default function DiscoverScreen() {
     router.push('/profile');
   };
 
+  const renderLocalPickBadge = () => (
+    <View style={styles.localPickBadge}>
+      <Ionicons name="home" size={11} color={LOCAL_PICK_COLOR} />
+      <Text style={styles.localPickBadgeText}>Local&apos;s Pick</Text>
+    </View>
+  );
+
   const renderCommunityBadge = (gem: GemWithProfile) => {
     if (!gem.community_id || !gem.communities) return null;
     const { name, icon, color } = gem.communities;
@@ -609,8 +618,11 @@ export default function DiscoverScreen() {
         </View>
         <View style={styles.listCardContent}>
           {renderCommunityBadge(gem)}
-          <View style={styles.listCategoryBadge}>
-            <Text style={styles.listCategoryBadgeText}>{gem.category}</Text>
+          <View style={styles.listBadgeRow}>
+            <View style={styles.listCategoryBadge}>
+              <Text style={styles.listCategoryBadgeText}>{gem.category}</Text>
+            </View>
+            {gem.is_local_pick && renderLocalPickBadge()}
           </View>
           <Text style={styles.listCardTitle} numberOfLines={1}>
             {gem.title}
@@ -654,6 +666,9 @@ export default function DiscoverScreen() {
         </View>
         <View style={styles.trendingBody}>
           {renderCommunityBadge(gem)}
+          {gem.is_local_pick && (
+            <View style={styles.trendingBadgeRow}>{renderLocalPickBadge()}</View>
+          )}
           <Text style={styles.trendingTitle} numberOfLines={2}>
             {gem.title}
           </Text>
@@ -1292,6 +1307,13 @@ const createStyles = (theme: Theme) =>
     padding: 12,
     justifyContent: 'space-between',
   },
+  listBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 2,
+  },
   listCategoryBadge: {
     alignSelf: 'flex-start',
     backgroundColor: theme.accentSubtle,
@@ -1300,7 +1322,26 @@ const createStyles = (theme: Theme) =>
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 20,
-    marginBottom: 2,
+  },
+  localPickBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: LOCAL_PICK_COLOR + '20',
+    borderWidth: 0.5,
+    borderColor: LOCAL_PICK_COLOR,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 20,
+  },
+  localPickBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: LOCAL_PICK_COLOR,
+  },
+  trendingBadgeRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
   },
   communityBadge: {
     flexDirection: 'row',
