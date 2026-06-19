@@ -264,7 +264,7 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
@@ -385,7 +385,7 @@ const createStyles = (theme: Theme) =>
     },
     actionText: {
       fontSize: 14,
-      color: '#A8D5BA',
+      color: theme.textSecondary,
     },
     notificationTime: {
       fontSize: 12,
@@ -412,7 +412,7 @@ const createStyles = (theme: Theme) =>
       height: 52,
       borderRadius: 8,
       overflow: 'hidden',
-      backgroundColor: '#1A5C3A',
+      backgroundColor: theme.backgroundTertiary,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -427,6 +427,6 @@ const createStyles = (theme: Theme) =>
     initialText: {
       fontSize: 20,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: theme.accentText,
     },
   });

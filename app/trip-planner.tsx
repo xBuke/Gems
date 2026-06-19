@@ -22,7 +22,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const RADIUS_OPTIONS = [10, 25, 50, 100, 200] as const;
-const IMAGE_PLACEHOLDER = '#1A5C3A';
 
 type CitySuggestion = { name: string; lat: number; lng: number };
 
@@ -238,7 +237,7 @@ export default function TripPlannerScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerSide} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerSide} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="arrow-back" size={22} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Trip Planner</Text>
@@ -266,7 +265,7 @@ export default function TripPlannerScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerSide} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerSide} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Trip Planner</Text>
@@ -343,19 +342,21 @@ export default function TripPlannerScreen() {
           contentContainerStyle={styles.pillRow}>
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategories.includes(cat.id);
+            const chipTextColor = isSelected ? '#FFFFFF' : theme.text;
             return (
               <TouchableOpacity
                 key={cat.id}
                 style={[
                   styles.categoryPill,
                   {
-                    backgroundColor: isSelected ? cat.color : 'rgba(255,255,255,0.15)',
+                    backgroundColor: isSelected ? cat.color : theme.card,
+                    borderColor: theme.border,
                   },
                 ]}
                 onPress={() => toggleCategory(cat)}
                 activeOpacity={0.7}>
-                <Ionicons name={cat.icon as keyof typeof Ionicons.glyphMap} size={14} color="#FFFFFF" />
-                <Text style={styles.categoryPillText}>
+                <Ionicons name={cat.icon as keyof typeof Ionicons.glyphMap} size={14} color={chipTextColor} />
+                <Text style={[styles.categoryPillText, { color: chipTextColor }]}>
                   {cat.name}
                   {cat.premium ? ' 💎' : ''}
                 </Text>
@@ -533,9 +534,9 @@ const createStyles = (theme: Theme) =>
       paddingVertical: 10,
       borderRadius: 20,
       marginRight: 10,
-      backgroundColor: 'rgba(255,255,255,0.15)',
+      backgroundColor: theme.card,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.4)',
+      borderColor: theme.border,
     },
     radiusPillText: {
       fontSize: 14,
@@ -552,10 +553,8 @@ const createStyles = (theme: Theme) =>
       borderRadius: 20,
       marginRight: 10,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.4)',
     },
     categoryPillText: {
-      color: '#FFFFFF',
       fontSize: 14,
       fontWeight: '600',
     },
@@ -637,7 +636,7 @@ const createStyles = (theme: Theme) =>
       borderBottomLeftRadius: 12,
     },
     listCardImagePlaceholder: {
-      backgroundColor: IMAGE_PLACEHOLDER,
+      backgroundColor: theme.backgroundTertiary,
     },
     listCardContent: {
       flex: 1,

@@ -411,7 +411,7 @@ export default function OnboardingScreen() {
         </View>
         {selected && (
           <View style={styles.checkBadge}>
-            <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={14} color={theme.accentText} />
           </View>
         )}
       </TouchableOpacity>

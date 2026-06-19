@@ -35,8 +35,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const ACCENT_MUTED = '#A8D5BA';
-
 type Category = (typeof CATEGORIES)[number];
 
 type LocationChoice = 'here' | 'else';
@@ -472,6 +470,7 @@ export default function AddGemScreen() {
                 placeholderTextColor={theme.textTertiary}
                 value={name}
                 onChangeText={setName}
+                maxLength={60}
               />
 
               <Text style={styles.fieldLabel}>What makes this place special?</Text>
@@ -483,6 +482,7 @@ export default function AddGemScreen() {
                 onChangeText={setDescription}
                 multiline
                 textAlignVertical="top"
+                maxLength={500}
               />
 
               <Text style={styles.fieldLabel}>Category</Text>
@@ -875,8 +875,8 @@ const createStyles = (theme: Theme) =>
     paddingHorizontal: 12,
   },
   tagPillSelected: {
-    backgroundColor: '#0F3D25',
-    borderColor: '#1D9E75',
+    backgroundColor: theme.accentSubtle,
+    borderColor: theme.accent,
   },
   tagPillText: {
     color: theme.text,
@@ -884,7 +884,7 @@ const createStyles = (theme: Theme) =>
     fontWeight: '500',
   },
   tagPillTextSelected: {
-    color: '#1D9E75',
+    color: theme.accent,
   },
   bestTimeScroll: {
     marginBottom: 8,
@@ -928,7 +928,7 @@ const createStyles = (theme: Theme) =>
   },
   locationStatusText: {
     flex: 1,
-    color: ACCENT_MUTED,
+    color: theme.textSecondary,
     fontSize: 13,
   },
   submitButton: {

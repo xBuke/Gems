@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import {
   ActionSheetIOS,
+  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
@@ -115,6 +116,7 @@ export default function ProfileScreen() {
   const [likedGems, setLikedGems] = useState<Gem[]>([]);
   const [visitedGems, setVisitedGems] = useState<Gem[]>([]);
   const [expandedPanel, setExpandedPanel] = useState<AccordionPanel | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const fetchMyCustomCategories = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -144,7 +146,10 @@ export default function ProfileScreen() {
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setProfileLoading(false);
+      return;
+    }
 
     const isOwn = !userId || userId === user.id;
     const profileId = isOwn ? user.id : userId;
@@ -263,6 +268,8 @@ export default function ProfileScreen() {
       setLikedGems(parseGemLinkRows(likedData as GemLinkRow[] | null));
       setVisitedGems(parseGemLinkRows(visitedData as GemLinkRow[] | null));
     }
+
+    setProfileLoading(false);
   }, [userId, fetchMyCustomCategories]);
 
   useEffect(() => {
@@ -750,21 +757,26 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         {isOwnProfile ? (
-          <TouchableOpacity onPress={() => router.push('/settings')} activeOpacity={0.7} style={styles.headerSide}>
+          <TouchableOpacity onPress={() => router.push('/settings')} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
             <Ionicons name="settings-outline" size={22} color={theme.text} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={showProfileMenu} activeOpacity={0.7} style={styles.headerSide}>
+          <TouchableOpacity onPress={showProfileMenu} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
             <Ionicons name="ellipsis-horizontal" size={22} color={theme.text} />
           </TouchableOpacity>
         )}
       </View>
 
+      {profileLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      ) : (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileSection}>
           {isOwnProfile ? (
@@ -997,8 +1009,8 @@ export default function ProfileScreen() {
                 </View>
               ) : (
                 <View style={styles.gemsGrid}>
-                  {gemRows.map((row, rowIndex) => (
-                    <View key={`row-${rowIndex}`} style={styles.gemRow}>
+                  {gemRows.map((row) => (
+                    <View key={`row-${row.map((g) => g.id).join('-')}`} style={styles.gemRow}>
                       {row.map((gem) => (
                         <Fragment key={gem.id}>{renderGemCard(gem)}</Fragment>
                       ))}
@@ -1055,6 +1067,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+      )}
 
       {!isOwnProfile && currentUserId && userId && (
         <ReportSheet

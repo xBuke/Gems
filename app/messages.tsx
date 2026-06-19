@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   StyleSheet,
@@ -130,63 +131,70 @@ export default function MessagesScreen() {
     }, [fetchConversations]),
   );
 
-  const renderConversation = ({ item }: { item: Conversation }) => {
-    const initial = item.otherUsername.charAt(0).toUpperCase();
+  const renderConversation = useCallback(
+    ({ item }: { item: Conversation }) => {
+      const initial = item.otherUsername.charAt(0).toUpperCase();
 
-    return (
-      <TouchableOpacity
-        style={styles.conversationItem}
-        onPress={() =>
-          router.push({
-            pathname: '/chat',
-            params: { userId: item.otherUserId, username: item.otherUsername },
-          })
-        }
-        activeOpacity={0.7}>
-        <View style={styles.avatar}>
-          {item.otherAvatarUrl ? (
-            <Image
-              source={{ uri: item.otherAvatarUrl }}
-              style={styles.avatarImage}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <Text style={styles.avatarText}>{initial}</Text>
-          )}
-        </View>
-        <View style={styles.conversationContent}>
-          <View style={styles.conversationTopRow}>
-            <Text
-              style={[styles.username, item.hasUnread && styles.usernameUnread]}
-              numberOfLines={1}>
-              {item.otherUsername}
-            </Text>
-            <Text style={styles.timeAgo}>{timeAgo(item.lastMessageAt)}</Text>
+      return (
+        <TouchableOpacity
+          style={styles.conversationItem}
+          onPress={() =>
+            router.push({
+              pathname: '/chat',
+              params: { userId: item.otherUserId, username: item.otherUsername },
+            })
+          }
+          activeOpacity={0.7}>
+          <View style={styles.avatar}>
+            {item.otherAvatarUrl ? (
+              <Image
+                source={{ uri: item.otherAvatarUrl }}
+                style={styles.avatarImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
           </View>
-          <Text style={styles.preview} numberOfLines={1}>
-            {item.lastMessage}
-          </Text>
-        </View>
-        {item.hasUnread && <View style={styles.unreadDot} />}
-      </TouchableOpacity>
-    );
-  };
+          <View style={styles.conversationContent}>
+            <View style={styles.conversationTopRow}>
+              <Text
+                style={[styles.username, item.hasUnread && styles.usernameUnread]}
+                numberOfLines={1}>
+                {item.otherUsername}
+              </Text>
+              <Text style={styles.timeAgo}>{timeAgo(item.lastMessageAt)}</Text>
+            </View>
+            <Text style={styles.preview} numberOfLines={1}>
+              {item.lastMessage}
+            </Text>
+          </View>
+          {item.hasUnread && <View style={styles.unreadDot} />}
+        </TouchableOpacity>
+      );
+    },
+    [router, styles],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity onPress={() => Alert.alert('Coming Soon', 'Starting new conversations from here is coming soon. For now, message someone by visiting their profile and tapping "Send Message".')} activeOpacity={0.7} style={styles.headerSideRight}>
+        <TouchableOpacity onPress={() => Alert.alert('Coming Soon', 'Starting new conversations from here is coming soon. For now, message someone by visiting their profile and tapping "Send Message".')} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSideRight}>
           <Ionicons name="create-outline" size={22} color={theme.accent} />
         </TouchableOpacity>
       </View>
 
-      {!loading && conversations.length === 0 ? (
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 }}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      ) : conversations.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="chatbubbles-outline" size={64} color={theme.accent} style={styles.emptyIcon} />
           <Text style={styles.emptyTitle}>No messages yet</Text>

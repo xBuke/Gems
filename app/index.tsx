@@ -24,6 +24,7 @@ import * as Location from 'expo-location';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   RefreshControl,
   ScrollView,
@@ -36,8 +37,6 @@ import {
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const ACCENT_MUTED = '#A8D5BA';
-const IMAGE_PLACEHOLDER = '#1A5C3A';
 const LOCAL_PICK_COLOR = '#7F77DD';
 
 const DISCOVER_GEM_SELECT =
@@ -148,6 +147,7 @@ export default function DiscoverScreen() {
   const [streakBannerText, setStreakBannerText] = useState<string | null>(null);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const streakBannerOpacity = useRef(new Animated.Value(0)).current;
 
   const showStreakBanner = useCallback(
@@ -643,9 +643,13 @@ export default function DiscoverScreen() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
-      refreshDiscoverData(myCommunityIds);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+        await refreshDiscoverData(myCommunityIds);
+      } finally {
+        setInitialLoading(false);
+      }
     };
     load();
     checkStreakBanner();
@@ -908,7 +912,9 @@ export default function DiscoverScreen() {
           <Text style={styles.listCardTitle} numberOfLines={1}>
             {gem.title}
           </Text>
-          <Text style={styles.listCardUsername}>@{username}</Text>
+          <Text style={styles.listCardUsername} numberOfLines={1} ellipsizeMode="tail">
+            @{username}
+          </Text>
           {showBestTime && renderBestTimeHint(gem.best_time)}
           <View style={styles.listCardMetaRow}>
             <View style={styles.listCardMetaItem}>
@@ -1198,6 +1204,14 @@ export default function DiscoverScreen() {
     });
   };
 
+  if (initialLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
+        <ActivityIndicator size="large" color={theme.accent} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {streakBannerText && (
@@ -1282,10 +1296,10 @@ export default function DiscoverScreen() {
             marginRight: 10,
             backgroundColor:
               activeMainCategory === null && activeCustomCategory === null
-                ? '#1D9E75'
-                : 'rgba(255,255,255,0.15)',
+                ? theme.accent
+                : theme.card,
             borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.4)',
+            borderColor: theme.border,
           }}
           onPress={() => {
             hapticSelection();
@@ -1295,7 +1309,10 @@ export default function DiscoverScreen() {
           }}>
           <Text
             style={{
-              color: '#FFFFFF',
+              color:
+                activeMainCategory === null && activeCustomCategory === null
+                  ? theme.accentText
+                  : theme.text,
               fontSize: 14,
               fontWeight: '600',
             }}>
@@ -1303,68 +1320,75 @@ export default function DiscoverScreen() {
           </Text>
         </TouchableOpacity>
 
-        {CATEGORIES.map((cat) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 18,
-              paddingVertical: 10,
-              borderRadius: 20,
-              marginRight: 10,
-              backgroundColor: activeMainCategory?.id === cat.id ? cat.color : 'rgba(255,255,255,0.15)',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.4)',
-            }}
-            onPress={() => handleCategoryPress(cat)}>
-            <Ionicons name={cat.icon as any} size={14} color="#FFFFFF" aria-hidden={true} />
-            <Text
+        {CATEGORIES.map((cat) => {
+          const isSelected = activeMainCategory?.id === cat.id;
+          const chipTextColor = isSelected ? '#FFFFFF' : theme.text;
+          return (
+            <TouchableOpacity
+              key={cat.id}
               style={{
-                color: '#FFFFFF',
-                fontSize: 14,
-                fontWeight: '600',
-              }}>
-              {cat.name}
-              {cat.premium ? ' 💎' : ''}
-            </Text>
-          </TouchableOpacity>
-        ))}
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 18,
+                paddingVertical: 10,
+                borderRadius: 20,
+                marginRight: 10,
+                backgroundColor: isSelected ? cat.color : theme.card,
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}
+              onPress={() => handleCategoryPress(cat)}>
+              <Ionicons name={cat.icon as any} size={14} color={chipTextColor} aria-hidden={true} />
+              <Text
+                style={{
+                  color: chipTextColor,
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}>
+                {cat.name}
+                {cat.premium ? ' 💎' : ''}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
 
-        {customCategories.map((cat) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 18,
-              paddingVertical: 10,
-              borderRadius: 20,
-              marginRight: 10,
-              backgroundColor:
-                activeCustomCategory?.id === cat.id ? cat.color : 'rgba(255,255,255,0.15)',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.4)',
-            }}
-            onPress={() => handleCustomCategoryPress(cat)}>
-            <Ionicons
-              name={cat.icon as keyof typeof Ionicons.glyphMap}
-              size={14}
-              color="#FFFFFF"
-              aria-hidden={true}
-            />
-            <Text
+        {customCategories.map((cat) => {
+          const isSelected = activeCustomCategory?.id === cat.id;
+          const chipTextColor = isSelected ? '#FFFFFF' : theme.text;
+          return (
+            <TouchableOpacity
+              key={cat.id}
               style={{
-                color: '#FFFFFF',
-                fontSize: 14,
-                fontWeight: '600',
-              }}>
-              {cat.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 18,
+                paddingVertical: 10,
+                borderRadius: 20,
+                marginRight: 10,
+                backgroundColor: isSelected ? cat.color : theme.card,
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}
+              onPress={() => handleCustomCategoryPress(cat)}>
+              <Ionicons
+                name={cat.icon as keyof typeof Ionicons.glyphMap}
+                size={14}
+                color={chipTextColor}
+                aria-hidden={true}
+              />
+              <Text
+                style={{
+                  color: chipTextColor,
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}>
+                {cat.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {activeMainCategory && !activeCustomCategory && (
@@ -1382,33 +1406,36 @@ export default function DiscoverScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             style={{ paddingLeft: 16 }}>
-            {activeMainCategory.subcategories.map((sub) => (
-              <TouchableOpacity
-                key={sub}
-                style={{
-                  backgroundColor: activeSubcategory === sub ? activeMainCategory.color : 'rgba(255,255,255,0.15)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  borderRadius: 20,
-                  paddingHorizontal: 18,
-                  paddingVertical: 10,
-                  marginRight: 10,
-                }}
-                onPress={() => {
-                  hapticSelection();
-                  setActiveSubcategory(activeSubcategory === sub ? null : sub);
-                }}
-                activeOpacity={0.7}>
-                <Text
+            {activeMainCategory.subcategories.map((sub) => {
+              const isSelected = activeSubcategory === sub;
+              return (
+                <TouchableOpacity
+                  key={sub}
                   style={{
-                    color: '#FFFFFF',
-                    fontSize: 14,
-                    fontWeight: '600',
-                  }}>
-                  {sub}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                    backgroundColor: isSelected ? activeMainCategory.color : theme.card,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    borderRadius: 20,
+                    paddingHorizontal: 18,
+                    paddingVertical: 10,
+                    marginRight: 10,
+                  }}
+                  onPress={() => {
+                    hapticSelection();
+                    setActiveSubcategory(activeSubcategory === sub ? null : sub);
+                  }}
+                  activeOpacity={0.7}>
+                  <Text
+                    style={{
+                      color: isSelected ? '#FFFFFF' : theme.text,
+                      fontSize: 14,
+                      fontWeight: '600',
+                    }}>
+                    {sub}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       )}
@@ -1728,7 +1755,7 @@ const createStyles = (theme: Theme) =>
     height: '100%',
   },
   heroImagePlaceholder: {
-    backgroundColor: IMAGE_PLACEHOLDER,
+    backgroundColor: theme.backgroundTertiary,
   },
   heroOverlay: {
     position: 'absolute',
@@ -1776,7 +1803,7 @@ const createStyles = (theme: Theme) =>
   heroMeta: {
     fontSize: 12,
     fontFamily: 'SpaceMono-Regular',
-    color: ACCENT_MUTED,
+    color: theme.textSecondary,
   },
   trendingRow: {
     gap: 12,
@@ -1794,7 +1821,7 @@ const createStyles = (theme: Theme) =>
   },
   trendingImage: {
     height: 130,
-    backgroundColor: IMAGE_PLACEHOLDER,
+    backgroundColor: theme.backgroundTertiary,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     overflow: 'hidden',
@@ -1804,7 +1831,7 @@ const createStyles = (theme: Theme) =>
     height: '100%',
   },
   trendingImagePlaceholder: {
-    backgroundColor: IMAGE_PLACEHOLDER,
+    backgroundColor: theme.backgroundTertiary,
   },
   trendingBody: {
     flex: 1,
@@ -1875,7 +1902,7 @@ const createStyles = (theme: Theme) =>
     borderBottomLeftRadius: 12,
   },
   listCardImagePlaceholder: {
-    backgroundColor: IMAGE_PLACEHOLDER,
+    backgroundColor: theme.backgroundTertiary,
   },
   listCardContent: {
     flex: 1,

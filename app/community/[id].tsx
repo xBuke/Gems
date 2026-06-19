@@ -610,7 +610,7 @@ export default function CommunityDetailScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
             <Ionicons name="arrow-back" size={22} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Community</Text>
@@ -626,7 +626,7 @@ export default function CommunityDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
 
@@ -644,7 +644,7 @@ export default function CommunityDetailScreen() {
         </View>
 
         {isCreator ? (
-          <TouchableOpacity onPress={handleSettingsPress} activeOpacity={0.7} style={styles.headerSide}>
+          <TouchableOpacity onPress={handleSettingsPress} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
             <Ionicons name="ellipsis-horizontal" size={22} color={theme.text} />
           </TouchableOpacity>
         ) : (
@@ -654,7 +654,9 @@ export default function CommunityDetailScreen() {
 
       <View style={styles.infoSection}>
         {community.description ? (
-          <Text style={styles.description}>{community.description}</Text>
+          <Text style={styles.description} numberOfLines={3} ellipsizeMode="tail">
+            {community.description}
+          </Text>
         ) : null}
 
         <View style={styles.chipsRow}>

@@ -221,11 +221,11 @@ export default function CommunitiesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Communities</Text>
-        <TouchableOpacity onPress={handleCreatePress} activeOpacity={0.7} style={styles.createButton}>
+        <TouchableOpacity onPress={handleCreatePress} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.createButton}>
           {isPremium ? (
             <Text style={styles.createButtonText}>+ Create</Text>
           ) : (

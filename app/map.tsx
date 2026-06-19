@@ -19,6 +19,7 @@ import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Linking,
   Platform,
   Alert,
@@ -31,7 +32,10 @@ import {
 import MapView, { MapType, Marker, Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const IMAGE_PLACEHOLDER = '#1A5C3A';
+const getCategoryColor = (category: string, accentFallback: string) => {
+  const match = CATEGORIES.find((c) => c.id === category);
+  return match?.color ?? accentFallback;
+};
 
 const formatDistanceKm = (meters: number) => {
   const km = meters / 1000;
@@ -50,11 +54,6 @@ const INITIAL_REGION = {
   longitude: 16.4,
   latitudeDelta: 3,
   longitudeDelta: 3,
-};
-
-const getCategoryColor = (category: string) => {
-  const match = CATEGORIES.find((c) => c.id === category);
-  return match?.color ?? '#1D9E75';
 };
 
 type Category = (typeof CATEGORIES)[number];
@@ -80,6 +79,7 @@ export default function MapScreen() {
   const router = useRouter();
   const { theme, isDark } = useTheme();
   const overlay = isDark ? 'rgba(13, 13, 13, 0.85)' : 'rgba(255, 255, 255, 0.9)';
+  const chipUnselectedBg = `${theme.card}E6`;
   const styles = useMemo(() => createStyles(theme, overlay), [theme, overlay]);
   const { placeMode } = useLocalSearchParams<{ placeMode?: string }>();
   const insets = useSafeAreaInsets();
@@ -90,6 +90,7 @@ export default function MapScreen() {
   const snapPoints = useMemo(() => ['25%', '60%'], []);
   const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
+  const [gemsLoading, setGemsLoading] = useState(true);
   const [selectedGem, setSelectedGem] = useState<Gem | null>(null);
   const [selectedLikeCount, setSelectedLikeCount] = useState(0);
   const [selectedCommentCount, setSelectedCommentCount] = useState(0);
@@ -114,28 +115,32 @@ export default function MapScreen() {
   }, [placeMode]);
 
   const fetchVisibleGems = useCallback(async (region: Region) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
 
-    const latDelta = region.latitudeDelta;
-    const lngDelta = region.longitudeDelta;
+      const latDelta = region.latitudeDelta;
+      const lngDelta = region.longitudeDelta;
 
-    let query = supabase
-      .from('gems')
-      .select(GEM_SELECT_MAP)
-      .eq('is_private', false)
-      .gte('latitude', region.latitude - latDelta)
-      .lte('latitude', region.latitude + latDelta)
-      .gte('longitude', region.longitude - lngDelta)
-      .lte('longitude', region.longitude + lngDelta)
-      .limit(200);
+      let query = supabase
+        .from('gems')
+        .select(GEM_SELECT_MAP)
+        .eq('is_private', false)
+        .gte('latitude', region.latitude - latDelta)
+        .lte('latitude', region.latitude + latDelta)
+        .gte('longitude', region.longitude - lngDelta)
+        .lte('longitude', region.longitude + lngDelta)
+        .limit(200);
 
-    query = applyCommunityGemFilter(query, myCommunityIds);
+      query = applyCommunityGemFilter(query, myCommunityIds);
 
-    const { data } = await query;
-    if (data) {
-      setGems(data);
-      lastFetchedRegionRef.current = region;
+      const { data } = await query;
+      if (data) {
+        setGems(data);
+        lastFetchedRegionRef.current = region;
+      }
+    } finally {
+      setGemsLoading(false);
     }
   }, []);
 
@@ -461,7 +466,7 @@ export default function MapScreen() {
             onPress={(e) => handleMarkerPress(gem, e)}
             stopPropagation>
             <View
-              style={[styles.marker, { backgroundColor: getCategoryColor(gem.category) }]}>
+              style={[styles.marker, { backgroundColor: getCategoryColor(gem.category, theme.accent) }]}>
               <Text style={styles.markerText}>{gem.category.charAt(0)}</Text>
             </View>
           </Marker>
@@ -502,6 +507,15 @@ export default function MapScreen() {
         />
       </TouchableOpacity>
 
+      {gemsLoading && (
+        <View style={{ position: 'absolute', top: 110, left: 0, right: 0, alignItems: 'center' }}>
+          <View style={{ backgroundColor: theme.card, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator size="small" color={theme.accent} />
+            <Text style={{ color: theme.text, fontSize: 12 }}>Loading gems...</Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.filterContainer}>
         <ScrollView
           horizontal
@@ -516,10 +530,10 @@ export default function MapScreen() {
               marginRight: 10,
               backgroundColor:
                 activeMainCategory === null && activeCustomCategory === null
-                  ? '#1D9E75'
-                  : 'rgba(255,255,255,0.15)',
+                  ? theme.accent
+                  : chipUnselectedBg,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.4)',
+              borderColor: theme.border,
             }}
             onPress={() => {
               setActiveMainCategory(null);
@@ -528,7 +542,10 @@ export default function MapScreen() {
             }}>
             <Text
               style={{
-                color: '#FFFFFF',
+                color:
+                  activeMainCategory === null && activeCustomCategory === null
+                    ? theme.accentText
+                    : theme.text,
                 fontSize: 14,
                 fontWeight: '600',
               }}>
@@ -536,66 +553,72 @@ export default function MapScreen() {
             </Text>
           </TouchableOpacity>
 
-          {CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: 18,
-                paddingVertical: 10,
-                borderRadius: 20,
-                marginRight: 10,
-                backgroundColor:
-                  activeMainCategory?.id === cat.id ? cat.color : 'rgba(255,255,255,0.15)',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.4)',
-              }}
-              onPress={() => handleCategoryPress(cat)}
-              activeOpacity={0.7}>
-              <Ionicons name={cat.icon as any} size={14} color="#FFFFFF" aria-hidden={true} />
-              <Text
+          {CATEGORIES.map((cat) => {
+            const isSelected = activeMainCategory?.id === cat.id;
+            const chipTextColor = isSelected ? '#FFFFFF' : theme.text;
+            return (
+              <TouchableOpacity
+                key={cat.id}
                 style={{
-                  color: '#FFFFFF',
-                  fontSize: 14,
-                  fontWeight: '600',
-                }}>
-                {cat.name}
-                {cat.premium ? ' 💎' : ''}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  marginRight: 10,
+                  backgroundColor: isSelected ? cat.color : chipUnselectedBg,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                }}
+                onPress={() => handleCategoryPress(cat)}
+                activeOpacity={0.7}>
+                <Ionicons name={cat.icon as any} size={14} color={chipTextColor} aria-hidden={true} />
+                <Text
+                  style={{
+                    color: chipTextColor,
+                    fontSize: 14,
+                    fontWeight: '600',
+                  }}>
+                  {cat.name}
+                  {cat.premium ? ' 💎' : ''}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
 
-          {customCategories.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: 18,
-                paddingVertical: 10,
-                borderRadius: 20,
-                marginRight: 10,
-                backgroundColor:
-                  activeCustomCategory?.id === cat.id ? cat.color : 'rgba(255,255,255,0.15)',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.4)',
-              }}
-              onPress={() => handleCustomCategoryPress(cat)}
-              activeOpacity={0.7}>
-              <Ionicons name={cat.icon as any} size={14} color="#FFFFFF" aria-hidden={true} />
-              <Text
+          {customCategories.map((cat) => {
+            const isSelected = activeCustomCategory?.id === cat.id;
+            const chipTextColor = isSelected ? '#FFFFFF' : theme.text;
+            return (
+              <TouchableOpacity
+                key={cat.id}
                 style={{
-                  color: '#FFFFFF',
-                  fontSize: 14,
-                  fontWeight: '600',
-                }}>
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  marginRight: 10,
+                  backgroundColor: isSelected ? cat.color : chipUnselectedBg,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                }}
+                onPress={() => handleCustomCategoryPress(cat)}
+                activeOpacity={0.7}>
+                <Ionicons name={cat.icon as any} size={14} color={chipTextColor} aria-hidden={true} />
+                <Text
+                  style={{
+                    color: chipTextColor,
+                    fontSize: 14,
+                    fontWeight: '600',
+                  }}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {activeMainCategory && !activeCustomCategory && (
@@ -613,33 +636,33 @@ export default function MapScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               style={{ paddingLeft: 16 }}>
-              {activeMainCategory.subcategories.map((sub) => (
-                <TouchableOpacity
-                  key={sub}
-                  style={{
-                    backgroundColor:
-                      activeSubcategory === sub
-                        ? activeMainCategory.color
-                        : 'rgba(255,255,255,0.15)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.4)',
-                    borderRadius: 20,
-                    paddingHorizontal: 18,
-                    paddingVertical: 10,
-                    marginRight: 10,
-                  }}
-                  onPress={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
-                  activeOpacity={0.7}>
-                  <Text
+              {activeMainCategory.subcategories.map((sub) => {
+                const isSelected = activeSubcategory === sub;
+                return (
+                  <TouchableOpacity
+                    key={sub}
                     style={{
-                      color: '#FFFFFF',
-                      fontSize: 14,
-                      fontWeight: '600',
-                    }}>
-                    {sub}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                      backgroundColor: isSelected ? activeMainCategory.color : chipUnselectedBg,
+                      borderWidth: 1,
+                      borderColor: theme.border,
+                      borderRadius: 20,
+                      paddingHorizontal: 18,
+                      paddingVertical: 10,
+                      marginRight: 10,
+                    }}
+                    onPress={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
+                    activeOpacity={0.7}>
+                    <Text
+                      style={{
+                        color: isSelected ? '#FFFFFF' : theme.text,
+                        fontSize: 14,
+                        fontWeight: '600',
+                      }}>
+                      {sub}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         )}
@@ -755,9 +778,9 @@ const createStyles = (theme: Theme, overlay: string) =>
       position: 'absolute',
       top: 50,
       left: 16,
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: overlay,
       borderWidth: 0.5,
       borderColor: theme.border,
@@ -772,7 +795,9 @@ const createStyles = (theme: Theme, overlay: string) =>
       borderWidth: 0.5,
       borderColor: theme.border,
       borderRadius: 20,
-      paddingVertical: 8,
+      minHeight: 44,
+      justifyContent: 'center',
+      paddingVertical: 12,
       paddingHorizontal: 14,
     },
     layerButtonText: {
@@ -784,9 +809,9 @@ const createStyles = (theme: Theme, overlay: string) =>
       position: 'absolute',
       top: 96,
       right: 16,
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: theme.card,
       borderWidth: 0.5,
       borderColor: theme.border,
@@ -807,7 +832,9 @@ const createStyles = (theme: Theme, overlay: string) =>
       borderWidth: 0.5,
       borderColor: theme.border,
       borderRadius: 20,
-      paddingVertical: 8,
+      minHeight: 44,
+      justifyContent: 'center',
+      paddingVertical: 12,
       paddingHorizontal: 14,
     },
     placeButtonText: {
@@ -911,7 +938,7 @@ const createStyles = (theme: Theme, overlay: string) =>
       height: 140,
       borderRadius: 12,
       marginBottom: 12,
-      backgroundColor: IMAGE_PLACEHOLDER,
+      backgroundColor: theme.backgroundTertiary,
       alignItems: 'center',
       justifyContent: 'center',
     },

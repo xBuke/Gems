@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import {
   ActionSheetIOS,
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -88,6 +89,7 @@ export default function SettingsScreen() {
   const [promptVisible, setPromptVisible] = useState(false);
   const [promptMode, setPromptMode] = useState<'username' | 'password' | null>(null);
   const [promptValue, setPromptValue] = useState('');
+  const [settingsLoading, setSettingsLoading] = useState(true);
 
   const languageLabel = language === 'hr' ? 'Hrvatski' : 'English';
 
@@ -97,7 +99,10 @@ export default function SettingsScreen() {
     if (storedLanguage) setLanguage(storedLanguage);
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setSettingsLoading(false);
+      return;
+    }
 
     setUserId(user.id);
 
@@ -117,6 +122,8 @@ export default function SettingsScreen() {
         await AsyncStorage.setItem(LANGUAGE_KEY, profile.language);
       }
     }
+
+    setSettingsLoading(false);
   }, []);
 
   useFocusEffect(
@@ -351,13 +358,18 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <View style={[styles.header, { backgroundColor: theme.background }]}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Settings</Text>
         <View style={styles.headerSide} />
       </View>
 
+      {settingsLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      ) : (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <SectionHeader title="Account" theme={theme} />
         <View style={styles.sectionGroup}>
@@ -504,6 +516,7 @@ export default function SettingsScreen() {
           </>
         ) : null}
       </ScrollView>
+      )}
 
       <Modal visible={promptVisible} transparent animationType="fade">
         <View style={styles.promptOverlay}>
@@ -524,6 +537,7 @@ export default function SettingsScreen() {
               value={promptValue}
               onChangeText={setPromptValue}
               secureTextEntry={promptMode === 'password'}
+              maxLength={promptMode === 'username' ? 20 : undefined}
               autoFocus
               placeholderTextColor={theme.textSecondary}
             />

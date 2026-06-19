@@ -10,6 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
+  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
@@ -95,6 +96,7 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const [otherAvatarUrl, setOtherAvatarUrl] = useState<string | null>(null);
+  const [messagesLoading, setMessagesLoading] = useState(true);
   const listRef = useRef<FlatList>(null);
 
   const chatItems = useMemo(() => buildChatItems(messages), [messages]);
@@ -107,7 +109,10 @@ export default function ChatScreen() {
 
   const fetchMessages = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !userId) return;
+    if (!user || !userId) {
+      setMessagesLoading(false);
+      return;
+    }
 
     setMyId(user.id);
 
@@ -136,6 +141,8 @@ export default function ChatScreen() {
       .update({ read: true })
       .eq('receiver_id', user.id)
       .eq('sender_id', userId);
+
+    setMessagesLoading(false);
   }, [userId]);
 
   useEffect(() => {
@@ -301,43 +308,50 @@ export default function ChatScreen() {
   const initial = displayName.charAt(0).toUpperCase();
   const canSend = inputText.trim().length > 0 && !sending;
 
-  const renderMessage = (item: Message) => {
-    const isMine = item.sender_id === myId;
+  const renderMessage = useCallback(
+    (item: Message) => {
+      const isMine = item.sender_id === myId;
 
-    return (
-      <View style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowTheirs]}>
-        <View style={styles.messageBlock}>
-          <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
-            <Text style={[styles.bubbleText, isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}>
-              {item.content}
-            </Text>
-          </View>
-          <Text style={[styles.timestamp, isMine && styles.timestampMine]}>
-            {formatTime(item.created_at)}
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
-  const renderItem = ({ item }: { item: ChatItem }) => {
-    if (item.type === 'date') {
       return (
-        <View style={styles.dateSeparatorWrap}>
-          <View style={styles.dateSeparator}>
-            <Text style={styles.dateSeparatorText}>{item.label}</Text>
+        <View style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowTheirs]}>
+          <View style={styles.messageBlock}>
+            <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
+              <Text
+                style={[styles.bubbleText, isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}>
+                {item.content}
+              </Text>
+            </View>
+            <Text style={[styles.timestamp, isMine && styles.timestampMine]}>
+              {formatTime(item.created_at)}
+            </Text>
           </View>
         </View>
       );
-    }
+    },
+    [myId, styles],
+  );
 
-    return renderMessage(item.data);
-  };
+  const renderItem = useCallback(
+    ({ item }: { item: ChatItem }) => {
+      if (item.type === 'date') {
+        return (
+          <View style={styles.dateSeparatorWrap}>
+            <View style={styles.dateSeparator}>
+              <Text style={styles.dateSeparatorText}>{item.label}</Text>
+            </View>
+          </View>
+        );
+      }
+
+      return renderMessage(item.data);
+    },
+    [renderMessage, styles],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerSide}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerCenter} onPress={goToProfile} activeOpacity={0.7}>
@@ -356,7 +370,7 @@ export default function ChatScreen() {
           </View>
           <Text style={styles.headerUsername}>{displayName}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={showChatMenu} activeOpacity={0.7} style={styles.headerSideRight}>
+        <TouchableOpacity onPress={showChatMenu} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSideRight}>
           <Ionicons name="ellipsis-horizontal" size={22} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
@@ -365,6 +379,11 @@ export default function ChatScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+        {messagesLoading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={theme.accent} />
+          </View>
+        ) : (
         <FlatList
           ref={listRef}
           data={chatItems}
@@ -375,6 +394,7 @@ export default function ChatScreen() {
           showsVerticalScrollIndicator={false}
           onContentSizeChange={scrollToBottom}
         />
+        )}
 
         <SafeAreaView edges={['bottom']} style={styles.inputArea}>
           <View style={styles.inputRow}>
@@ -504,6 +524,7 @@ const createStyles = (theme: Theme) =>
     bubbleText: {
       fontSize: 15,
       lineHeight: 20,
+      flexShrink: 1,
     },
     bubbleTextMine: {
       color: theme.background,

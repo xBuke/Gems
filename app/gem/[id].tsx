@@ -32,8 +32,6 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const ACCENT_MUTED = '#A8D5BA';
-const IMAGE_PLACEHOLDER = '#1A5C3A';
 const COMMENT_BLUE = '#185FA5';
 const LOCAL_PICK_COLOR = '#7F77DD';
 
@@ -105,6 +103,7 @@ export default function GemDetailScreen() {
     type: 'gem' | 'comment';
     id: string;
   } | null>(null);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const heartScale = useSharedValue(1);
   const heartAnimatedStyle = useAnimatedStyle(() => ({
@@ -218,6 +217,10 @@ export default function GemDetailScreen() {
 
       setIsLiked(!!existingLike);
     }
+  }, [gemId]);
+
+  useEffect(() => {
+    setDescriptionExpanded(false);
   }, [gemId]);
 
   useEffect(() => {
@@ -633,7 +636,9 @@ export default function GemDetailScreen() {
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={styles.heroTitle}>{gem.title}</Text>
+            <Text style={styles.heroTitle} numberOfLines={2} ellipsizeMode="tail">
+              {gem.title}
+            </Text>
           </View>
         </View>
 
@@ -656,7 +661,9 @@ export default function GemDetailScreen() {
                   <Text style={styles.authorAvatarText}>{username.charAt(0).toUpperCase()}</Text>
                 )}
               </View>
-              <Text style={styles.authorName}>@{username}</Text>
+              <Text style={styles.authorName} numberOfLines={1} ellipsizeMode="tail">
+                @{username}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.likeButton} onPress={handleToggleLike} activeOpacity={0.7}>
               <Animated.View style={heartAnimatedStyle}>
@@ -703,7 +710,23 @@ export default function GemDetailScreen() {
           </View>
 
           {gem.description ? (
-            <Text style={styles.description}>{gem.description}</Text>
+            <View style={styles.descriptionWrap}>
+              <Text
+                style={styles.description}
+                numberOfLines={descriptionExpanded ? undefined : 6}
+                ellipsizeMode="tail">
+                {gem.description}
+              </Text>
+              {gem.description.length > 180 ? (
+                <TouchableOpacity
+                  onPress={() => setDescriptionExpanded((prev) => !prev)}
+                  activeOpacity={0.7}>
+                  <Text style={styles.readMoreText}>
+                    {descriptionExpanded ? 'Show less' : 'Read more'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : null}
 
           <View style={styles.actionRow}>
@@ -742,7 +765,9 @@ export default function GemDetailScreen() {
                   </View>
                   <View style={styles.commentBody}>
                     <View style={styles.commentHeader}>
-                      <Text style={styles.commentUsername}>{commentUsername}</Text>
+                      <Text style={styles.commentUsername} numberOfLines={1} ellipsizeMode="tail">
+                        {commentUsername}
+                      </Text>
                       <View style={styles.commentHeaderRight}>
                         <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
                         {currentUserId && comment.user_id !== currentUserId && (
@@ -755,7 +780,9 @@ export default function GemDetailScreen() {
                         )}
                       </View>
                     </View>
-                    <Text style={styles.commentContent}>{comment.content}</Text>
+                    <Text style={styles.commentContent} numberOfLines={5} ellipsizeMode="tail">
+                      {comment.content}
+                    </Text>
                     <View style={styles.commentLikeWrap}>
                       <TouchableOpacity
                         style={styles.commentLikeRow}
@@ -778,24 +805,25 @@ export default function GemDetailScreen() {
       </ScrollView>
 
       <SafeAreaView style={styles.header} edges={['top']} pointerEvents="box-none">
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerRight}>
           {!isOwner && (
-            <TouchableOpacity style={styles.headerButton} onPress={showGemMenu} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.headerButton} onPress={showGemMenu} activeOpacity={0.8} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Ionicons name="ellipsis-horizontal" size={18} color={theme.text} />
             </TouchableOpacity>
           )}
           {isOwner && (
-            <TouchableOpacity style={styles.headerButton} onPress={confirmDelete} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.headerButton} onPress={confirmDelete} activeOpacity={0.8} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Ionicons name="trash-outline" size={18} color={theme.danger} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => console.log('Share gem', gem.id)}
-            activeOpacity={0.8}>
+            activeOpacity={0.8}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="share-outline" size={18} color={theme.text} />
           </TouchableOpacity>
         </View>
@@ -808,6 +836,7 @@ export default function GemDetailScreen() {
           placeholderTextColor={theme.textSecondary}
           value={commentText}
           onChangeText={setCommentText}
+          maxLength={500}
         />
         <TouchableOpacity style={styles.sendButton} onPress={handleSendComment} activeOpacity={0.8}>
           <Ionicons name="send" size={18} color={theme.background} />
@@ -882,7 +911,7 @@ const createStyles = (theme: Theme) =>
   },
   hero: {
     height: 320,
-    backgroundColor: IMAGE_PLACEHOLDER,
+    backgroundColor: theme.backgroundTertiary,
     position: 'relative',
   },
   heroImage: {
@@ -893,7 +922,7 @@ const createStyles = (theme: Theme) =>
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: IMAGE_PLACEHOLDER,
+    backgroundColor: theme.backgroundTertiary,
   },
   heroOverlay: {
     position: 'absolute',
@@ -1070,11 +1099,19 @@ const createStyles = (theme: Theme) =>
     fontFamily: 'SpaceMono-Regular',
     fontWeight: '600',
   },
+  descriptionWrap: {
+    marginBottom: 16,
+  },
   description: {
     color: theme.text,
     fontSize: 14,
     lineHeight: 22,
-    marginBottom: 16,
+  },
+  readMoreText: {
+    color: theme.accent,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
   },
   actionRow: {
     flexDirection: 'row',
@@ -1176,7 +1213,7 @@ const createStyles = (theme: Theme) =>
     fontFamily: 'SpaceMono-Regular',
   },
   commentContent: {
-    color: ACCENT_MUTED,
+    color: theme.textSecondary,
     fontSize: 13,
     marginTop: 2,
     lineHeight: 18,
