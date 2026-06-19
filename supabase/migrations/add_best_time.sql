@@ -1,0 +1,1 @@
+ALTER TABLE gems ADD COLUMN IF NOT EXISTS best_time text;

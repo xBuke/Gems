@@ -6,6 +6,7 @@ import {
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
+import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -42,6 +43,7 @@ type Gem = {
   image_url: string | null;
   verified: boolean;
   is_local_pick?: boolean;
+  best_time?: string | null;
   user_id: string;
   community_id?: string | null;
   communities?: CommunityGemInfo | null;
@@ -272,6 +274,7 @@ export default function GemDetailScreen() {
       }
       setCommentText('');
       fetchComments();
+      await addStreakBonus(user.id, 3);
     }
   };
 
@@ -302,6 +305,8 @@ export default function GemDetailScreen() {
           read: false,
         });
       }
+
+      await addStreakBonus(user.id, 2);
     }
   };
 
@@ -412,6 +417,7 @@ export default function GemDetailScreen() {
       });
       setVisitVerified(true);
       fetchVisitCount();
+      await addStreakBonus(user.id, 5);
     }
   };
 
@@ -523,6 +529,14 @@ export default function GemDetailScreen() {
               {locationName ?? `${gem.latitude.toFixed(4)}, ${gem.longitude.toFixed(4)}`}
             </Text>
           </View>
+
+          {gem.best_time ? (
+            <View style={styles.bestTimeRow}>
+              <Ionicons name="time-outline" size={14} color={theme.coral} />
+              <Text style={styles.bestTimeLabel}>Best time: </Text>
+              <Text style={styles.bestTimeValue}>{gem.best_time}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
@@ -836,6 +850,21 @@ const createStyles = (theme: Theme) =>
     color: theme.textSecondary,
     fontSize: 13,
     fontFamily: 'SpaceMono-Regular',
+  },
+  bestTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  bestTimeLabel: {
+    color: theme.textSecondary,
+    fontSize: 13,
+  },
+  bestTimeValue: {
+    color: theme.text,
+    fontSize: 13,
+    fontWeight: '600',
   },
   statsRow: {
     flexDirection: 'row',

@@ -1,6 +1,7 @@
 import { useAppFonts } from '@/lib/fonts';
 import { hasCompletedOnboarding, syncPendingPreferences } from '@/lib/onboarding';
 import { checkAndExpireTrial } from '@/lib/paywall';
+import { updateStreak } from '@/lib/streak';
 import { ThemeProvider, useTheme } from '@/lib/ThemeContext';
 import { startTracking, stopTracking } from '@/lib/locationTracker';
 import { darkTheme } from '@/lib/theme';
@@ -23,6 +24,7 @@ function OnboardingGate() {
       if (session) {
         await checkAndExpireTrial();
         await syncPendingPreferences(session.user.id);
+        await updateStreak(session.user.id);
       }
 
       const completed = await hasCompletedOnboarding();
@@ -77,6 +79,7 @@ export default function RootLayout() {
         startTracking(session.user.id);
         await checkAndExpireTrial();
         await syncPendingPreferences(session.user.id);
+        await updateStreak(session.user.id);
       }
     });
 
@@ -85,6 +88,7 @@ export default function RootLayout() {
         startTracking(session.user.id);
         await checkAndExpireTrial();
         await syncPendingPreferences(session.user.id);
+        await updateStreak(session.user.id);
       } else {
         stopTracking();
       }

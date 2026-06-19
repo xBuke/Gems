@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/authGuard';
+import { BEST_TIME_OPTIONS } from '@/lib/bestTimes';
 import { CATEGORIES, TAGS } from '@/lib/categories';
 import {
   canAddToCustomCategory,
@@ -10,6 +11,7 @@ import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
+import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -85,6 +87,8 @@ export default function AddGemScreen() {
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedBestTime, setSelectedBestTime] = useState('');
+  const [customBestTime, setCustomBestTime] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationDetected, setLocationDetected] = useState(false);
@@ -223,6 +227,7 @@ export default function AddGemScreen() {
     const isLocal = await checkIsLocalPick(user.id, latitude!, longitude!);
 
     const communityField = communityId ? { community_id: communityId } : {};
+    const bestTime = customBestTime.trim() || selectedBestTime || null;
 
     const gemPayload = selectedCustomCategory
       ? {
@@ -230,6 +235,7 @@ export default function AddGemScreen() {
           description: description.trim(),
           custom_category_id: selectedCustomCategory.id,
           tags: selectedTags.length > 0 ? selectedTags : null,
+          best_time: bestTime,
           latitude,
           longitude,
           user_id: user.id,
@@ -244,6 +250,7 @@ export default function AddGemScreen() {
           category: selectedMainCategory!.id,
           subcategory: selectedSubcategory,
           tags: selectedTags.length > 0 ? selectedTags : null,
+          best_time: bestTime,
           latitude,
           longitude,
           user_id: user.id,
@@ -259,6 +266,8 @@ export default function AddGemScreen() {
       Alert.alert('Error', error.message);
       return;
     }
+
+    await addStreakBonus(user.id, 10);
 
     const successRoute = communityId ? '/community/' + communityId : '/map';
     Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace(successRoute) }]);
@@ -561,6 +570,42 @@ export default function AddGemScreen() {
                   );
                 })}
               </View>
+
+              <Text style={styles.fieldLabel}>Best time to visit (optional)</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.bestTimeScroll}
+                contentContainerStyle={styles.bestTimeRow}>
+                {BEST_TIME_OPTIONS.map((option) => {
+                  const isSelected = selectedBestTime === option && !customBestTime.trim();
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={[styles.bestTimePill, isSelected && styles.bestTimePillSelected]}
+                      onPress={() => {
+                        setSelectedBestTime(option);
+                        setCustomBestTime('');
+                      }}
+                      activeOpacity={0.7}>
+                      <Text
+                        style={[
+                          styles.bestTimePillText,
+                          isSelected && styles.bestTimePillTextSelected,
+                        ]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <TextInput
+                style={styles.input}
+                placeholder="Or type your own (e.g. 'after rain')"
+                placeholderTextColor={theme.textTertiary}
+                value={customBestTime}
+                onChangeText={setCustomBestTime}
+              />
             </View>
 
             <View style={styles.locationStatus}>
@@ -825,6 +870,34 @@ const createStyles = (theme: Theme) =>
   },
   tagPillTextSelected: {
     color: '#1D9E75',
+  },
+  bestTimeScroll: {
+    marginBottom: 8,
+  },
+  bestTimeRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  bestTimePill: {
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  bestTimePillSelected: {
+    backgroundColor: theme.accentSubtle,
+    borderColor: theme.accent,
+  },
+  bestTimePillText: {
+    color: theme.text,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  bestTimePillTextSelected: {
+    color: theme.accent,
+    fontWeight: '600',
   },
   locationStatus: {
     flexDirection: 'row',

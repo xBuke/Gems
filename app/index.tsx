@@ -12,13 +12,15 @@ import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
+import { consumeLastStreakResult } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   Image,
   ScrollView,
   StyleSheet,
@@ -43,6 +45,7 @@ type Gem = {
   image_url: string | null;
   verified: boolean;
   is_local_pick?: boolean;
+  best_time?: string | null;
   latitude: number;
   longitude: number;
   created_at: string;
@@ -123,6 +126,51 @@ export default function DiscoverScreen() {
   const [filteredGems, setFilteredGems] = useState<GemWithProfile[]>([]);
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
   const [isPremium, setIsPremium] = useState(false);
+  const [streakBannerText, setStreakBannerText] = useState<string | null>(null);
+  const streakBannerOpacity = useRef(new Animated.Value(0)).current;
+
+  const showStreakBanner = useCallback(
+    (text: string) => {
+      setStreakBannerText(text);
+      streakBannerOpacity.setValue(0);
+      Animated.timing(streakBannerOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      setTimeout(() => {
+        Animated.timing(streakBannerOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => setStreakBannerText(null));
+      }, 3000);
+    },
+    [streakBannerOpacity],
+  );
+
+  const checkStreakBanner = useCallback(() => {
+    const tryShow = (attempt = 0) => {
+      const result = consumeLastStreakResult();
+      if (result) {
+        if (!result.isNewDay || result.current_streak <= 1) return;
+
+        const text = result.brokeRecord
+          ? `New record! ${result.current_streak} days 🎉`
+          : `${result.current_streak} day streak! Keep it going 🔥`;
+
+        showStreakBanner(text);
+        return;
+      }
+
+      if (attempt < 15) {
+        setTimeout(() => tryShow(attempt + 1), 200);
+      }
+    };
+
+    tryShow();
+  }, [showStreakBanner]);
 
   const sortByPreferences = useCallback(
     (gems: GemWithProfile[]) => {
@@ -399,7 +447,8 @@ export default function DiscoverScreen() {
       refreshDiscoverData(myCommunityIds);
     };
     load();
-  }, [refreshDiscoverData]);
+    checkStreakBanner();
+  }, [refreshDiscoverData, checkStreakBanner]);
 
   useFocusEffect(
     useCallback(() => {
@@ -410,7 +459,8 @@ export default function DiscoverScreen() {
         fetchFollowingGems(myCommunityIds);
       };
       load();
-    }, [refreshDiscoverData, fetchFollowingGems]),
+      checkStreakBanner();
+    }, [refreshDiscoverData, fetchFollowingGems, checkStreakBanner]),
   );
 
   useEffect(() => {
@@ -600,7 +650,23 @@ export default function DiscoverScreen() {
     );
   };
 
-  const renderListCard = (gem: GemWithProfile, distanceMeters?: number | null) => {
+  const renderBestTimeHint = (bestTime: string | null | undefined) => {
+    if (!bestTime) return null;
+    return (
+      <View style={styles.bestTimeHint}>
+        <Ionicons name="time-outline" size={11} color={theme.coral} />
+        <Text style={styles.bestTimeHintText} numberOfLines={1}>
+          {bestTime}
+        </Text>
+      </View>
+    );
+  };
+
+  const renderListCard = (
+    gem: GemWithProfile,
+    distanceMeters?: number | null,
+    showBestTime = false,
+  ) => {
     const username = gem.profiles?.username ?? 'unknown';
 
     return (
@@ -628,6 +694,7 @@ export default function DiscoverScreen() {
             {gem.title}
           </Text>
           <Text style={styles.listCardUsername}>@{username}</Text>
+          {showBestTime && renderBestTimeHint(gem.best_time)}
           <View style={styles.listCardMetaRow}>
             <View style={styles.listCardMetaItem}>
               <Ionicons name="heart-outline" size={12} color={theme.textSecondary} />
@@ -682,6 +749,7 @@ export default function DiscoverScreen() {
             <Ionicons name="heart-outline" size={12} color={theme.textSecondary} />
             <Text style={styles.trendingLikeText}>{likeCounts[gem.id] ?? 0}</Text>
           </View>
+          {renderBestTimeHint(gem.best_time)}
         </View>
       </TouchableOpacity>
     );
@@ -738,7 +806,7 @@ export default function DiscoverScreen() {
       {filteredRecentGems.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Recently Added</Text>
-          {filteredRecentGems.map((gem) => renderListCard(gem))}
+          {filteredRecentGems.map((gem) => renderListCard(gem, undefined, true))}
         </>
       )}
 
@@ -788,6 +856,13 @@ export default function DiscoverScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {streakBannerText && (
+        <Animated.View style={[styles.streakBanner, { opacity: streakBannerOpacity }]}>
+          <Ionicons name="flame" size={18} color="#FFFFFF" />
+          <Text style={styles.streakBannerText}>{streakBannerText}</Text>
+        </Animated.View>
+      )}
+
       <View style={styles.headerRow}>
         <Text style={styles.title}>Discover</Text>
         <View style={styles.headerActions}>
@@ -1049,6 +1124,25 @@ const createStyles = (theme: Theme) =>
   container: {
     flex: 1,
     backgroundColor: theme.background,
+  },
+  streakBanner: {
+    position: 'absolute',
+    top: 56,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.coral,
+    borderRadius: 12,
+    padding: 12,
+  },
+  streakBannerText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   headerRow: {
     flexDirection: 'row',
@@ -1392,6 +1486,17 @@ const createStyles = (theme: Theme) =>
   listCardMetaDivider: {
     fontSize: 11,
     color: theme.textTertiary,
+  },
+  bestTimeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  bestTimeHintText: {
+    fontSize: 10,
+    color: theme.coral,
+    flexShrink: 1,
   },
   emptyText: {
     fontSize: 14,

@@ -23,6 +23,7 @@ const IMAGE_PLACEHOLDER = '#1A5C3A';
 type Profile = {
   id: string;
   username: string;
+  current_streak?: number;
 };
 
 type Gem = {
@@ -288,6 +289,14 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.username}>{username}</Text>
           <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
+          {(profile?.current_streak ?? 0) > 0 && (
+            <View style={styles.streakBadge}>
+              <Ionicons name="flame" size={16} color={theme.coral} />
+              <Text style={styles.streakBadgeText}>
+                {profile!.current_streak} day streak
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.statsRow}>
@@ -478,6 +487,21 @@ const createStyles = (theme: Theme) =>
     fontSize: 13,
     color: theme.textSecondary,
     marginTop: 4,
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.coral + '15',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 12,
+  },
+  streakBadgeText: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 13,
+    color: theme.coral,
   },
   statsRow: {
     flexDirection: 'row',
