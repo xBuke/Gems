@@ -144,7 +144,7 @@ export default function CommunitiesScreen() {
         key={community.id}
         style={styles.card}
         onPress={() => router.push('/community/' + community.id)}
-        activeOpacity={0.7}>
+        activeOpacity={0.85}>
         <View style={styles.cardTop}>
           <View style={[styles.iconCircle, { backgroundColor: community.color }]}>
             <Ionicons

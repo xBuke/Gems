@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   StyleSheet,
@@ -127,6 +128,48 @@ export default function FollowersScreen() {
     });
   };
 
+  const handleRemoveFollower = (followerId: string, followerUsername: string) => {
+    if (!currentUserId) return;
+
+    Alert.alert(
+      'Remove follower',
+      `Remove ${followerUsername} from your followers?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase
+              .from('follows')
+              .delete()
+              .eq('follower_id', followerId)
+              .eq('following_id', currentUserId);
+
+            setUsers((prev) => prev.filter((user) => user.id !== followerId));
+          },
+        },
+      ],
+    );
+  };
+
+  const handleUnfollowFromOwnList = async (targetId: string) => {
+    if (!currentUserId) return;
+
+    await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', currentUserId)
+      .eq('following_id', targetId);
+
+    setUsers((prev) => prev.filter((user) => user.id !== targetId));
+    setFollowingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(targetId);
+      return next;
+    });
+  };
+
   const renderItem = ({ item }: { item: ProfileSummary }) => {
     const initials = (item.username ?? 'U').charAt(0).toUpperCase();
     const isSelf = item.id === currentUserId;
@@ -161,6 +204,22 @@ export default function FollowersScreen() {
             <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
               {isFollowing ? 'Following' : 'Follow'}
             </Text>
+          </TouchableOpacity>
+        ) : null}
+        {isOwnList && isFollowers && !isSelf ? (
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => handleRemoveFollower(item.id, item.username)}
+            activeOpacity={0.8}>
+            <Text style={styles.removeButtonText}>Remove</Text>
+          </TouchableOpacity>
+        ) : null}
+        {isOwnList && !isFollowers && !isSelf ? (
+          <TouchableOpacity
+            style={styles.unfollowButton}
+            onPress={() => handleUnfollowFromOwnList(item.id)}
+            activeOpacity={0.8}>
+            <Text style={styles.unfollowButtonText}>Unfollow</Text>
           </TouchableOpacity>
         ) : null}
       </TouchableOpacity>
@@ -279,6 +338,32 @@ const createStyles = (theme: Theme) =>
       paddingHorizontal: 14,
     },
     followingButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.accent,
+    },
+    removeButton: {
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.danger,
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+    },
+    removeButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.danger,
+    },
+    unfollowButton: {
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.accent,
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+    },
+    unfollowButtonText: {
       fontSize: 13,
       fontWeight: '600',
       color: theme.accent,

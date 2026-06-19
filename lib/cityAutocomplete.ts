@@ -3,24 +3,29 @@ export const searchCities = async (query: string): Promise<{ name: string; lat: 
 
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&featuretype=city&limit=5&addressdetails=1`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8&addressdetails=1`,
       { headers: { 'User-Agent': 'HiddenGemsApp/1.0' } },
     )
     const data = await response.json()
 
     return data
-      .filter(
-        (item: { type?: string; class?: string }) =>
-          item.type === 'city' ||
-          item.type === 'town' ||
-          item.type === 'village' ||
-          item.class === 'place',
-      )
-      .map((item: { display_name: string; lat: string; lon: string }) => ({
-        name: item.display_name.split(',').slice(0, 2).join(',').trim(),
-        lat: parseFloat(item.lat),
-        lng: parseFloat(item.lon),
-      }))
+      .filter((item: any) => {
+        const validClasses = ['place', 'boundary']
+        const validTypes = ['city', 'town', 'village', 'administrative', 'municipality', 'suburb']
+        return validClasses.includes(item.class) && validTypes.includes(item.type)
+      })
+      .map((item: any) => {
+        const address = item.address || {}
+        const cityName = address.city || address.town || address.village || address.municipality || item.name
+        const country = address.country || ''
+        const displayName = country ? `${cityName}, ${country}` : cityName
+        return {
+          name: displayName,
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+        }
+      })
+      .filter((item: any) => item.name && item.name !== ', ')
   } catch (error) {
     console.log('City search error:', error)
     return []

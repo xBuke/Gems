@@ -17,6 +17,7 @@ import { getMyBlockedUsers } from '@/lib/safety';
 import { consumeLastStreakResult } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -31,7 +32,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ACCENT_MUTED = '#A8D5BA';
 const IMAGE_PLACEHOLDER = '#1A5C3A';
@@ -108,8 +110,9 @@ const matchesSearch = (gem: GemWithProfile, query: string) => {
 };
 
 export default function DiscoverScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('discover');
   const [feedTab, setFeedTab] = useState<FeedTab>('forYou');
@@ -711,15 +714,15 @@ export default function DiscoverScreen() {
     gem: GemWithProfile,
     distanceMeters?: number | null,
     showBestTime = false,
+    staggerIndex?: number,
   ) => {
     const username = gem.profiles?.username ?? 'unknown';
 
-    return (
+    const card = (
       <TouchableOpacity
-        key={gem.id}
         style={styles.listCard}
         onPress={() => router.push('/gem/' + gem.id)}
-        activeOpacity={0.7}>
+        activeOpacity={0.85}>
         <View style={styles.listCardImageWrap}>
           {gem.image_url ? (
             <Image source={{ uri: gem.image_url }} style={styles.listCardImage} />
@@ -758,17 +761,35 @@ export default function DiscoverScreen() {
         </View>
       </TouchableOpacity>
     );
+
+    if (staggerIndex !== undefined) {
+      return (
+        <Reanimated.View
+          key={gem.id}
+          entering={FadeInDown.delay(staggerIndex * 60).duration(300)}>
+          {card}
+        </Reanimated.View>
+      );
+    }
+
+    return (
+      <View key={gem.id}>
+        {card}
+      </View>
+    );
   };
 
-  const renderTrendingCard = (gem: GemWithProfile) => {
+  const renderTrendingCard = (gem: GemWithProfile, index: number) => {
     const username = gem.profiles?.username ?? 'unknown';
 
     return (
-      <TouchableOpacity
+      <Reanimated.View
         key={gem.id}
+        entering={FadeInDown.delay(index * 60).duration(300)}>
+      <TouchableOpacity
         style={styles.trendingCard}
         onPress={() => router.push('/gem/' + gem.id)}
-        activeOpacity={0.7}>
+        activeOpacity={0.85}>
         <View style={styles.trendingImage}>
           {gem.image_url ? (
             <Image source={{ uri: gem.image_url }} style={styles.trendingImageFill} />
@@ -801,6 +822,7 @@ export default function DiscoverScreen() {
           {renderBestTimeHint(gem.best_time)}
         </View>
       </TouchableOpacity>
+      </Reanimated.View>
     );
   };
 
@@ -892,7 +914,7 @@ export default function DiscoverScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.trendingRow}>
-            {filteredTrendingGems.map((gem) => renderTrendingCard(gem))}
+            {filteredTrendingGems.map((gem, index) => renderTrendingCard(gem, index))}
           </ScrollView>
         </>
       )}
@@ -900,7 +922,7 @@ export default function DiscoverScreen() {
       {filteredRecentGems.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Recently Added</Text>
-          {filteredRecentGems.map((gem) => renderListCard(gem, undefined, true))}
+          {filteredRecentGems.map((gem, index) => renderListCard(gem, undefined, true, index))}
         </>
       )}
 
@@ -952,8 +974,22 @@ export default function DiscoverScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {streakBannerText && (
         <Animated.View style={[styles.streakBanner, { opacity: streakBannerOpacity }]}>
-          <Ionicons name="flame" size={18} color="#FFFFFF" />
-          <Text style={styles.streakBannerText}>{streakBannerText}</Text>
+          <BlurView
+            intensity={70}
+            tint={isDark ? 'dark' : 'light'}
+            style={{ borderRadius: 12, overflow: 'hidden' }}>
+            <View
+              style={{
+                backgroundColor: theme.coral + 'CC',
+                padding: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+              <Ionicons name="flame" size={18} color="#FFFFFF" />
+              <Text style={styles.streakBannerText}>{streakBannerText}</Text>
+            </View>
+          </BlurView>
         </Animated.View>
       )}
 
@@ -1169,58 +1205,72 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}>
         {feedTab === 'forYou' ? renderForYouContent() : renderFollowingContent()}
       </ScrollView>
 
-      <View style={styles.tabBar}>
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          const isAddButton = 'addButton' in tab && tab.addButton;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={styles.tabItem}
-              onPress={async () => {
-                hapticSelection();
-                if (tab.key === 'discover') {
-                  setActiveTab('discover');
-                } else if (tab.key === 'map') {
-                  router.push('/map');
-                  setActiveTab(tab.key);
-                } else if (tab.key === 'add') {
-                  const proceed = await requireAuth('/add-gem');
-                  if (!proceed) return;
-                  router.push('/add-gem');
-                  setActiveTab(tab.key);
-                } else if (tab.key === 'notifications') {
-                  await handleNotifications();
-                  setActiveTab(tab.key);
-                } else if (tab.key === 'profile') {
-                  await handleProfile();
-                  setActiveTab(tab.key);
-                }
-              }}
-              activeOpacity={0.7}>
-              <View style={styles.tabIconWrap}>
-                <Ionicons
-                  name={isActive ? tab.activeIcon : tab.icon}
-                  size={isAddButton ? 34 : 24}
-                  color={isAddButton ? theme.accent : isActive ? theme.accent : theme.textTertiary}
-                />
-                {tab.key === 'notifications' && unreadNotificationCount > 0 && (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>
-                      {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <BlurView
+        intensity={80}
+        tint={isDark ? 'dark' : 'light'}
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          borderTopWidth: 0.5,
+          borderTopColor: theme.border,
+        }}>
+        <View style={[styles.tabBar, { paddingBottom: 8 + insets.bottom }]}>
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            const isAddButton = 'addButton' in tab && tab.addButton;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={styles.tabItem}
+                onPress={async () => {
+                  hapticSelection();
+                  if (tab.key === 'discover') {
+                    setActiveTab('discover');
+                  } else if (tab.key === 'map') {
+                    router.push('/map');
+                    setActiveTab(tab.key);
+                  } else if (tab.key === 'add') {
+                    const proceed = await requireAuth('/add-gem');
+                    if (!proceed) return;
+                    router.push('/add-gem');
+                    setActiveTab(tab.key);
+                  } else if (tab.key === 'notifications') {
+                    await handleNotifications();
+                    setActiveTab(tab.key);
+                  } else if (tab.key === 'profile') {
+                    await handleProfile();
+                    setActiveTab(tab.key);
+                  }
+                }}
+                activeOpacity={0.7}>
+                <View style={styles.tabIconWrap}>
+                  <Ionicons
+                    name={isActive ? tab.activeIcon : tab.icon}
+                    size={isAddButton ? 34 : 24}
+                    color={isAddButton ? theme.accent : isActive ? theme.accent : theme.textTertiary}
+                  />
+                  {tab.key === 'notifications' && unreadNotificationCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationBadgeText}>
+                        {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </BlurView>
     </SafeAreaView>
   );
 }
@@ -1237,12 +1287,6 @@ const createStyles = (theme: Theme) =>
     left: 20,
     right: 20,
     zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.coral,
-    borderRadius: 12,
-    padding: 12,
   },
   streakBannerText: {
     flex: 1,
@@ -1721,10 +1765,6 @@ const createStyles = (theme: Theme) =>
   },
   tabBar: {
     flexDirection: 'row',
-    borderTopWidth: 0.5,
-    borderTopColor: theme.border,
-    backgroundColor: theme.background,
-    paddingBottom: 8,
     paddingTop: 10,
   },
   tabItem: {

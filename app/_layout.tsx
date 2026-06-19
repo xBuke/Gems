@@ -10,6 +10,7 @@ import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-rout
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function OnboardingGate() {
   const router = useRouter();
@@ -46,26 +47,52 @@ function RootNavigator() {
   return (
     <>
       <OnboardingGate />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.background },
+          animation: 'slide_from_right',
+          animationDuration: 250,
+        }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="auth" />
         <Stack.Screen name="discover" options={{ headerShown: false }} />
+        <Stack.Screen name="map" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
-        <Stack.Screen name="add-gem" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="add-gem"
+          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
         <Stack.Screen name="messages" options={{ headerShown: false }} />
         <Stack.Screen name="chat" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
         <Stack.Screen name="blocked-users" options={{ headerShown: false }} />
-        <Stack.Screen name="edit-hometown" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="edit-hometown"
+          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
         <Stack.Screen name="followers" options={{ headerShown: false }} />
         <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="paywall" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="paywall"
+          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
         <Stack.Screen name="gem-swipe" options={{ headerShown: false }} />
-        <Stack.Screen name="trip-planner" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="trip-planner"
+          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
         <Stack.Screen name="communities" options={{ headerShown: false }} />
-        <Stack.Screen name="create-community" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="create-community"
+          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="create-category"
+          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
         <Stack.Screen name="community/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
       </Stack>
@@ -104,13 +131,15 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: darkTheme.background }} />;
-  }
-
   return (
-    <ThemeProvider>
-      <RootNavigator />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {!fontsLoaded ? (
+        <View style={{ flex: 1, backgroundColor: darkTheme.background }} />
+      ) : (
+        <ThemeProvider>
+          <RootNavigator />
+        </ThemeProvider>
+      )}
+    </GestureHandlerRootView>
   );
 }

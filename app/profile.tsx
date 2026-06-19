@@ -23,6 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const IMAGE_PLACEHOLDER = '#1A5C3A';
@@ -33,7 +34,13 @@ type Profile = {
   avatar_url?: string | null;
   current_streak?: number;
   is_private?: boolean;
+  liked_gems_public?: boolean;
+  visited_gems_public?: boolean;
 };
+
+type GemLinkRow = { gem: Gem | null };
+
+type AccordionPanel = 'gems' | 'liked' | 'visited';
 
 type FollowRequest = {
   follower_id: string;
@@ -55,6 +62,9 @@ const chunk = <T,>(items: T[], size: number): T[][] => {
   }
   return rows;
 };
+
+const parseGemLinkRows = (rows: GemLinkRow[] | null): Gem[] =>
+  (rows ?? []).map((row) => row.gem).filter((gem): gem is Gem => gem != null);
 
 const uploadAvatar = async (uri: string, userId: string) => {
   const compressedUri = await compressImage(uri);
@@ -102,6 +112,9 @@ export default function ProfileScreen() {
   const [followRequestsExpanded, setFollowRequestsExpanded] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [likedGems, setLikedGems] = useState<Gem[]>([]);
+  const [visitedGems, setVisitedGems] = useState<Gem[]>([]);
+  const [expandedPanel, setExpandedPanel] = useState<AccordionPanel | null>(null);
 
   const fetchMyCustomCategories = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -148,6 +161,9 @@ export default function ProfileScreen() {
       .single();
     if (profileData) setProfile(profileData);
 
+    const likedPublic = profileData?.liked_gems_public !== false;
+    const visitedPublic = profileData?.visited_gems_public !== false;
+
     const { data: gemsData } = await supabase
       .from('gems')
       .select('*')
@@ -181,6 +197,42 @@ export default function ProfileScreen() {
       setIsFollowing(followData?.status === 'accepted');
       setIsRequested(followData?.status === 'pending');
       setFollowRequests([]);
+
+      const otherUserFetches: Promise<void>[] = [];
+
+      if (likedPublic) {
+        otherUserFetches.push(
+          supabase
+            .from('gem_likes')
+            .select('*, gem:gems(*)')
+            .eq('user_id', profileId)
+            .order('created_at', { ascending: false })
+            .limit(6)
+            .then(({ data: likedData }) => {
+              setLikedGems(parseGemLinkRows(likedData as GemLinkRow[] | null));
+            }),
+        );
+      } else {
+        setLikedGems([]);
+      }
+
+      if (visitedPublic) {
+        otherUserFetches.push(
+          supabase
+            .from('gem_visits')
+            .select('*, gem:gems(*)')
+            .eq('user_id', profileId)
+            .order('created_at', { ascending: false })
+            .limit(6)
+            .then(({ data: visitedData }) => {
+              setVisitedGems(parseGemLinkRows(visitedData as GemLinkRow[] | null));
+            }),
+        );
+      } else {
+        setVisitedGems([]);
+      }
+
+      await Promise.all(otherUserFetches);
     } else {
       setIsFollowing(false);
       setIsRequested(false);
@@ -192,6 +244,24 @@ export default function ProfileScreen() {
         .eq('status', 'pending');
 
       setFollowRequests((pendingRequests as FollowRequest[]) ?? []);
+
+      const [{ data: likedData }, { data: visitedData }] = await Promise.all([
+        supabase
+          .from('gem_likes')
+          .select('*, gem:gems(*)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(6),
+        supabase
+          .from('gem_visits')
+          .select('*, gem:gems(*)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(6),
+      ]);
+
+      setLikedGems(parseGemLinkRows(likedData as GemLinkRow[] | null));
+      setVisitedGems(parseGemLinkRows(visitedData as GemLinkRow[] | null));
     }
   }, [userId, fetchMyCustomCategories]);
 
@@ -512,7 +582,38 @@ export default function ProfileScreen() {
     });
   };
 
-  const profileId = isOwnProfile ? currentUserId : userId;
+  const togglePanel = (panel: AccordionPanel) => {
+    setExpandedPanel((prev) => (prev === panel ? null : panel));
+  };
+
+  const toggleLikedGemsPublic = async () => {
+    if (!currentUserId || !profile) return;
+
+    hapticLight();
+    const newValue = profile.liked_gems_public === false;
+    await supabase
+      .from('profiles')
+      .update({ liked_gems_public: newValue })
+      .eq('id', currentUserId);
+    setProfile({ ...profile, liked_gems_public: newValue });
+  };
+
+  const toggleVisitedGemsPublic = async () => {
+    if (!currentUserId || !profile) return;
+
+    hapticLight();
+    const newValue = profile.visited_gems_public === false;
+    await supabase
+      .from('profiles')
+      .update({ visited_gems_public: newValue })
+      .eq('id', currentUserId);
+    setProfile({ ...profile, visited_gems_public: newValue });
+  };
+
+  const likedGemsPublic = profile?.liked_gems_public !== false;
+  const visitedGemsPublic = profile?.visited_gems_public !== false;
+  const showLikedSection = isOwnProfile || likedGemsPublic;
+  const showVisitedSection = isOwnProfile || visitedGemsPublic;
 
   const renderGemCard = (gem: Gem) => (
     <TouchableOpacity
@@ -531,7 +632,7 @@ export default function ProfileScreen() {
               ])
           : undefined
       }
-      activeOpacity={0.8}>
+      activeOpacity={0.85}>
       <View style={styles.gemImageArea}>
         {gem.image_url ? (
           <Image source={{ uri: gem.image_url }} style={styles.gemImage} resizeMode="cover" />
@@ -550,6 +651,92 @@ export default function ProfileScreen() {
         </View>
       </View>
     </TouchableOpacity>
+  );
+
+  const profileId = isOwnProfile ? currentUserId : userId;
+
+  const renderHorizontalGemCard = (gem: Gem) => (
+    <TouchableOpacity
+      key={gem.id}
+      style={styles.horizontalGemCard}
+      onPress={() => router.push('/gem/' + gem.id)}
+      activeOpacity={0.85}>
+      <View style={styles.horizontalGemImage}>
+        {gem.image_url ? (
+          <Image source={{ uri: gem.image_url }} style={styles.horizontalGemImageFill} />
+        ) : (
+          <View style={[styles.horizontalGemImageFill, styles.horizontalGemImagePlaceholder]}>
+            <Ionicons name="location-outline" size={28} color={theme.accent} />
+          </View>
+        )}
+      </View>
+      <View style={styles.horizontalGemBody}>
+        <View style={styles.horizontalCategoryBadge}>
+          <Text style={styles.horizontalCategoryBadgeText}>{gem.category}</Text>
+        </View>
+        <Text style={styles.horizontalGemTitle} numberOfLines={2}>
+          {gem.title}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderHorizontalGemList = (gemsList: Gem[], emptyText: string) =>
+    gemsList.length === 0 ? (
+      <Text style={styles.sectionEmptyText}>{emptyText}</Text>
+    ) : (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.horizontalGemRow}>
+        {gemsList.map((gem) => renderHorizontalGemCard(gem))}
+      </ScrollView>
+    );
+
+  const renderPrivacyToggle = (
+    isPublic: boolean,
+    onToggle: () => void,
+  ) => (
+    <TouchableOpacity
+      style={styles.privacyToggle}
+      onPress={onToggle}
+      activeOpacity={0.7}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      <Ionicons
+        name={isPublic ? 'eye-outline' : 'eye-off-outline'}
+        size={14}
+        color={theme.textTertiary}
+      />
+      <Text style={styles.privacyToggleLabel}>{isPublic ? 'Public' : 'Private'}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderAccordionHeader = (
+    panel: AccordionPanel,
+    title: string,
+    count: number,
+    showPrivacy?: boolean,
+    isPublic?: boolean,
+    onTogglePrivacy?: () => void,
+  ) => (
+    <View style={styles.accordionHeaderRow}>
+      <TouchableOpacity
+        style={styles.accordionHeader}
+        onPress={() => togglePanel(panel)}
+        activeOpacity={0.7}>
+        <Text style={styles.sectionTitle}>
+          {title} ({count})
+        </Text>
+        <Ionicons
+          name={expandedPanel === panel ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={theme.textSecondary}
+        />
+      </TouchableOpacity>
+      {showPrivacy && onTogglePrivacy != null && isPublic != null
+        ? renderPrivacyToggle(isPublic, onTogglePrivacy)
+        : null}
+    </View>
   );
 
   return (
@@ -764,35 +951,81 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>My Gems</Text>
-          <Text style={styles.sectionCount}>{gems.length}</Text>
+        <View style={styles.accordionSection}>
+          {renderAccordionHeader('gems', 'My Gems', gems.length)}
+
+          {expandedPanel === 'gems' && (
+            <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
+              {gems.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons
+                    name="location-outline"
+                    size={56}
+                    color={theme.accent}
+                    style={styles.emptyIcon}
+                  />
+                  <Text style={styles.emptyTitle}>No gems yet</Text>
+                  <Text style={styles.emptySubtitle}>Start exploring and drop your first gem!</Text>
+                  {isOwnProfile && (
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={() => router.push('/add-gem')}
+                      activeOpacity={0.8}>
+                      <Text style={styles.addButtonText}>Add Gem</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.gemsGrid}>
+                  {gemRows.map((row, rowIndex) => (
+                    <View key={`row-${rowIndex}`} style={styles.gemRow}>
+                      {row.map((gem) => (
+                        <Fragment key={gem.id}>{renderGemCard(gem)}</Fragment>
+                      ))}
+                      {row.length === 1 ? <View style={styles.gemCardSpacer} /> : null}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Animated.View>
+          )}
         </View>
 
-        {gems.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="location-outline" size={56} color={theme.accent} style={styles.emptyIcon} />
-            <Text style={styles.emptyTitle}>No gems yet</Text>
-            <Text style={styles.emptySubtitle}>Start exploring and drop your first gem!</Text>
-            {isOwnProfile && (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => router.push('/add-gem')}
-                activeOpacity={0.8}>
-                <Text style={styles.addButtonText}>Add Gem</Text>
-              </TouchableOpacity>
+        {showLikedSection && (
+          <View style={styles.accordionSection}>
+            {renderAccordionHeader(
+              'liked',
+              'Liked Gems',
+              likedGems.length,
+              isOwnProfile,
+              likedGemsPublic,
+              toggleLikedGemsPublic,
+            )}
+
+            {expandedPanel === 'liked' && (
+              <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
+                {renderHorizontalGemList(likedGems, 'No liked gems yet')}
+              </Animated.View>
             )}
           </View>
-        ) : (
-          <View style={styles.gemsGrid}>
-            {gemRows.map((row, rowIndex) => (
-              <View key={`row-${rowIndex}`} style={styles.gemRow}>
-                {row.map((gem) => (
-                  <Fragment key={gem.id}>{renderGemCard(gem)}</Fragment>
-                ))}
-                {row.length === 1 ? <View style={styles.gemCardSpacer} /> : null}
-              </View>
-            ))}
+        )}
+
+        {showVisitedSection && (
+          <View style={styles.accordionSection}>
+            {renderAccordionHeader(
+              'visited',
+              'Visited Gems',
+              visitedGems.length,
+              isOwnProfile,
+              visitedGemsPublic,
+              toggleVisitedGemsPublic,
+            )}
+
+            {expandedPanel === 'visited' && (
+              <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
+                {renderHorizontalGemList(visitedGems, 'No verified visits yet')}
+              </Animated.View>
+            )}
           </View>
         )}
 
@@ -1234,5 +1467,94 @@ const createStyles = (theme: Theme) =>
     fontSize: 15,
     fontWeight: '500',
     color: theme.danger,
+  },
+  gemSection: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  accordionSection: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  accordionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    gap: 12,
+  },
+  accordionHeader: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  privacyToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  privacyToggleLabel: {
+    fontSize: 11,
+    color: theme.textTertiary,
+  },
+  sectionEmptyText: {
+    fontSize: 13,
+    color: theme.textTertiary,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  horizontalGemRow: {
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
+  horizontalGemCard: {
+    width: 160,
+    height: 200,
+    backgroundColor: theme.card,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 0.5,
+    borderColor: theme.border,
+  },
+  horizontalGemImage: {
+    height: 120,
+    backgroundColor: IMAGE_PLACEHOLDER,
+  },
+  horizontalGemImageFill: {
+    width: '100%',
+    height: '100%',
+  },
+  horizontalGemImagePlaceholder: {
+    backgroundColor: IMAGE_PLACEHOLDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  horizontalGemBody: {
+    flex: 1,
+    padding: 10,
+    justifyContent: 'space-between',
+  },
+  horizontalCategoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.accentSubtle,
+    borderWidth: 0.5,
+    borderColor: theme.accent,
+    borderRadius: 20,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  horizontalCategoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: theme.accent,
+  },
+  horizontalGemTitle: {
+    fontSize: 13,
+    fontFamily: 'SpaceGrotesk-Bold',
+    color: theme.text,
+    marginTop: 6,
   },
 });

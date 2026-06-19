@@ -29,6 +29,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ACCENT_MUTED = '#A8D5BA';
@@ -104,6 +105,11 @@ export default function GemDetailScreen() {
     type: 'gem' | 'comment';
     id: string;
   } | null>(null);
+
+  const heartScale = useSharedValue(1);
+  const heartAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+  }));
 
   const gemId = Array.isArray(id) ? id[0] : id;
 
@@ -313,6 +319,10 @@ export default function GemDetailScreen() {
 
   const handleToggleLike = async () => {
     if (!gem || !gemId) return;
+
+    heartScale.value = withSpring(1.3, { damping: 2, stiffness: 300 }, () => {
+      heartScale.value = withSpring(1);
+    });
 
     const proceed = await requireAuth();
     if (!proceed) return;
@@ -638,11 +648,13 @@ export default function GemDetailScreen() {
               <Text style={styles.authorName}>@{username}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.likeButton} onPress={handleToggleLike} activeOpacity={0.7}>
-              <Ionicons
-                name={isLiked ? 'heart' : 'heart-outline'}
-                size={22}
-                color={isLiked ? theme.danger : theme.textSecondary}
-              />
+              <Animated.View style={heartAnimatedStyle}>
+                <Ionicons
+                  name={isLiked ? 'heart' : 'heart-outline'}
+                  size={22}
+                  color={isLiked ? theme.danger : theme.textSecondary}
+                />
+              </Animated.View>
               <Text style={[styles.likeCountText, isLiked && styles.likeCountTextActive]}>
                 {likeCount}
               </Text>

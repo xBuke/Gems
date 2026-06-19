@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
 import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customCategories';
+import { getDistance } from '@/lib/distance';
 import {
   applyCommunityGemFilter,
   fetchMyCommunityIds,
@@ -11,13 +12,32 @@ import { hapticLight, hapticSelection } from '@/lib/haptics';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  Linking,
+  Platform,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import MapView, { MapType, Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const IMAGE_PLACEHOLDER = '#1A5C3A';
+
+const formatDistanceKm = (meters: number) => {
+  const km = meters / 1000;
+  if (km < 1) return `${Math.round(meters)} m`;
+  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+};
 
 const MAP_TYPES: { type: MapType; label: string }[] = [
   { type: 'standard', label: 'Street' },
@@ -47,6 +67,8 @@ type Gem = {
   category: string;
   subcategory?: string | null;
   custom_category_id?: string | null;
+  image_url?: string | null;
+  verified?: boolean;
 };
 
 type TapLocation = {
@@ -62,8 +84,17 @@ export default function MapScreen() {
   const { placeMode } = useLocalSearchParams<{ placeMode?: string }>();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = useMemo(() => ['25%', '60%'], []);
   const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
+  const [selectedGem, setSelectedGem] = useState<Gem | null>(null);
+  const [selectedLikeCount, setSelectedLikeCount] = useState(0);
+  const [selectedCommentCount, setSelectedCommentCount] = useState(0);
+  const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
   const [activeMainCategory, setActiveMainCategory] = useState<Category | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [activeCustomCategory, setActiveCustomCategory] = useState<CustomCategory | null>(null);
@@ -71,6 +102,8 @@ export default function MapScreen() {
   const [placingMode, setPlacingMode] = useState(false);
   const [tapLocation, setTapLocation] = useState<TapLocation | null>(null);
   const [tapLocationName, setTapLocationName] = useState<string | null>(null);
+  const [showMyLocation, setShowMyLocation] = useState(true);
+  const hasShownLocationHiddenAlert = useRef(false);
 
   useEffect(() => {
     if (placeMode === 'true') {
@@ -108,8 +141,73 @@ export default function MapScreen() {
   );
 
   useEffect(() => {
-    Location.requestForegroundPermissionsAsync();
+    const initLocation = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      try {
+        const location = await Location.getCurrentPositionAsync({});
+        setUserCoords({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      } catch {
+        // Location unavailable — distance won't be shown
+      }
+    };
+
+    initLocation();
   }, []);
+
+  useEffect(() => {
+    if (placingMode || tapLocation) {
+      bottomSheetRef.current?.close();
+      setSelectedGem(null);
+    }
+  }, [placingMode, tapLocation]);
+
+  useEffect(() => {
+    if (!selectedGem) {
+      setSelectedLikeCount(0);
+      setSelectedCommentCount(0);
+      setSelectedLocationName(null);
+      return;
+    }
+
+    const fetchGemPreviewData = async () => {
+      const [{ count: likeCount }, { count: commentCount }] = await Promise.all([
+        supabase
+          .from('gem_likes')
+          .select('*', { count: 'exact', head: true })
+          .eq('gem_id', selectedGem.id),
+        supabase
+          .from('comments')
+          .select('*', { count: 'exact', head: true })
+          .eq('gem_id', selectedGem.id),
+      ]);
+
+      setSelectedLikeCount(likeCount ?? 0);
+      setSelectedCommentCount(commentCount ?? 0);
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${selectedGem.latitude}&lon=${selectedGem.longitude}&format=json`,
+        );
+        const data = await response.json();
+        const name =
+          data.address?.city ||
+          data.address?.town ||
+          data.address?.village ||
+          data.address?.county ||
+          null;
+        setSelectedLocationName(name);
+      } catch {
+        setSelectedLocationName(null);
+      }
+    };
+
+    fetchGemPreviewData();
+  }, [selectedGem]);
 
   useEffect(() => {
     if (!tapLocation) {
@@ -182,6 +280,22 @@ export default function MapScreen() {
     setMapTypeIndex((prev) => (prev + 1) % MAP_TYPES.length);
   };
 
+  const toggleShowMyLocation = () => {
+    setShowMyLocation((prev) => {
+      const next = !prev;
+      if (!next && !hasShownLocationHiddenAlert.current) {
+        hasShownLocationHiddenAlert.current = true;
+        Alert.alert(
+          'Location hidden',
+          'Your location dot is now hidden. Tap again to show it.',
+        );
+      }
+      return next;
+    });
+  };
+
+  // Center-map button stays enabled when dot is hidden — only you see the map pan.
+
   const handleAddGemHere = async () => {
     if (!tapLocation) return;
 
@@ -202,9 +316,65 @@ export default function MapScreen() {
       setPlacingMode(false);
       setTapLocation(null);
     } else {
+      bottomSheetRef.current?.close();
+      setSelectedGem(null);
       setPlacingMode(true);
     }
   };
+
+  const openMaps = (gem: Gem) => {
+    const url = Platform.select({
+      ios: `http://maps.apple.com/?daddr=${gem.latitude},${gem.longitude}&q=${encodeURIComponent(gem.title)}`,
+      android: `https://www.google.com/maps/dir/?api=1&destination=${gem.latitude},${gem.longitude}`,
+      default: `https://www.google.com/maps/dir/?api=1&destination=${gem.latitude},${gem.longitude}`,
+    });
+
+    if (url) Linking.openURL(url);
+  };
+
+  const handleMapPress = useCallback(
+    (e: { nativeEvent: { coordinate: TapLocation } }) => {
+      if (placingMode) {
+        setTapLocation(e.nativeEvent.coordinate);
+        return;
+      }
+
+      bottomSheetRef.current?.close();
+      setSelectedGem(null);
+    },
+    [placingMode],
+  );
+
+  const handleMarkerPress = (gem: Gem, e: { stopPropagation?: () => void }) => {
+    hapticLight();
+    if (placingMode || tapLocation) return;
+
+    e.stopPropagation?.();
+    setSelectedGem(gem);
+    bottomSheetRef.current?.snapToIndex(0);
+  };
+
+  const selectedGemDistance =
+    selectedGem && userCoords
+      ? formatDistanceKm(
+          getDistance(
+            userCoords.latitude,
+            userCoords.longitude,
+            selectedGem.latitude,
+            selectedGem.longitude,
+          ),
+        )
+      : null;
+
+  const selectedGemLocationLabel = selectedGem
+    ? [
+        selectedLocationName ??
+          `${selectedGem.latitude.toFixed(4)}, ${selectedGem.longitude.toFixed(4)}`,
+        selectedGemDistance,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
 
   const handleMyLocation = async () => {
     const location = await Location.getCurrentPositionAsync({});
@@ -232,20 +402,16 @@ export default function MapScreen() {
         style={styles.map}
         initialRegion={INITIAL_REGION}
         mapType={currentMapType.type}
-        showsUserLocation
+        showsUserLocation={showMyLocation}
         showsMyLocationButton={false}
         followsUserLocation={false}
-        onPress={
-          placingMode ? (e) => setTapLocation(e.nativeEvent.coordinate) : undefined
-        }>
+        onPress={handleMapPress}>
         {visibleGems.map((gem) => (
           <Marker
             key={gem.id}
             coordinate={{ latitude: gem.latitude, longitude: gem.longitude }}
-            onPress={() => {
-              hapticLight();
-              router.push('/gem/' + gem.id);
-            }}>
+            onPress={(e) => handleMarkerPress(gem, e)}
+            stopPropagation>
             <View
               style={[styles.marker, { backgroundColor: getCategoryColor(gem.category) }]}>
               <Text style={styles.markerText}>{gem.category.charAt(0)}</Text>
@@ -274,6 +440,18 @@ export default function MapScreen() {
 
       <TouchableOpacity style={styles.layerButton} onPress={cycleMapType} activeOpacity={0.8}>
         <Text style={styles.layerButtonText}>{currentMapType.label}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.locationDotToggle}
+        onPress={toggleShowMyLocation}
+        activeOpacity={0.8}>
+        <Ionicons
+          name={showMyLocation ? 'locate' : 'locate-outline'}
+          size={20}
+          color={showMyLocation ? theme.accent : theme.textTertiary}
+          style={showMyLocation ? undefined : { opacity: 0.55 }}
+        />
       </TouchableOpacity>
 
       <View style={styles.filterContainer}>
@@ -440,6 +618,77 @@ export default function MapScreen() {
           </View>
         </View>
       )}
+
+      {!placingMode && !tapLocation && (
+        <BottomSheet
+          ref={bottomSheetRef}
+          index={-1}
+          snapPoints={snapPoints}
+          enablePanDownToClose
+          onClose={() => setSelectedGem(null)}
+          backgroundStyle={{ backgroundColor: theme.card }}
+          handleIndicatorStyle={{ backgroundColor: theme.border }}>
+          <BottomSheetView style={styles.bottomSheetContent}>
+            {selectedGem && (
+              <>
+                {selectedGem.image_url ? (
+                  <Image
+                    source={{ uri: selectedGem.image_url }}
+                    style={styles.sheetImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.sheetImagePlaceholder}>
+                    <Ionicons name="location-outline" size={40} color={theme.accent} />
+                  </View>
+                )}
+
+                <Text style={styles.sheetTitle}>{selectedGem.title}</Text>
+
+                <View style={styles.sheetBadgeRow}>
+                  <View style={styles.sheetCategoryBadge}>
+                    <Text style={styles.sheetCategoryBadgeText}>{selectedGem.category}</Text>
+                  </View>
+                  {selectedGem.verified && (
+                    <View style={styles.sheetVerifiedBadge}>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.coral} />
+                      <Text style={styles.sheetVerifiedBadgeText}>Verified</Text>
+                    </View>
+                  )}
+                </View>
+
+                <Text style={styles.sheetLocation}>{selectedGemLocationLabel}</Text>
+
+                <View style={styles.sheetStatsRow}>
+                  <View style={styles.sheetStat}>
+                    <Ionicons name="heart" size={14} color={theme.textSecondary} />
+                    <Text style={styles.sheetStatText}>{selectedLikeCount}</Text>
+                  </View>
+                  <View style={styles.sheetStat}>
+                    <Ionicons name="chatbubble-outline" size={14} color={theme.textSecondary} />
+                    <Text style={styles.sheetStatText}>{selectedCommentCount}</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.viewDetailsButton}
+                  onPress={() => router.push('/gem/' + selectedGem.id)}
+                  activeOpacity={0.8}>
+                  <Text style={styles.viewDetailsButtonText}>View Full Details</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.navigateButton}
+                  onPress={() => openMaps(selectedGem)}
+                  activeOpacity={0.8}>
+                  <Ionicons name="navigate" size={16} color={theme.accent} />
+                  <Text style={styles.navigateButtonText}>Navigate</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </BottomSheetView>
+        </BottomSheet>
+      )}
     </View>
   );
 }
@@ -480,6 +729,19 @@ const createStyles = (theme: Theme, overlay: string) =>
       fontSize: 13,
       fontWeight: '500',
       color: theme.text,
+    },
+    locationDotToggle: {
+      position: 'absolute',
+      top: 96,
+      right: 16,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     filterContainer: {
       position: 'absolute',
@@ -581,6 +843,114 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     addButtonText: {
       color: theme.background,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    bottomSheetContent: {
+      flex: 1,
+      padding: 16,
+    },
+    sheetImage: {
+      width: '100%',
+      height: 140,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    sheetImagePlaceholder: {
+      width: '100%',
+      height: 140,
+      borderRadius: 12,
+      marginBottom: 12,
+      backgroundColor: IMAGE_PLACEHOLDER,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sheetTitle: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 18,
+      color: theme.text,
+      marginBottom: 10,
+    },
+    sheetBadgeRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 8,
+    },
+    sheetCategoryBadge: {
+      backgroundColor: theme.accentSubtle,
+      borderWidth: 0.5,
+      borderColor: theme.accent,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 20,
+    },
+    sheetCategoryBadgeText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.accent,
+    },
+    sheetVerifiedBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: theme.coralSubtle,
+      borderWidth: 0.5,
+      borderColor: theme.coral,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 20,
+    },
+    sheetVerifiedBadgeText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.coral,
+    },
+    sheetLocation: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginBottom: 12,
+    },
+    sheetStatsRow: {
+      flexDirection: 'row',
+      gap: 16,
+      marginBottom: 16,
+    },
+    sheetStat: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    sheetStatText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    viewDetailsButton: {
+      backgroundColor: theme.accent,
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    viewDetailsButtonText: {
+      color: theme.background,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    navigateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.accent,
+      borderRadius: 10,
+      paddingVertical: 14,
+    },
+    navigateButtonText: {
+      color: theme.accent,
       fontSize: 14,
       fontWeight: '600',
     },
