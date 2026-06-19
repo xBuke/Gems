@@ -9,6 +9,7 @@ import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { Ionicons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Location from 'expo-location'
 import { useRouter } from 'expo-router'
@@ -17,7 +18,6 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
-  Image,
   PanResponder,
   Pressable,
   ScrollView,
@@ -29,16 +29,35 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-const TOTAL_STEPS = 10
-const STORY_TEXTS = [
-  "Most places worth seeing aren't on any map.",
-  "The best ones get passed between people who've actually been there.",
-  'Hidden Gems is where that happens.',
+const TOTAL_STEPS = 13
+const STORY_STEPS = [
+  { text: "Most places worth seeing aren't on any map." },
+  { text: "The best ones get passed between people who've actually been there." },
+  {
+    text: 'Some gems you find. Others find you.',
+    subtitle: 'Swipe through curated spots picked just for you',
+    showProBadge: true,
+  },
+  {
+    text: 'Build your own circle of secrets.',
+    subtitle: 'Create communities around what you love — local crews, dog parks, sunset chasers',
+    showProBadge: true,
+  },
+  {
+    text: "Going somewhere new? We'll map it out.",
+    subtitle: "Tell us where you're headed — we'll surface the gems worth the detour",
+    showProBadge: true,
+  },
+  { text: 'Hidden Gems is where that happens.' },
 ]
 
 const TRIAL_FEATURES = [
   'Unlimited gem drops',
   'Hidden Gems exclusive category',
+  'Gem Swipe — discover faster',
+  'Create your own communities',
+  'Custom categories for your interests',
+  'Trip Planner for any destination',
   'Private pins for friends only',
   'No ads',
 ]
@@ -112,7 +131,7 @@ export default function OnboardingScreen() {
 
   const advance = useCallback(() => {
     if (step >= TOTAL_STEPS - 1) return
-    if (step === 3 || step === 6 || step === 7 || step === 8) return
+    if (step === 6 || step === 9 || step === 10 || step === 11) return
     animateStepChange(step + 1)
   }, [animateStepChange, step])
 
@@ -145,11 +164,11 @@ export default function OnboardingScreen() {
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) => {
-        if (stepRef.current > 2) return false
+        if (stepRef.current > 5) return false
         return Math.abs(g.dx) > 24 && Math.abs(g.dy) < 40
       },
       onPanResponderRelease: (_, g) => {
-        if (stepRef.current > 2) return
+        if (stepRef.current > 5) return
         if (g.dx < -50) {
           if (stepRef.current < TOTAL_STEPS - 1) {
             animateStepRef.current(stepRef.current + 1)
@@ -175,7 +194,7 @@ export default function OnboardingScreen() {
 
       if (gems && gems.length > 0) {
         const sorted = await sortGemsByLikes(gems as Gem[])
-        setTrendingGems(sorted.slice(0, 3))
+        setTrendingGems(sorted.slice(0, 6))
       }
 
       const catMap: Record<string, Gem | null> = {}
@@ -202,7 +221,7 @@ export default function OnboardingScreen() {
   }, [])
 
   useEffect(() => {
-    if (step !== 6) return
+    if (step !== 9) return
 
     const detectHomeTown = async () => {
       try {
@@ -228,7 +247,7 @@ export default function OnboardingScreen() {
   }, [step])
 
   useEffect(() => {
-    if (step !== 7 || prefsSaved) return
+    if (step !== 10 || prefsSaved) return
 
     const save = async () => {
       await savePreferences(userId, buildPrefs())
@@ -236,12 +255,12 @@ export default function OnboardingScreen() {
     }
     save()
 
-    const timer = setTimeout(() => animateStepChange(8), 1800)
+    const timer = setTimeout(() => animateStepChange(11), 1800)
     return () => clearTimeout(timer)
   }, [step, prefsSaved, userId, buildPrefs, animateStepChange])
 
   useEffect(() => {
-    if (step !== 7) return
+    if (step !== 10) return
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.15, duration: 700, useNativeDriver: true }),
@@ -264,7 +283,7 @@ export default function OnboardingScreen() {
       Animated.spring(cardScale, { toValue: 1.05, useNativeDriver: true, friction: 4 }),
       Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start()
-    setTimeout(() => animateStepChange(5), 300)
+    setTimeout(() => animateStepChange(8), 300)
   }
 
   const selectDiscover = (style: 'solo' | 'social') => {
@@ -273,7 +292,7 @@ export default function OnboardingScreen() {
       Animated.spring(cardScale, { toValue: 1.05, useNativeDriver: true, friction: 4 }),
       Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start()
-    setTimeout(() => animateStepChange(6), 300)
+    setTimeout(() => animateStepChange(9), 300)
   }
 
   const handleCityInput = (text: string) => {
@@ -306,7 +325,7 @@ export default function OnboardingScreen() {
 
   const continueFromHomeTown = () => {
     if (!homeTown.trim()) return
-    animateStepChange(7)
+    animateStepChange(10)
   }
 
   const startTrial = async () => {
@@ -318,7 +337,7 @@ export default function OnboardingScreen() {
         .update({ is_premium: true, trial_ends_at: trialEnd.toISOString() })
         .eq('id', userId)
     }
-    animateStepChange(9)
+    animateStepChange(12)
   }
 
   const finishOnboarding = async () => {
@@ -330,21 +349,37 @@ export default function OnboardingScreen() {
     }
   }
 
-  const showSkip = !loading && step < 8
-  const showProgress = !loading && step < 9
-  const tapToAdvance = !loading && step < 3
+  const showSkip = !loading && step < 11
+  const showProgress = !loading && step < 12
+  const tapToAdvance = !loading && step < 6
 
   const renderStoryStep = (index: number) => {
-    const gem = trendingGems[index]
+    const story = STORY_STEPS[index]
+    const gem =
+      trendingGems.length > 0 ? trendingGems[index % trendingGems.length] : undefined
     return (
       <View style={styles.storyContainer}>
         {gem?.image_url ? (
-          <Image source={{ uri: gem.image_url }} style={styles.storyImage} />
+          <Image
+            source={{ uri: gem.image_url }}
+            style={styles.storyImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
         ) : (
           <View style={[styles.storyImage, styles.storyPlaceholder]} />
         )}
         <View style={styles.storyGradient} />
-        <Text style={styles.storyText}>{STORY_TEXTS[index]}</Text>
+        {story.showProBadge && (
+          <View style={styles.storyProBadge}>
+            <Text style={styles.storyProBadgeText}>💎 PRO</Text>
+          </View>
+        )}
+        <View style={styles.storyTextWrap}>
+          <Text style={styles.storyText}>{story.text}</Text>
+          {story.subtitle && <Text style={styles.storySubtitle}>{story.subtitle}</Text>}
+        </View>
       </View>
     )
   }
@@ -359,7 +394,13 @@ export default function OnboardingScreen() {
         onPress={() => toggleCategory(cat.id)}
         activeOpacity={0.85}>
         {gem?.image_url ? (
-          <Image source={{ uri: gem.image_url }} style={styles.categoryCardImage} />
+          <Image
+            source={{ uri: gem.image_url }}
+            style={styles.categoryCardImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
         ) : (
           <View style={[styles.categoryCardImage, { backgroundColor: cat.color + '33' }]} />
         )}
@@ -391,7 +432,13 @@ export default function OnboardingScreen() {
           onPress={() => selectExplore(pref)}
           activeOpacity={0.85}>
           {gem?.image_url ? (
-            <Image source={{ uri: gem.image_url }} style={styles.exploreCardImage} />
+            <Image
+              source={{ uri: gem.image_url }}
+              style={styles.exploreCardImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
           ) : (
             <View style={[styles.exploreCardImage, { backgroundColor: fallbackColor + '44' }]} />
           )}
@@ -441,9 +488,9 @@ export default function OnboardingScreen() {
       )
     }
 
-    if (step <= 2) return renderStoryStep(step)
+    if (step <= 5) return renderStoryStep(step)
 
-    if (step === 3) {
+    if (step === 6) {
       return (
         <View style={styles.prefsContainer}>
           <Text style={styles.prefsTitle}>What calls to you?</Text>
@@ -460,7 +507,7 @@ export default function OnboardingScreen() {
               selectedCategories.length === 0 && styles.continueButtonDisabled,
             ]}
             disabled={selectedCategories.length === 0}
-            onPress={() => animateStepChange(4)}
+            onPress={() => animateStepChange(7)}
             activeOpacity={0.8}>
             <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
@@ -468,7 +515,7 @@ export default function OnboardingScreen() {
       )
     }
 
-    if (step === 4) {
+    if (step === 7) {
       return (
         <View style={styles.prefsContainer}>
           <Text style={styles.prefsTitle}>City or wild?</Text>
@@ -481,7 +528,7 @@ export default function OnboardingScreen() {
       )
     }
 
-    if (step === 5) {
+    if (step === 8) {
       return (
         <View style={styles.prefsContainer}>
           <Text style={styles.prefsTitle}>Solo or social?</Text>
@@ -494,7 +541,7 @@ export default function OnboardingScreen() {
       )
     }
 
-    if (step === 6) {
+    if (step === 9) {
       return (
         <View style={styles.prefsContainer}>
           <Text style={styles.prefsTitle}>Where do you call home?</Text>
@@ -540,7 +587,7 @@ export default function OnboardingScreen() {
       )
     }
 
-    if (step === 7) {
+    if (step === 10) {
       return (
         <View style={styles.centered}>
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
@@ -561,12 +608,12 @@ export default function OnboardingScreen() {
       )
     }
 
-    if (step === 8) {
+    if (step === 11) {
       return (
         <ScrollView contentContainerStyle={styles.trialContent} showsVerticalScrollIndicator={false}>
           <Ionicons name="diamond" size={56} color={theme.coral} />
           <Text style={styles.trialTitle}>Try Premium free for 3 days</Text>
-          <Text style={styles.trialSubtitle}>Then 4.99€/month. Cancel anytime.</Text>
+          <Text style={styles.trialSubtitle}>Then 5.99€/month. Cancel anytime.</Text>
           <View style={styles.featuresList}>
             {TRIAL_FEATURES.map((feature) => (
               <View key={feature} style={styles.featureRow}>
@@ -578,7 +625,7 @@ export default function OnboardingScreen() {
           <TouchableOpacity style={styles.trialButton} onPress={startTrial} activeOpacity={0.8}>
             <Text style={styles.trialButtonText}>Start free trial</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => animateStepChange(9)} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => animateStepChange(12)} activeOpacity={0.7}>
             <Text style={styles.maybeLater}>Maybe later</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -697,16 +744,40 @@ const createStyles = (theme: Theme) =>
       height: 220,
       backgroundColor: 'rgba(0,0,0,0.55)',
     },
-    storyText: {
+    storyProBadge: {
+      position: 'absolute',
+      top: 72,
+      right: 16,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderWidth: 1,
+      borderColor: theme.coral,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    storyProBadgeText: {
+      color: theme.coral,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    storyTextWrap: {
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
+      padding: 24,
+    },
+    storyText: {
       fontFamily: 'SpaceGrotesk-Bold',
       fontSize: 26,
       color: '#FFFFFF',
       lineHeight: 34,
-      padding: 24,
+    },
+    storySubtitle: {
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.75)',
+      marginTop: 8,
+      lineHeight: 18,
     },
     prefsContainer: {
       flex: 1,

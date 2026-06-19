@@ -5,6 +5,7 @@ import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -12,7 +13,6 @@ import {
   Alert,
   Dimensions,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -334,7 +334,13 @@ export default function ChatScreen() {
         <TouchableOpacity style={styles.headerCenter} onPress={goToProfile} activeOpacity={0.7}>
           <View style={styles.headerAvatar}>
             {otherAvatarUrl ? (
-              <Image source={{ uri: otherAvatarUrl }} style={styles.headerAvatarImage} />
+              <Image
+                source={{ uri: otherAvatarUrl }}
+                style={styles.headerAvatarImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
             ) : (
               <Text style={styles.headerAvatarText}>{initial}</Text>
             )}

@@ -18,13 +18,13 @@ import { consumeLastStreakResult } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -41,6 +41,8 @@ const LOCAL_PICK_COLOR = '#7F77DD';
 
 const DISCOVER_GEM_SELECT =
   '*, profiles!gems_user_id_fkey(username, avatar_url), communities(name, icon, color)';
+
+const PAGE_SIZE = 20;
 
 type Gem = {
   id: string;
@@ -123,7 +125,13 @@ export default function DiscoverScreen() {
   const [gemOfTheDay, setGemOfTheDay] = useState<GemWithProfile | null>(null);
   const [trendingGems, setTrendingGems] = useState<GemWithProfile[]>([]);
   const [recentGems, setRecentGems] = useState<GemWithProfile[]>([]);
+  const [recentlyAddedPage, setRecentlyAddedPage] = useState(0);
+  const [hasMoreRecent, setHasMoreRecent] = useState(true);
+  const [loadingMoreRecent, setLoadingMoreRecent] = useState(false);
   const [nearbyGems, setNearbyGems] = useState<GemWithProfile[]>([]);
+  const [nearbyPage, setNearbyPage] = useState(0);
+  const [hasMoreNearby, setHasMoreNearby] = useState(true);
+  const [loadingMoreNearby, setLoadingMoreNearby] = useState(false);
   const [followingGems, setFollowingGems] = useState<GemWithProfile[]>([]);
   const [locationAvailable, setLocationAvailable] = useState(false);
   const [userCoords, setUserCoords] = useState<UserCoords | null>(null);
@@ -255,6 +263,121 @@ export default function DiscoverScreen() {
     setUnreadNotificationCount(!error ? (count ?? 0) : 0);
   }, []);
 
+  const filterBlocked = <T extends { user_id: string }>(
+    gems: T[],
+    blockedIds: Set<string>,
+  ): T[] => gems.filter((g) => !blockedIds.has(g.user_id));
+
+  const fetchRecentGems = useCallback(
+    async (page = 0, myCommunityIds: string[] = []) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const blocked = user ? await getMyBlockedUsers(user.id) : [];
+      const blockedIds = new Set<string>(
+        blocked.map((b: { blocked_id: string }) => b.blocked_id),
+      );
+
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase
+        .from('gems')
+        .select(DISCOVER_GEM_SELECT)
+        .eq('is_private', false)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      query = applyCommunityGemFilter(query, myCommunityIds);
+
+      const { data } = await query;
+
+      if (data) {
+        const filtered = (data as GemWithProfile[]).filter((g) => !blockedIds.has(g.user_id));
+        if (page === 0) {
+          setRecentGems(filtered);
+        } else {
+          setRecentGems((prev) => [...prev, ...filtered]);
+        }
+        setHasMoreRecent(data.length === PAGE_SIZE);
+        fetchLikeCounts(filtered as Gem[]);
+      }
+    },
+    [fetchLikeCounts],
+  );
+
+  const fetchNearbyGems = useCallback(
+    async (page = 0, myCommunityIds: string[] = [], coords?: UserCoords | null) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const blocked = user ? await getMyBlockedUsers(user.id) : [];
+      const blockedIds = new Set<string>(
+        blocked.map((b: { blocked_id: string }) => b.blocked_id),
+      );
+
+      let locationCoords = coords ?? null;
+
+      if (page === 0) {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLocationAvailable(false);
+          setUserCoords(null);
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        locationCoords = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        };
+        setLocationAvailable(true);
+        setUserCoords(locationCoords);
+      } else if (!locationCoords) {
+        return;
+      }
+
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase
+        .from('gems')
+        .select(DISCOVER_GEM_SELECT)
+        .eq('is_private', false)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      query = applyCommunityGemFilter(query, myCommunityIds);
+
+      const { data } = await query;
+
+      if (data && locationCoords) {
+        const nearby = filterBlocked(data as GemWithProfile[], blockedIds)
+          .map((gem) => ({
+            gem,
+            distance: getDistance(
+              locationCoords!.latitude,
+              locationCoords!.longitude,
+              gem.latitude,
+              gem.longitude,
+            ),
+          }))
+          .filter(({ distance }) => distance < 50000)
+          .sort((a, b) => a.distance - b.distance)
+          .map(({ gem }) => gem);
+
+        if (page === 0) {
+          setNearbyGems(nearby);
+        } else {
+          setNearbyGems((prev) => {
+            const existingIds = new Set(prev.map((g) => g.id));
+            const newGems = nearby.filter((g) => !existingIds.has(g.id));
+            return [...prev, ...newGems];
+          });
+        }
+        setHasMoreNearby(data.length === PAGE_SIZE);
+        fetchLikeCounts(nearby);
+      }
+    },
+    [fetchLikeCounts],
+  );
+
   const fetchFollowingGems = useCallback(async (myCommunityIds: string[] = []) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -300,7 +423,7 @@ export default function DiscoverScreen() {
     const blocked = user ? await getMyBlockedUsers(user.id) : [];
     const blockedIds = new Set(blocked.map((b: { blocked_id: string }) => b.blocked_id));
 
-    const filterBlocked = <T extends { user_id: string }>(gems: T[]): T[] =>
+    const filterBlockedLocal = <T extends { user_id: string }>(gems: T[]): T[] =>
       gems.filter((g) => !blockedIds.has(g.user_id));
 
     const fetchMysteryGem = async () => {
@@ -325,7 +448,7 @@ export default function DiscoverScreen() {
       const { data } = await query;
 
       if (data && data.length > 0) {
-        const eligible = filterBlocked(data as GemWithProfile[]);
+        const eligible = filterBlockedLocal(data as GemWithProfile[]);
         if (eligible.length > 0) {
           const random = eligible[Math.floor(Math.random() * eligible.length)];
           setGemOfTheDay(random);
@@ -349,27 +472,8 @@ export default function DiscoverScreen() {
       const { data } = await query;
 
       if (data) {
-        const filtered = filterBlocked(data as GemWithProfile[]);
+        const filtered = filterBlockedLocal(data as GemWithProfile[]);
         setTrendingGems(filtered);
-        fetchLikeCounts(filtered as Gem[]);
-      }
-    };
-
-    const fetchRecent = async () => {
-      let query = supabase
-        .from('gems')
-        .select(DISCOVER_GEM_SELECT)
-        .eq('is_private', false)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      query = applyCommunityGemFilter(query, myCommunityIds);
-
-      const { data } = await query;
-
-      if (data) {
-        const filtered = filterBlocked(data as GemWithProfile[]);
-        setRecentGems(filtered);
         fetchLikeCounts(filtered as Gem[]);
       }
     };
@@ -384,59 +488,20 @@ export default function DiscoverScreen() {
 
       const { data } = await query;
 
-      if (data) setAllGems(filterBlocked(data as GemWithProfile[]));
+      if (data) setAllGems(filterBlockedLocal(data as GemWithProfile[]));
     };
 
-    const fetchNearby = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationAvailable(false);
-        setUserCoords(null);
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      setLocationAvailable(true);
-      setUserCoords({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-
-      let query = supabase
-        .from('gems')
-        .select(DISCOVER_GEM_SELECT)
-        .eq('is_private', false);
-
-      query = applyCommunityGemFilter(query, myCommunityIds);
-
-      const { data } = await query;
-
-      if (data) {
-        const nearby = filterBlocked(data as GemWithProfile[])
-          .map((gem) => ({
-            gem,
-            distance: getDistance(
-              location.coords.latitude,
-              location.coords.longitude,
-              gem.latitude,
-              gem.longitude,
-            ),
-          }))
-          .filter(({ distance }) => distance < 50000)
-          .sort((a, b) => a.distance - b.distance)
-          .map(({ gem }) => gem);
-
-        setNearbyGems(nearby);
-        fetchLikeCounts(nearby);
-      }
-    };
+    setRecentlyAddedPage(0);
+    setHasMoreRecent(true);
+    setNearbyPage(0);
+    setHasMoreNearby(true);
 
     fetchMysteryGem();
     fetchGemOfTheDay();
     fetchTrending();
-    fetchRecent();
+    fetchRecentGems(0, myCommunityIds);
     fetchAllGems();
-    fetchNearby();
+    fetchNearbyGems(0, myCommunityIds);
     checkUnreadMessages();
     checkUnreadNotifications();
 
@@ -447,7 +512,29 @@ export default function DiscoverScreen() {
       setCustomCategories(categories);
     };
     loadCustomCategories();
-  }, [checkUnreadMessages, checkUnreadNotifications, fetchLikeCounts]);
+  }, [checkUnreadMessages, checkUnreadNotifications, fetchLikeCounts, fetchRecentGems, fetchNearbyGems]);
+
+  const handleLoadMoreRecent = useCallback(async () => {
+    if (loadingMoreRecent || !hasMoreRecent) return;
+    setLoadingMoreRecent(true);
+    const nextPage = recentlyAddedPage + 1;
+    const { data: { user } } = await supabase.auth.getUser();
+    const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+    await fetchRecentGems(nextPage, myCommunityIds);
+    setRecentlyAddedPage(nextPage);
+    setLoadingMoreRecent(false);
+  }, [loadingMoreRecent, hasMoreRecent, recentlyAddedPage, fetchRecentGems]);
+
+  const handleLoadMoreNearby = useCallback(async () => {
+    if (loadingMoreNearby || !hasMoreNearby) return;
+    setLoadingMoreNearby(true);
+    const nextPage = nearbyPage + 1;
+    const { data: { user } } = await supabase.auth.getUser();
+    const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+    await fetchNearbyGems(nextPage, myCommunityIds, userCoords);
+    setNearbyPage(nextPage);
+    setLoadingMoreNearby(false);
+  }, [loadingMoreNearby, hasMoreNearby, nearbyPage, fetchNearbyGems, userCoords]);
 
   useEffect(() => {
     checkIsPremium().then(setIsPremium);
@@ -725,7 +812,13 @@ export default function DiscoverScreen() {
         activeOpacity={0.85}>
         <View style={styles.listCardImageWrap}>
           {gem.image_url ? (
-            <Image source={{ uri: gem.image_url }} style={styles.listCardImage} />
+            <Image
+              source={{ uri: gem.image_url }}
+              style={styles.listCardImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
           ) : (
             <View style={[styles.listCardImage, styles.listCardImagePlaceholder]} />
           )}
@@ -792,7 +885,13 @@ export default function DiscoverScreen() {
         activeOpacity={0.85}>
         <View style={styles.trendingImage}>
           {gem.image_url ? (
-            <Image source={{ uri: gem.image_url }} style={styles.trendingImageFill} />
+            <Image
+              source={{ uri: gem.image_url }}
+              style={styles.trendingImageFill}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
           ) : (
             <View style={[styles.trendingImageFill, styles.trendingImagePlaceholder]} />
           )}
@@ -807,7 +906,13 @@ export default function DiscoverScreen() {
           </Text>
           <View style={styles.trendingUserRow}>
             {gem.profiles?.avatar_url ? (
-              <Image source={{ uri: gem.profiles.avatar_url }} style={styles.trendingAvatarImage} />
+              <Image
+                source={{ uri: gem.profiles.avatar_url }}
+                style={styles.trendingAvatarImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
             ) : (
               <View style={styles.trendingAvatar}>
                 <Text style={styles.trendingAvatarText}>{username[0]?.toUpperCase() ?? '?'}</Text>
@@ -837,7 +942,13 @@ export default function DiscoverScreen() {
         onPress={() => router.push('/gem/' + mysteryGem.id)}
         activeOpacity={0.85}>
         {mysteryGem.image_url ? (
-          <Image source={{ uri: mysteryGem.image_url }} style={styles.mysteryImage} />
+          <Image
+            source={{ uri: mysteryGem.image_url }}
+            style={styles.mysteryImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
         ) : (
           <View style={styles.mysteryPlaceholder}>
             <View style={[styles.mysteryPlaceholderBase, { backgroundColor: theme.card }]} />
@@ -881,7 +992,13 @@ export default function DiscoverScreen() {
             onPress={() => router.push('/gem/' + filteredGemOfTheDay.id)}
             activeOpacity={0.85}>
             {filteredGemOfTheDay.image_url ? (
-              <Image source={{ uri: filteredGemOfTheDay.image_url }} style={styles.heroImage} />
+              <Image
+                source={{ uri: filteredGemOfTheDay.image_url }}
+                style={styles.heroImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
             ) : (
               <View style={[styles.heroImage, styles.heroImagePlaceholder]} />
             )}
@@ -923,6 +1040,17 @@ export default function DiscoverScreen() {
         <>
           <Text style={styles.sectionTitle}>Recently Added</Text>
           {filteredRecentGems.map((gem, index) => renderListCard(gem, undefined, true, index))}
+          {hasMoreRecent && !searchQuery.trim() && (
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={handleLoadMoreRecent}
+              disabled={loadingMoreRecent}
+              activeOpacity={0.8}>
+              <Text style={styles.loadMoreButtonText}>
+                {loadingMoreRecent ? 'Loading...' : 'Load More'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </>
       )}
 
@@ -930,9 +1058,35 @@ export default function DiscoverScreen() {
         <>
           <Text style={styles.sectionTitle}>Near You</Text>
           {filteredNearbyGems.length === 0 ? (
-            <Text style={styles.emptyText}>No gems near you yet — be the first!</Text>
+            <>
+              <Text style={styles.emptyText}>No gems near you yet — be the first!</Text>
+              {hasMoreNearby && !searchQuery.trim() && (
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={handleLoadMoreNearby}
+                  disabled={loadingMoreNearby}
+                  activeOpacity={0.8}>
+                  <Text style={styles.loadMoreButtonText}>
+                    {loadingMoreNearby ? 'Loading...' : 'Load More'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
           ) : (
-            filteredNearbyGems.map((gem) => renderListCard(gem, getGemDistance(gem)))
+            <>
+              {filteredNearbyGems.map((gem) => renderListCard(gem, getGemDistance(gem)))}
+              {hasMoreNearby && !searchQuery.trim() && (
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={handleLoadMoreNearby}
+                  disabled={loadingMoreNearby}
+                  activeOpacity={0.8}>
+                  <Text style={styles.loadMoreButtonText}>
+                    {loadingMoreNearby ? 'Loading...' : 'Load More'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </>
       )}
@@ -1732,6 +1886,20 @@ const createStyles = (theme: Theme) =>
     textAlign: 'center',
     marginBottom: 24,
     paddingVertical: 16,
+  },
+  loadMoreButton: {
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  loadMoreButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.accent,
   },
   followingItem: {
     marginBottom: 4,

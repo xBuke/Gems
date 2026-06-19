@@ -2,12 +2,12 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -216,7 +216,13 @@ export default function NotificationsScreen() {
 
     if (item.gem.image_url) {
       return (
-        <Image source={{ uri: item.gem.image_url }} style={styles.gemThumbnail} resizeMode="cover" />
+        <Image
+          source={{ uri: item.gem.image_url }}
+          style={styles.gemThumbnail}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+        />
       );
     }
 

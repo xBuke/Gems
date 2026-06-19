@@ -14,11 +14,11 @@ import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Image,
   Linking,
   Platform,
   Alert,
@@ -28,7 +28,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { MapType, Marker } from 'react-native-maps';
+import MapView, { MapType, Marker, Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const IMAGE_PLACEHOLDER = '#1A5C3A';
@@ -85,6 +85,8 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const regionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastFetchedRegionRef = useRef<Region | null>(null);
   const snapPoints = useMemo(() => ['25%', '60%'], []);
   const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
@@ -111,19 +113,57 @@ export default function MapScreen() {
     }
   }, [placeMode]);
 
-  const fetchGems = useCallback(async () => {
+  const fetchVisibleGems = useCallback(async (region: Region) => {
     const { data: { user } } = await supabase.auth.getUser();
     const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
 
-    let query = supabase.from('gems').select(GEM_SELECT_MAP).eq('is_private', false);
+    const latDelta = region.latitudeDelta;
+    const lngDelta = region.longitudeDelta;
+
+    let query = supabase
+      .from('gems')
+      .select(GEM_SELECT_MAP)
+      .eq('is_private', false)
+      .gte('latitude', region.latitude - latDelta)
+      .lte('latitude', region.latitude + latDelta)
+      .gte('longitude', region.longitude - lngDelta)
+      .lte('longitude', region.longitude + lngDelta)
+      .limit(200);
+
     query = applyCommunityGemFilter(query, myCommunityIds);
 
     const { data } = await query;
-    if (data) setGems(data);
+    if (data) {
+      setGems(data);
+      lastFetchedRegionRef.current = region;
+    }
   }, []);
 
+  const handleRegionChangeComplete = useCallback(
+    (region: Region) => {
+      if (regionDebounceRef.current) {
+        clearTimeout(regionDebounceRef.current);
+      }
+
+      regionDebounceRef.current = setTimeout(() => {
+        const last = lastFetchedRegionRef.current;
+        if (last) {
+          const latMoved =
+            Math.abs(region.latitude - last.latitude) > last.latitudeDelta * 0.3;
+          const lngMoved =
+            Math.abs(region.longitude - last.longitude) > last.longitudeDelta * 0.3;
+          const zoomChanged =
+            Math.abs(region.latitudeDelta - last.latitudeDelta) > last.latitudeDelta * 0.2;
+          if (!latMoved && !lngMoved && !zoomChanged) return;
+        }
+        fetchVisibleGems(region);
+      }, 500);
+    },
+    [fetchVisibleGems],
+  );
+
   useEffect(() => {
-    fetchGems();
+    fetchVisibleGems(INITIAL_REGION);
 
     const loadCustomCategories = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -132,12 +172,19 @@ export default function MapScreen() {
       setCustomCategories(categories);
     };
     loadCustomCategories();
-  }, [fetchGems]);
+
+    return () => {
+      if (regionDebounceRef.current) {
+        clearTimeout(regionDebounceRef.current);
+      }
+    };
+  }, [fetchVisibleGems]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchGems();
-    }, [fetchGems]),
+      const region = lastFetchedRegionRef.current ?? INITIAL_REGION;
+      fetchVisibleGems(region);
+    }, [fetchVisibleGems]),
   );
 
   useEffect(() => {
@@ -405,7 +452,8 @@ export default function MapScreen() {
         showsUserLocation={showMyLocation}
         showsMyLocationButton={false}
         followsUserLocation={false}
-        onPress={handleMapPress}>
+        onPress={handleMapPress}
+        onRegionChangeComplete={handleRegionChangeComplete}>
         {visibleGems.map((gem) => (
           <Marker
             key={gem.id}
@@ -635,7 +683,9 @@ export default function MapScreen() {
                   <Image
                     source={{ uri: selectedGem.image_url }}
                     style={styles.sheetImage}
-                    resizeMode="cover"
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
                   />
                 ) : (
                   <View style={styles.sheetImagePlaceholder}>

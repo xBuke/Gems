@@ -3,11 +3,11 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -144,7 +144,13 @@ export default function MessagesScreen() {
         activeOpacity={0.7}>
         <View style={styles.avatar}>
           {item.otherAvatarUrl ? (
-            <Image source={{ uri: item.otherAvatarUrl }} style={styles.avatarImage} />
+            <Image
+              source={{ uri: item.otherAvatarUrl }}
+              style={styles.avatarImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
           ) : (
             <Text style={styles.avatarText}>{initial}</Text>
           )}

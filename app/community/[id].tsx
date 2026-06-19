@@ -6,6 +6,7 @@ import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { Ionicons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -13,7 +14,6 @@ import {
   Alert,
   Dimensions,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -428,7 +428,13 @@ export default function CommunityDetailScreen() {
         activeOpacity={0.7}>
         <View style={styles.listCardImageWrap}>
           {gem.image_url ? (
-            <Image source={{ uri: gem.image_url }} style={styles.listCardImage} />
+            <Image
+              source={{ uri: gem.image_url }}
+              style={styles.listCardImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
           ) : (
             <View style={[styles.listCardImage, styles.listCardImagePlaceholder]} />
           )}

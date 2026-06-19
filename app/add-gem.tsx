@@ -16,6 +16,7 @@ import { compressImage } from '@/lib/imageCompress';
 import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -25,7 +26,6 @@ import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -453,7 +453,13 @@ export default function AddGemScreen() {
             <TouchableOpacity style={styles.imagePicker} onPress={handleImagePress} activeOpacity={0.8}>
               {imageUri ? (
                 <>
-                  <Image source={{ uri: imageUri }} style={styles.selectedImage} resizeMode="cover" />
+                  <Image
+                    source={{ uri: imageUri }}
+                    style={styles.selectedImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
                   <TouchableOpacity
                     style={styles.imageEditButton}
                     onPress={handleImagePress}

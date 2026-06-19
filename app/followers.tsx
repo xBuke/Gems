@@ -2,13 +2,13 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -182,7 +182,13 @@ export default function FollowersScreen() {
         activeOpacity={0.7}>
         <View style={styles.avatar}>
           {item.avatar_url ? (
-            <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
+            <Image
+              source={{ uri: item.avatar_url }}
+              style={styles.avatarImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
           ) : (
             <Text style={styles.avatarText}>{initials}</Text>
           )}

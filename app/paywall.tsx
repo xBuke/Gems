@@ -17,9 +17,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const FEATURES = [
   'Unlimited gem drops',
   'Hidden Gems exclusive category',
-  'Private pins — share only with friends',
-  'Advanced filters & tags',
-  'Support indie development ❤️',
+  'Gem Swipe — discover faster',
+  'Create your own communities',
+  'Custom categories for your interests',
+  'Trip Planner for any destination',
+  'Private pins for friends only',
+  'No ads',
 ];
 
 const checkLifetimeSlotsRemaining = async () => {
@@ -87,7 +90,7 @@ export default function PaywallScreen() {
           <View style={styles.pricingCard}>
             <Text style={styles.tierLabel}>Monthly</Text>
             <View style={styles.priceRow}>
-              <Text style={styles.priceAmount}>4.99€</Text>
+              <Text style={styles.priceAmount}>5.99€</Text>
               <Text style={styles.pricePeriod}>/month</Text>
             </View>
             <TouchableOpacity
@@ -104,10 +107,10 @@ export default function PaywallScreen() {
             </View>
             <Text style={styles.tierLabel}>Yearly</Text>
             <View style={styles.priceRow}>
-              <Text style={styles.priceAmount}>39.99€</Text>
-              <Text style={styles.pricePeriod}>/year · 3.33€/mo</Text>
+              <Text style={styles.priceAmount}>44.99€</Text>
+              <Text style={styles.pricePeriod}>/year · 3.75€/mo</Text>
             </View>
-            <Text style={styles.saveLabel}>Save 33%</Text>
+            <Text style={styles.saveLabel}>Save 37%</Text>
             <TouchableOpacity
               style={styles.yearlyButton}
               onPress={() => Alert.alert('Payment integration coming soon! 🚀')}
@@ -123,7 +126,7 @@ export default function PaywallScreen() {
               </View>
               <Text style={styles.tierLabel}>Lifetime</Text>
               <View style={styles.priceRow}>
-                <Text style={styles.priceAmount}>99€</Text>
+                <Text style={styles.priceAmount}>119€</Text>
                 <Text style={styles.pricePeriod}>one-time payment</Text>
               </View>
               <View style={styles.slotsProgressTrack}>

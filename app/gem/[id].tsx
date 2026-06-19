@@ -11,6 +11,7 @@ import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -18,7 +19,6 @@ import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -582,7 +582,13 @@ export default function GemDetailScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           {gem.image_url ? (
-            <Image source={{ uri: gem.image_url }} style={styles.heroImage} resizeMode="cover" />
+            <Image
+              source={{ uri: gem.image_url }}
+              style={styles.heroImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
           ) : (
             <View style={styles.heroPlaceholder}>
               <Ionicons name="location-outline" size={64} color={theme.accent} />
@@ -640,7 +646,13 @@ export default function GemDetailScreen() {
               activeOpacity={0.7}>
               <View style={styles.authorAvatar}>
                 {gem.profiles?.avatar_url ? (
-                  <Image source={{ uri: gem.profiles.avatar_url }} style={styles.authorAvatarImage} />
+                  <Image
+                    source={{ uri: gem.profiles.avatar_url }}
+                    style={styles.authorAvatarImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
                 ) : (
                   <Text style={styles.authorAvatarText}>{username.charAt(0).toUpperCase()}</Text>
                 )}

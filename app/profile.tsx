@@ -9,13 +9,13 @@ import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import {
   ActionSheetIOS,
   Alert,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -635,7 +635,13 @@ export default function ProfileScreen() {
       activeOpacity={0.85}>
       <View style={styles.gemImageArea}>
         {gem.image_url ? (
-          <Image source={{ uri: gem.image_url }} style={styles.gemImage} resizeMode="cover" />
+          <Image
+            source={{ uri: gem.image_url }}
+            style={styles.gemImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
         ) : (
           <View style={styles.gemImagePlaceholder}>
             <Ionicons name="location" size={28} color={theme.accent} />
@@ -663,7 +669,13 @@ export default function ProfileScreen() {
       activeOpacity={0.85}>
       <View style={styles.horizontalGemImage}>
         {gem.image_url ? (
-          <Image source={{ uri: gem.image_url }} style={styles.horizontalGemImageFill} />
+          <Image
+            source={{ uri: gem.image_url }}
+            style={styles.horizontalGemImageFill}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
         ) : (
           <View style={[styles.horizontalGemImageFill, styles.horizontalGemImagePlaceholder]}>
             <Ionicons name="location-outline" size={28} color={theme.accent} />
@@ -766,7 +778,13 @@ export default function ProfileScreen() {
               disabled={uploadingAvatar}
               style={styles.avatarWrap}>
               {profile?.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="memory-disk"
+                />
               ) : (
                 <View style={styles.avatar}>
                   <Text style={styles.avatarInitials}>{initials}</Text>
@@ -779,7 +797,13 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.avatarWrap}>
               {profile?.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="memory-disk"
+                />
               ) : (
                 <View style={styles.avatar}>
                   <Text style={styles.avatarInitials}>{initials}</Text>

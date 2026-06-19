@@ -11,13 +11,13 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -168,7 +168,13 @@ function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef }: 
     <GestureDetector gesture={panGesture}>
       <Reanimated.View style={[cardStyles.card, cardStyle]}>
         {gem.image_url ? (
-          <Image source={{ uri: gem.image_url }} style={cardStyles.cardImage} resizeMode="cover" />
+          <Image
+            source={{ uri: gem.image_url }}
+            style={cardStyles.cardImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
         ) : (
           <View style={[cardStyles.cardImage, { backgroundColor: theme.backgroundTertiary }]} />
         )}
@@ -562,7 +568,13 @@ export default function GemSwipeScreen() {
             {nextGem && (
               <View style={[cardStyles.card, styles.nextCard]}>
                 {nextGem.image_url ? (
-                  <Image source={{ uri: nextGem.image_url }} style={cardStyles.cardImage} resizeMode="cover" />
+                  <Image
+                    source={{ uri: nextGem.image_url }}
+                    style={cardStyles.cardImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
                 ) : (
                   <View style={[cardStyles.cardImage, { backgroundColor: theme.backgroundTertiary }]} />
                 )}
