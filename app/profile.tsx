@@ -359,7 +359,7 @@ const createStyles = (theme: Theme) =>
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
   },
   scrollContent: {
@@ -410,6 +410,7 @@ const createStyles = (theme: Theme) =>
   },
   statValue: {
     fontSize: 22,
+    fontFamily: 'SpaceMono-Regular',
     fontWeight: '700',
     color: theme.text,
   },
@@ -542,7 +543,7 @@ const createStyles = (theme: Theme) =>
   },
   gemTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
     marginTop: 3,
   },

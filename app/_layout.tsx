@@ -1,17 +1,52 @@
+import { useAppFonts } from '@/lib/fonts';
+import { hasCompletedOnboarding, syncPendingPreferences } from '@/lib/onboarding';
+import { checkAndExpireTrial } from '@/lib/paywall';
 import { ThemeProvider, useTheme } from '@/lib/ThemeContext';
 import { startTracking, stopTracking } from '@/lib/locationTracker';
+import { darkTheme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
-import { Stack } from 'expo-router';
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
+
+function OnboardingGate() {
+  const router = useRouter();
+  const segments = useSegments();
+  const rootNavigationState = useRootNavigationState();
+
+  useEffect(() => {
+    if (!rootNavigationState?.key) return;
+
+    const run = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await checkAndExpireTrial();
+        await syncPendingPreferences(session.user.id);
+      }
+
+      const completed = await hasCompletedOnboarding();
+      const currentRoute = segments[0];
+      if (!completed && currentRoute !== 'onboarding' && currentRoute !== 'auth') {
+        router.replace('/onboarding');
+      }
+    };
+
+    run();
+  }, [rootNavigationState?.key, segments, router]);
+
+  return null;
+}
 
 function RootNavigator() {
   const { theme } = useTheme();
 
   return (
     <>
+      <OnboardingGate />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="auth" />
         <Stack.Screen name="discover" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
@@ -22,6 +57,8 @@ function RootNavigator() {
         <Stack.Screen name="settings" options={{ headerShown: false }} />
         <Stack.Screen name="followers" options={{ headerShown: false }} />
         <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="paywall" options={{ headerShown: false }} />
+        <Stack.Screen name="gem-swipe" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>
@@ -29,14 +66,22 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) startTracking(session.user.id);
-    });
+  const [fontsLoaded] = useAppFonts();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         startTracking(session.user.id);
+        await checkAndExpireTrial();
+        await syncPendingPreferences(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        startTracking(session.user.id);
+        await checkAndExpireTrial();
+        await syncPendingPreferences(session.user.id);
       } else {
         stopTracking();
       }
@@ -47,6 +92,10 @@ export default function RootLayout() {
       stopTracking();
     };
   }, []);
+
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: darkTheme.background }} />;
+  }
 
   return (
     <ThemeProvider>

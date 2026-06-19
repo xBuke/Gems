@@ -441,7 +441,8 @@ export default function GemDetailScreen() {
               </View>
               {gem.verified && (
                 <View style={styles.verifiedBadge}>
-                  <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
+                  <Ionicons name="checkmark-circle" size={12} color={theme.coral} />
+                  <Text style={styles.verifiedBadgeText}>Verified</Text>
                 </View>
               )}
             </View>
@@ -685,9 +686,12 @@ const createStyles = (theme: Theme) =>
     color: theme.accent,
   },
   verifiedBadge: {
-    backgroundColor: theme.accentSubtle,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.coralSubtle,
     borderWidth: 0.5,
-    borderColor: theme.accent,
+    borderColor: theme.coral,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 20,
@@ -695,12 +699,12 @@ const createStyles = (theme: Theme) =>
   verifiedBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: theme.accent,
+    color: theme.coral,
   },
   heroTitle: {
     color: theme.text,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'SpaceGrotesk-Bold',
   },
   content: {
     padding: 16,
@@ -758,6 +762,7 @@ const createStyles = (theme: Theme) =>
   locationText: {
     color: theme.textSecondary,
     fontSize: 13,
+    fontFamily: 'SpaceMono-Regular',
   },
   statsRow: {
     flexDirection: 'row',
@@ -776,6 +781,7 @@ const createStyles = (theme: Theme) =>
   statCount: {
     color: theme.text,
     fontSize: 14,
+    fontFamily: 'SpaceMono-Regular',
     fontWeight: '600',
   },
   description: {
@@ -876,6 +882,7 @@ const createStyles = (theme: Theme) =>
   commentTime: {
     color: theme.textTertiary,
     fontSize: 11,
+    fontFamily: 'SpaceMono-Regular',
   },
   commentContent: {
     color: ACCENT_MUTED,

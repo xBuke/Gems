@@ -1,4 +1,6 @@
 import { requireAuth } from '@/lib/authGuard';
+import { CATEGORIES } from '@/lib/categories';
+import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -23,18 +25,12 @@ const INITIAL_REGION = {
   longitudeDelta: 3,
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Beach: '#185FA5',
-  Graffiti: '#D85A30',
-  Viewpoint: '#BA7517',
-  Food: '#1D9E75',
-  Skate: '#534AB7',
-  Nature: '#27500A',
+const getCategoryColor = (category: string) => {
+  const match = CATEGORIES.find((c) => c.id === category);
+  return match?.color ?? '#1D9E75';
 };
 
-const getCategoryColor = (category: string) => CATEGORY_COLORS[category] ?? '#1D9E75';
-
-const CATEGORIES = ['All', 'Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
+type Category = (typeof CATEGORIES)[number];
 
 type Gem = {
   id: string;
@@ -42,6 +38,7 @@ type Gem = {
   longitude: number;
   title: string;
   category: string;
+  subcategory?: string | null;
 };
 
 type TapLocation = {
@@ -59,7 +56,8 @@ export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeMainCategory, setActiveMainCategory] = useState<Category | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [placingMode, setPlacingMode] = useState(false);
   const [tapLocation, setTapLocation] = useState<TapLocation | null>(null);
   const [tapLocationName, setTapLocationName] = useState<string | null>(null);
@@ -109,10 +107,30 @@ export default function MapScreen() {
     fetchLocationName();
   }, [tapLocation]);
 
+  const handleCategoryPress = async (cat: Category) => {
+    if (cat.premium) {
+      const isPremium = await checkIsPremium();
+      if (!isPremium) {
+        router.push('/paywall');
+        return;
+      }
+    }
+    if (activeMainCategory?.id === cat.id) {
+      setActiveMainCategory(null);
+      setActiveSubcategory(null);
+    } else {
+      setActiveMainCategory(cat);
+      setActiveSubcategory(null);
+    }
+  };
+
   const currentMapType = MAP_TYPES[mapTypeIndex];
 
-  const visibleGems =
-    activeCategory === 'All' ? gems : gems.filter((g) => g.category === activeCategory);
+  const visibleGems = gems.filter((gem) => {
+    if (activeMainCategory && gem.category !== activeMainCategory.id) return false;
+    if (activeSubcategory && gem.subcategory !== activeSubcategory) return false;
+    return true;
+  });
 
   const cycleMapType = () => {
     setMapTypeIndex((prev) => (prev + 1) % MAP_TYPES.length);
@@ -208,26 +226,114 @@ export default function MapScreen() {
         <Text style={styles.layerButtonText}>{currentMapType.label}</Text>
       </TouchableOpacity>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryBar}
-        contentContainerStyle={styles.categoryRow}>
-        {CATEGORIES.map((category) => {
-          const isActive = activeCategory === category;
-          return (
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}>
+          <TouchableOpacity
+            style={{
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+              borderRadius: 20,
+              marginRight: 10,
+              backgroundColor: activeMainCategory === null ? '#1D9E75' : 'rgba(255,255,255,0.15)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.4)',
+            }}
+            onPress={() => {
+              setActiveMainCategory(null);
+              setActiveSubcategory(null);
+            }}>
+            <Text
+              style={{
+                color: '#FFFFFF',
+                fontSize: 14,
+                fontWeight: '600',
+              }}>
+              All
+            </Text>
+          </TouchableOpacity>
+
+          {CATEGORIES.map((cat) => (
             <TouchableOpacity
-              key={category}
-              style={[styles.categoryPill, isActive && styles.categoryPillActive]}
-              onPress={() => setActiveCategory(category)}
+              key={cat.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 18,
+                paddingVertical: 10,
+                borderRadius: 20,
+                marginRight: 10,
+                backgroundColor:
+                  activeMainCategory?.id === cat.id ? cat.color : 'rgba(255,255,255,0.15)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.4)',
+              }}
+              onPress={() => handleCategoryPress(cat)}
               activeOpacity={0.7}>
-              <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
-                {category}
+              <Ionicons name={cat.icon as any} size={14} color="#FFFFFF" aria-hidden={true} />
+              <Text
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}>
+                {cat.name}
+                {cat.premium ? ' 💎' : ''}
               </Text>
             </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+          ))}
+        </ScrollView>
+
+        {activeMainCategory && (
+          <View style={{ marginBottom: 4 }}>
+            <Text
+              style={{
+                color: theme.textSecondary,
+                fontSize: 12,
+                marginBottom: 6,
+                marginLeft: 16,
+              }}>
+              Filter by:
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ paddingLeft: 16 }}>
+              {activeMainCategory.subcategories.map((sub) => (
+                <TouchableOpacity
+                  key={sub}
+                  style={{
+                    backgroundColor:
+                      activeSubcategory === sub
+                        ? activeMainCategory.color
+                        : 'rgba(255,255,255,0.15)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    borderRadius: 20,
+                    paddingHorizontal: 18,
+                    paddingVertical: 10,
+                    marginRight: 10,
+                  }}
+                  onPress={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
+                  activeOpacity={0.7}>
+                  <Text
+                    style={{
+                      color: '#FFFFFF',
+                      fontSize: 14,
+                      fontWeight: '600',
+                    }}>
+                    {sub}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+      </View>
 
       <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocation} activeOpacity={0.8}>
         <Ionicons name="locate" size={22} color={theme.accent} />
@@ -291,6 +397,12 @@ const createStyles = (theme: Theme, overlay: string) =>
       fontWeight: '500',
       color: theme.text,
     },
+    filterContainer: {
+      position: 'absolute',
+      top: 100,
+      left: 0,
+      right: 0,
+    },
     placeButton: {
       position: 'absolute',
       top: 50,
@@ -306,37 +418,6 @@ const createStyles = (theme: Theme, overlay: string) =>
       fontSize: 13,
       fontWeight: '500',
       color: theme.text,
-    },
-    categoryBar: {
-      position: 'absolute',
-      top: 105,
-      left: 0,
-      right: 0,
-    },
-    categoryRow: {
-      paddingHorizontal: 16,
-    },
-    categoryPill: {
-      backgroundColor: overlay,
-      borderWidth: 0.5,
-      borderColor: theme.border,
-      borderRadius: 20,
-      paddingVertical: 6,
-      paddingHorizontal: 14,
-      marginRight: 8,
-    },
-    categoryPillActive: {
-      backgroundColor: theme.accent,
-      borderColor: theme.accent,
-    },
-    categoryText: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: theme.text,
-    },
-    categoryTextActive: {
-      fontWeight: '600',
-      color: theme.background,
     },
     marker: {
       width: 36,
@@ -383,11 +464,12 @@ const createStyles = (theme: Theme, overlay: string) =>
       fontWeight: '600',
       marginBottom: 6,
     },
-    actionSheetLocation: {
-      color: theme.textSecondary,
-      fontSize: 13,
-      marginBottom: 16,
-    },
+  actionSheetLocation: {
+    color: theme.textSecondary,
+    fontSize: 13,
+    fontFamily: 'SpaceMono-Regular',
+    marginBottom: 16,
+  },
     actionSheetButtons: {
       flexDirection: 'row',
       gap: 10,

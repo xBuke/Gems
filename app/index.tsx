@@ -1,9 +1,13 @@
 import { requireAuth } from '@/lib/authGuard';
+import { CATEGORIES } from '@/lib/categories';
+import { PENDING_PREFS_KEY } from '@/lib/onboarding';
+import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -24,13 +28,17 @@ const IMAGE_PLACEHOLDER = '#1A5C3A';
 type Gem = {
   id: string;
   title: string;
+  description?: string | null;
   category: string;
+  subcategory?: string | null;
   image_url: string | null;
   verified: boolean;
   latitude: number;
   longitude: number;
   created_at: string;
 };
+
+type Category = (typeof CATEGORIES)[number];
 
 type GemWithProfile = Gem & {
   profiles: { username: string } | null;
@@ -95,6 +103,24 @@ export default function DiscoverScreen() {
   const [locationAvailable, setLocationAvailable] = useState(false);
   const [userCoords, setUserCoords] = useState<UserCoords | null>(null);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [activeMainCategory, setActiveMainCategory] = useState<Category | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  const [allGems, setAllGems] = useState<GemWithProfile[]>([]);
+  const [filteredGems, setFilteredGems] = useState<GemWithProfile[]>([]);
+  const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
+  const [isPremium, setIsPremium] = useState(false);
+
+  const sortByPreferences = useCallback(
+    (gems: GemWithProfile[]) => {
+      if (preferredCategories.length === 0) return gems;
+      return [...gems].sort((a, b) => {
+        const aMatch = preferredCategories.includes(a.category) ? 0 : 1;
+        const bMatch = preferredCategories.includes(b.category) ? 0 : 1;
+        return aMatch - bMatch;
+      });
+    },
+    [preferredCategories],
+  );
 
   const fetchLikeCounts = useCallback(async (gems: Gem[]) => {
     if (gems.length === 0) return;
@@ -189,6 +215,37 @@ export default function DiscoverScreen() {
   }, [fetchLikeCounts]);
 
   useEffect(() => {
+    checkIsPremium().then(setIsPremium);
+  }, []);
+
+  useEffect(() => {
+    const fetchPreferredCategories = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('preferred_categories')
+          .eq('id', user.id)
+          .single();
+        if (data?.preferred_categories?.length) {
+          setPreferredCategories(data.preferred_categories);
+        }
+        return;
+      }
+
+      const raw = await AsyncStorage.getItem(PENDING_PREFS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { preferred_categories?: string[] };
+        if (parsed.preferred_categories?.length) {
+          setPreferredCategories(parsed.preferred_categories);
+        }
+      }
+    };
+
+    fetchPreferredCategories();
+  }, []);
+
+  useEffect(() => {
     const fetchGemOfTheDay = async () => {
       const { data } = await supabase
         .from('gems')
@@ -229,6 +286,15 @@ export default function DiscoverScreen() {
         setRecentGems(data as GemWithProfile[]);
         fetchLikeCounts(data as Gem[]);
       }
+    };
+
+    const fetchAllGems = async () => {
+      const { data } = await supabase
+        .from('gems')
+        .select('*, profiles!gems_user_id_fkey(username)')
+        .eq('is_private', false);
+
+      if (data) setAllGems(data as GemWithProfile[]);
     };
 
     const fetchNearby = async () => {
@@ -274,6 +340,7 @@ export default function DiscoverScreen() {
     fetchGemOfTheDay();
     fetchTrending();
     fetchRecent();
+    fetchAllGems();
     fetchNearby();
     checkUnreadMessages();
     checkUnreadNotifications();
@@ -328,19 +395,37 @@ export default function DiscoverScreen() {
     }
   }, [feedTab, fetchFollowingGems]);
 
+  useEffect(() => {
+    let results = allGems;
+    if (activeMainCategory) {
+      results = results.filter((g) => g.category === activeMainCategory.id);
+    }
+    if (activeSubcategory) {
+      results = results.filter((g) => g.subcategory === activeSubcategory);
+    }
+    if (searchQuery.trim()) {
+      results = results.filter(
+        (g) =>
+          g.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          g.description?.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+    }
+    setFilteredGems(results);
+  }, [activeMainCategory, activeSubcategory, searchQuery, allGems]);
+
   const filteredGemOfTheDay = useMemo(
     () => (gemOfTheDay && matchesSearch(gemOfTheDay, searchQuery) ? gemOfTheDay : null),
     [gemOfTheDay, searchQuery],
   );
 
   const filteredTrendingGems = useMemo(
-    () => trendingGems.filter((gem) => matchesSearch(gem, searchQuery)),
-    [trendingGems, searchQuery],
+    () => sortByPreferences(trendingGems.filter((gem) => matchesSearch(gem, searchQuery))),
+    [trendingGems, searchQuery, sortByPreferences],
   );
 
   const filteredRecentGems = useMemo(
-    () => recentGems.filter((gem) => matchesSearch(gem, searchQuery)),
-    [recentGems, searchQuery],
+    () => sortByPreferences(recentGems.filter((gem) => matchesSearch(gem, searchQuery))),
+    [recentGems, searchQuery, sortByPreferences],
   );
 
   const filteredNearbyGems = useMemo(
@@ -348,25 +433,50 @@ export default function DiscoverScreen() {
     [nearbyGems, searchQuery],
   );
 
-  const filteredFollowingGems = useMemo(
-    () => followingGems.filter((gem) => matchesSearch(gem, searchQuery)),
-    [followingGems, searchQuery],
-  );
+  const filteredFollowingGems = useMemo(() => {
+    const filteredIds = new Set(filteredGems.map((g) => g.id));
+    return followingGems.filter(
+      (gem) => matchesSearch(gem, searchQuery) && filteredIds.has(gem.id),
+    );
+  }, [followingGems, searchQuery, filteredGems]);
+
+  const handleCategoryPress = async (cat: Category) => {
+    if (cat.premium) {
+      const isPremium = await checkIsPremium();
+      if (!isPremium) {
+        router.push('/paywall');
+        return;
+      }
+    }
+    if (activeMainCategory?.id === cat.id) {
+      setActiveMainCategory(null);
+      setActiveSubcategory(null);
+    } else {
+      setActiveMainCategory(cat);
+      setActiveSubcategory(null);
+    }
+  };
+
+  const handleGemSwipePress = async () => {
+    const proceed = await requireAuth('/gem-swipe');
+    if (!proceed) return;
+    router.push('/gem-swipe');
+  };
 
   const handleMessagesPress = async () => {
-    const proceed = await requireAuth();
+    const proceed = await requireAuth('/messages');
     if (!proceed) return;
     router.push('/messages');
   };
 
   const handleNotifications = async () => {
-    const proceed = await requireAuth();
+    const proceed = await requireAuth('/notifications');
     if (!proceed) return;
     router.push('/notifications');
   };
 
   const handleProfile = async () => {
-    const proceed = await requireAuth();
+    const proceed = await requireAuth('/profile');
     if (!proceed) return;
     router.push('/profile');
   };
@@ -553,13 +663,26 @@ export default function DiscoverScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Discover</Text>
-        <TouchableOpacity
-          style={styles.messagesButton}
-          onPress={handleMessagesPress}
-          activeOpacity={0.7}>
-          <Ionicons name="chatbubble-outline" size={24} color={theme.text} />
-          {hasUnreadMessages && <View style={styles.unreadDot} />}
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleGemSwipePress}
+            activeOpacity={0.7}>
+            <Ionicons
+              name="layers-outline"
+              size={22}
+              color={isPremium ? theme.coral : theme.text}
+            />
+            {!isPremium && <View style={styles.proBadgeDot} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleMessagesPress}
+            activeOpacity={0.7}>
+            <Ionicons name="chatbubble-outline" size={24} color={theme.text} />
+            {hasUnreadMessages && <View style={styles.unreadDot} />}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchBar}>
@@ -572,6 +695,108 @@ export default function DiscoverScreen() {
           onChangeText={setSearchQuery}
         />
       </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}>
+        <TouchableOpacity
+          style={{
+            paddingHorizontal: 18,
+            paddingVertical: 10,
+            borderRadius: 20,
+            marginRight: 10,
+            backgroundColor: activeMainCategory === null ? '#1D9E75' : 'rgba(255,255,255,0.15)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.4)',
+          }}
+          onPress={() => {
+            setActiveMainCategory(null);
+            setActiveSubcategory(null);
+          }}>
+          <Text
+            style={{
+              color: '#FFFFFF',
+              fontSize: 14,
+              fontWeight: '600',
+            }}>
+            All
+          </Text>
+        </TouchableOpacity>
+
+        {CATEGORIES.map((cat) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+              borderRadius: 20,
+              marginRight: 10,
+              backgroundColor: activeMainCategory?.id === cat.id ? cat.color : 'rgba(255,255,255,0.15)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.4)',
+            }}
+            onPress={() => handleCategoryPress(cat)}>
+            <Ionicons name={cat.icon as any} size={14} color="#FFFFFF" aria-hidden={true} />
+            <Text
+              style={{
+                color: '#FFFFFF',
+                fontSize: 14,
+                fontWeight: '600',
+              }}>
+              {cat.name}
+              {cat.premium ? ' 💎' : ''}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {activeMainCategory && (
+        <View style={{ marginVertical: 10 }}>
+          <Text
+            style={{
+              color: theme.textSecondary,
+              fontSize: 12,
+              marginBottom: 6,
+              marginLeft: 16,
+            }}>
+            Filter by:
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ paddingLeft: 16 }}>
+            {activeMainCategory.subcategories.map((sub) => (
+              <TouchableOpacity
+                key={sub}
+                style={{
+                  backgroundColor: activeSubcategory === sub ? activeMainCategory.color : 'rgba(255,255,255,0.15)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  borderRadius: 20,
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  marginRight: 10,
+                }}
+                onPress={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
+                activeOpacity={0.7}>
+                <Text
+                  style={{
+                    color: '#FFFFFF',
+                    fontSize: 14,
+                    fontWeight: '600',
+                  }}>
+                  {sub}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <View style={styles.feedTabContainer}>
         <TouchableOpacity
@@ -612,7 +837,7 @@ export default function DiscoverScreen() {
                   router.push('/map');
                   setActiveTab(tab.key);
                 } else if (tab.key === 'add') {
-                  const proceed = await requireAuth();
+                  const proceed = await requireAuth('/add-gem');
                   if (!proceed) return;
                   router.push('/add-gem');
                   setActiveTab(tab.key);
@@ -664,12 +889,26 @@ const createStyles = (theme: Theme) =>
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
   },
-  messagesButton: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconButton: {
     position: 'relative',
     padding: 4,
+  },
+  proBadgeDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.coral,
   },
   unreadDot: {
     position: 'absolute',
@@ -762,15 +1001,15 @@ const createStyles = (theme: Theme) =>
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: theme.accent,
+    backgroundColor: theme.coral,
     borderRadius: 4,
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
   heroLabelText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: theme.text,
+    fontFamily: 'SpaceGrotesk-Bold',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   heroBottom: {
@@ -789,12 +1028,13 @@ const createStyles = (theme: Theme) =>
   },
   heroTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
     marginBottom: 4,
   },
   heroMeta: {
     fontSize: 12,
+    fontFamily: 'SpaceMono-Regular',
     color: ACCENT_MUTED,
   },
   trendingRow: {
@@ -832,7 +1072,7 @@ const createStyles = (theme: Theme) =>
   },
   trendingTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
   },
   trendingUserRow: {
@@ -913,7 +1153,7 @@ const createStyles = (theme: Theme) =>
   },
   listCardTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
   },
   listCardUsername: {
@@ -932,6 +1172,7 @@ const createStyles = (theme: Theme) =>
   },
   listCardMetaText: {
     fontSize: 11,
+    fontFamily: 'SpaceMono-Regular',
     color: theme.textSecondary,
   },
   listCardMetaDivider: {

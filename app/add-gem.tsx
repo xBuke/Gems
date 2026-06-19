@@ -1,4 +1,6 @@
 import { requireAuth } from '@/lib/authGuard';
+import { CATEGORIES, TAGS } from '@/lib/categories';
+import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
@@ -25,19 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ACCENT_MUTED = '#A8D5BA';
 
-const CATEGORIES = ['Beach', 'Graffiti', 'Viewpoint', 'Food', 'Skate', 'Nature'] as const;
-
-const CATEGORY_CONFIG: Record<
-  string,
-  { icon: keyof typeof Ionicons.glyphMap; color: string }
-> = {
-  Beach: { icon: 'water', color: '#185FA5' },
-  Graffiti: { icon: 'color-palette', color: '#D85A30' },
-  Viewpoint: { icon: 'eye', color: '#BA7517' },
-  Food: { icon: 'restaurant', color: '#1D9E75' },
-  Skate: { icon: 'bicycle', color: '#534AB7' },
-  Nature: { icon: 'leaf', color: '#27500A' },
-};
+type Category = (typeof CATEGORIES)[number];
 
 type LocationChoice = 'here' | 'else';
 
@@ -83,7 +73,9 @@ export default function AddGemScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Beach');
+  const [selectedMainCategory, setSelectedMainCategory] = useState<Category | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationDetected, setLocationDetected] = useState(false);
@@ -197,7 +189,9 @@ export default function AddGemScreen() {
     const { error } = await supabase.from('gems').insert({
       title: name.trim(),
       description: description.trim(),
-      category: selectedCategory,
+      category: selectedMainCategory!.id,
+      subcategory: selectedSubcategory,
+      tags: selectedTags.length > 0 ? selectedTags : null,
       latitude,
       longitude,
       user_id: user.id,
@@ -213,12 +207,52 @@ export default function AddGemScreen() {
     Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace('/map') }]);
   };
 
+  const handleCategorySelect = async (category: Category) => {
+    if (category.premium) {
+      const allowed = await canUseCategory(category.id);
+      if (!allowed) {
+        Alert.alert('This is a Premium category', undefined, [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go Premium', onPress: () => router.push('/paywall') },
+        ]);
+        return;
+      }
+    }
+    setSelectedMainCategory(category);
+    setSelectedSubcategory(null);
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
+
   const handleSubmit = async () => {
     const proceed = await requireAuth();
     if (!proceed) return;
 
+    const { allowed, reason } = await canAddGem();
+    if (!allowed) {
+      Alert.alert('Upgrade to Premium', reason, [
+        { text: 'Maybe later', style: 'cancel' },
+        { text: 'Go Premium', onPress: () => router.push('/paywall') },
+      ]);
+      return;
+    }
+
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a gem name.');
+      return;
+    }
+
+    if (!selectedMainCategory) {
+      Alert.alert('Error', 'Please select a category.');
+      return;
+    }
+
+    if (!selectedSubcategory) {
+      Alert.alert('Error', 'Please select a subcategory.');
       return;
     }
 
@@ -348,18 +382,74 @@ export default function AddGemScreen() {
               <Text style={styles.fieldLabel}>Category</Text>
               <View style={styles.categoryGrid}>
                 {CATEGORIES.map((category) => {
-                  const isSelected = selectedCategory === category;
-                  const config = CATEGORY_CONFIG[category];
+                  const isSelected = selectedMainCategory?.id === category.id;
                   return (
-                    <View key={category} style={styles.categoryItemWrap}>
+                    <View key={category.id} style={styles.categoryItemWrap}>
                       <TouchableOpacity
                         style={[styles.categoryItem, isSelected && styles.categoryItemSelected]}
-                        onPress={() => setSelectedCategory(category)}
+                        onPress={() => handleCategorySelect(category)}
                         activeOpacity={0.7}>
-                        <Ionicons name={config.icon} size={22} color={config.color} />
-                        <Text style={styles.categoryName}>{category}</Text>
+                        <Ionicons
+                          name={category.icon as keyof typeof Ionicons.glyphMap}
+                          size={22}
+                          color={category.color}
+                        />
+                        <Text style={styles.categoryName}>{category.name}</Text>
+                        {category.premium && (
+                          <View style={styles.proBadge}>
+                            <Text style={styles.proBadgeText}>PRO</Text>
+                          </View>
+                        )}
                       </TouchableOpacity>
                     </View>
+                  );
+                })}
+              </View>
+
+              {selectedMainCategory && (
+                <>
+                  <Text style={styles.fieldLabel}>Subcategory</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.subcategoryScroll}
+                    contentContainerStyle={styles.subcategoryRow}>
+                    {selectedMainCategory.subcategories.map((sub) => {
+                      const isSelected = selectedSubcategory === sub;
+                      return (
+                        <TouchableOpacity
+                          key={sub}
+                          style={[styles.subcategoryPill, isSelected && styles.subcategoryPillSelected]}
+                          onPress={() => setSelectedSubcategory(sub)}
+                          activeOpacity={0.7}>
+                          <Text
+                            style={[
+                              styles.subcategoryPillText,
+                              isSelected && styles.subcategoryPillTextSelected,
+                            ]}>
+                            {sub}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </>
+              )}
+
+              <Text style={styles.fieldLabel}>Tags (optional)</Text>
+              <View style={styles.tagsGrid}>
+                {TAGS.map((tag) => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <TouchableOpacity
+                      key={tag}
+                      style={[styles.tagPill, isSelected && styles.tagPillSelected]}
+                      onPress={() => toggleTag(tag)}
+                      activeOpacity={0.7}>
+                      <Text style={[styles.tagPillText, isSelected && styles.tagPillTextSelected]}>
+                        {tag}
+                      </Text>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
@@ -522,7 +612,7 @@ const createStyles = (theme: Theme) =>
     marginBottom: 16,
   },
   categoryItemWrap: {
-    width: '33.333%',
+    width: '50%',
     padding: 4,
   },
   categoryItem: {
@@ -533,6 +623,7 @@ const createStyles = (theme: Theme) =>
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   categoryItemSelected: {
     backgroundColor: theme.accentSubtle,
@@ -542,6 +633,75 @@ const createStyles = (theme: Theme) =>
     color: theme.text,
     fontSize: 12,
     marginTop: 4,
+    textAlign: 'center',
+  },
+  proBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  proBadgeText: {
+    color: '#FFD700',
+    fontSize: 8,
+    fontWeight: '700',
+  },
+  subcategoryScroll: {
+    marginBottom: 16,
+  },
+  subcategoryRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  subcategoryPill: {
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  subcategoryPillSelected: {
+    backgroundColor: theme.accentSubtle,
+    borderColor: theme.accent,
+  },
+  subcategoryPillText: {
+    color: theme.text,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  subcategoryPillTextSelected: {
+    color: theme.accent,
+    fontWeight: '600',
+  },
+  tagsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  tagPill: {
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  tagPillSelected: {
+    backgroundColor: '#0F3D25',
+    borderColor: '#1D9E75',
+  },
+  tagPillText: {
+    color: theme.text,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  tagPillTextSelected: {
+    color: '#1D9E75',
   },
   locationStatus: {
     flexDirection: 'row',

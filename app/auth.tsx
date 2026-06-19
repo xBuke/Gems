@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { supabase } from '@/lib/supabase';
 
@@ -21,6 +21,7 @@ type AuthMode = 'login' | 'register';
 
 export default function AuthScreen() {
   const router = useRouter();
+  const { redirectTo } = useLocalSearchParams();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [mode, setMode] = useState<AuthMode>('login');
@@ -51,7 +52,7 @@ export default function AuthScreen() {
       return;
     }
 
-    router.replace('/');
+    router.replace(redirectTo ? String(redirectTo) : '/');
   };
 
   const handleRegister = async () => {
@@ -83,7 +84,7 @@ export default function AuthScreen() {
     }
 
     setLoading(false);
-    router.replace('/');
+    router.replace(redirectTo ? String(redirectTo) : '/');
   };
 
   return (
