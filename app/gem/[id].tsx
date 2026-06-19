@@ -3,16 +3,19 @@ import {
   GEM_SELECT_WITH_COMMUNITY,
   type CommunityGemInfo,
 } from '@/lib/gemVisibility';
+import { blockUser, getMyBlockedUsers } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
 import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
+import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Image,
@@ -52,6 +55,7 @@ type Gem = {
 
 type Comment = {
   id: string;
+  user_id: string;
   content: string;
   created_at: string;
   profiles: { username: string } | null;
@@ -90,6 +94,13 @@ export default function GemDetailScreen() {
   const [commentLikes, setCommentLikes] = useState<Record<string, CommentLikeState>>({});
   const [isOwner, setIsOwner] = useState(false);
   const [locationName, setLocationName] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [reportVisible, setReportVisible] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{
+    type: 'gem' | 'comment';
+    id: string;
+  } | null>(null);
 
   const gemId = Array.isArray(id) ? id[0] : id;
 
@@ -127,6 +138,18 @@ export default function GemDetailScreen() {
     setCommentLikes(likesMap);
   };
 
+  const fetchBlockedUsers = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setCurrentUserId(null);
+      setBlockedUserIds([]);
+      return;
+    }
+    setCurrentUserId(user.id);
+    const blocked = await getMyBlockedUsers(user.id);
+    setBlockedUserIds(blocked.map((b: { blocked_id: string }) => b.blocked_id));
+  }, []);
+
   const fetchComments = useCallback(async () => {
     if (!gemId) return;
 
@@ -137,10 +160,13 @@ export default function GemDetailScreen() {
       .order('created_at', { ascending: true });
 
     if (commentsData) {
-      setComments(commentsData);
-      await fetchCommentLikes(commentsData.map((comment) => comment.id));
+      const filtered = commentsData.filter(
+        (comment: Comment) => !blockedUserIds.includes(comment.user_id),
+      );
+      setComments(filtered);
+      await fetchCommentLikes(filtered.map((comment: Comment) => comment.id));
     }
-  }, [gemId]);
+  }, [gemId, blockedUserIds]);
 
   const fetchGem = useCallback(async () => {
     if (!id) return;
@@ -192,19 +218,22 @@ export default function GemDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      fetchBlockedUsers();
       fetchGem();
-      fetchComments();
       fetchVisitCount();
       fetchLikes();
-    }, [fetchGem, fetchComments, fetchLikes]),
+    }, [fetchBlockedUsers, fetchGem, fetchLikes]),
   );
 
   useEffect(() => {
-    if (gemId) {
+    fetchComments();
+  }, [fetchComments]);
+
+  useFocusEffect(
+    useCallback(() => {
       fetchComments();
-      fetchVisitCount();
-    }
-  }, [gemId, fetchComments]);
+    }, [fetchComments]),
+  );
 
   useEffect(() => {
     fetchLikes();
@@ -421,6 +450,90 @@ export default function GemDetailScreen() {
     }
   };
 
+  const openReportSheet = (type: 'gem' | 'comment', targetId: string) => {
+    setReportTarget({ type, id: targetId });
+    setReportVisible(true);
+  };
+
+  const confirmBlockUser = (blockedId: string, blockedUsername: string) => {
+    if (!currentUserId) return;
+
+    Alert.alert(
+      `Block @${blockedUsername}?`,
+      'They won\'t be able to see your content and you won\'t see theirs.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            await blockUser(currentUserId, blockedId);
+            router.back();
+          },
+        },
+      ],
+    );
+  };
+
+  const showGemMenu = () => {
+    if (!gem || isOwner) return;
+
+    const gemUsername = gem.profiles?.username ?? 'unknown';
+    const options = [`Report Gem`, `Block @${gemUsername}`, 'Cancel'];
+    const cancelIndex = 2;
+
+    const handleSelection = (index: number) => {
+      if (index === 0) openReportSheet('gem', gem.id);
+      if (index === 1) confirmBlockUser(gem.user_id, gemUsername);
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: 1 },
+        handleSelection,
+      );
+    } else {
+      Alert.alert('Options', undefined, [
+        { text: 'Report Gem', onPress: () => openReportSheet('gem', gem.id) },
+        {
+          text: `Block @${gemUsername}`,
+          style: 'destructive',
+          onPress: () => confirmBlockUser(gem.user_id, gemUsername),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
+  const showCommentMenu = (comment: Comment) => {
+    const commentUsername = comment.profiles?.username ?? 'user';
+
+    const options = ['Report Comment', `Block @${commentUsername}`, 'Cancel'];
+    const cancelIndex = 2;
+
+    const handleSelection = (index: number) => {
+      if (index === 0) openReportSheet('comment', comment.id);
+      if (index === 1) confirmBlockUser(comment.user_id, commentUsername);
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: 1 },
+        handleSelection,
+      );
+    } else {
+      Alert.alert('Options', undefined, [
+        { text: 'Report Comment', onPress: () => openReportSheet('comment', comment.id) },
+        {
+          text: `Block @${commentUsername}`,
+          style: 'destructive',
+          onPress: () => confirmBlockUser(comment.user_id, commentUsername),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -594,7 +707,17 @@ export default function GemDetailScreen() {
                   <View style={styles.commentBody}>
                     <View style={styles.commentHeader}>
                       <Text style={styles.commentUsername}>{commentUsername}</Text>
-                      <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
+                      <View style={styles.commentHeaderRight}>
+                        <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
+                        {currentUserId && comment.user_id !== currentUserId && (
+                          <TouchableOpacity
+                            onPress={() => showCommentMenu(comment)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            activeOpacity={0.7}>
+                            <Ionicons name="ellipsis-horizontal" size={14} color={theme.textTertiary} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                     <Text style={styles.commentContent}>{comment.content}</Text>
                     <View style={styles.commentLikeWrap}>
@@ -623,6 +746,11 @@ export default function GemDetailScreen() {
           <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerRight}>
+          {!isOwner && (
+            <TouchableOpacity style={styles.headerButton} onPress={showGemMenu} activeOpacity={0.8}>
+              <Ionicons name="ellipsis-horizontal" size={18} color={theme.text} />
+            </TouchableOpacity>
+          )}
           {isOwner && (
             <TouchableOpacity style={styles.headerButton} onPress={confirmDelete} activeOpacity={0.8}>
               <Ionicons name="trash-outline" size={18} color={theme.danger} />
@@ -649,6 +777,19 @@ export default function GemDetailScreen() {
           <Ionicons name="send" size={18} color={theme.background} />
         </TouchableOpacity>
       </SafeAreaView>
+
+      {currentUserId && reportTarget && (
+        <ReportSheet
+          visible={reportVisible}
+          onClose={() => {
+            setReportVisible(false);
+            setReportTarget(null);
+          }}
+          targetType={reportTarget.type}
+          targetId={reportTarget.id}
+          reporterId={currentUserId}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -974,6 +1115,11 @@ const createStyles = (theme: Theme) =>
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  commentHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   commentUsername: {
     color: theme.text,

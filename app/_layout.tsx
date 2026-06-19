@@ -57,10 +57,13 @@ function RootNavigator() {
         <Stack.Screen name="chat" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="blocked-users" options={{ headerShown: false }} />
+        <Stack.Screen name="edit-hometown" options={{ headerShown: false }} />
         <Stack.Screen name="followers" options={{ headerShown: false }} />
         <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="paywall" options={{ headerShown: false }} />
         <Stack.Screen name="gem-swipe" options={{ headerShown: false }} />
+        <Stack.Screen name="trip-planner" options={{ headerShown: false }} />
         <Stack.Screen name="communities" options={{ headerShown: false }} />
         <Stack.Screen name="create-community" options={{ headerShown: false }} />
         <Stack.Screen name="community/[id]" options={{ headerShown: false }} />

@@ -1,10 +1,14 @@
+import { blockUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActionSheetIOS,
+  Alert,
   Dimensions,
   FlatList,
   KeyboardAvoidingView,
@@ -87,6 +91,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
   const listRef = useRef<FlatList>(null);
 
   const chatItems = useMemo(() => buildChatItems(messages), [messages]);
@@ -210,6 +215,67 @@ export default function ChatScreen() {
     router.push('/profile?userId=' + userId);
   };
 
+  const showChatMenu = () => {
+    if (!myId || !userId) return;
+
+    const options = ['Report User', 'Block User', 'Cancel'];
+    const cancelIndex = 2;
+
+    const handleSelection = (index: number) => {
+      if (index === 0) setReportVisible(true);
+      if (index === 1) {
+        Alert.alert(
+          `Block ${displayName}?`,
+          'They won\'t be able to message you and you won\'t see their content.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Block',
+              style: 'destructive',
+              onPress: async () => {
+                await blockUser(myId, userId);
+                router.back();
+              },
+            },
+          ],
+        );
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: 1 },
+        handleSelection,
+      );
+    } else {
+      Alert.alert('Options', undefined, [
+        { text: 'Report User', onPress: () => setReportVisible(true) },
+        {
+          text: 'Block User',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              `Block ${displayName}?`,
+              'They won\'t be able to message you and you won\'t see their content.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await blockUser(myId, userId);
+                    router.back();
+                  },
+                },
+              ],
+            );
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
   const displayName = typeof username === 'string' ? username : 'User';
   const initial = displayName.charAt(0).toUpperCase();
   const canSend = inputText.trim().length > 0 && !sending;
@@ -259,9 +325,9 @@ export default function ChatScreen() {
           </View>
           <Text style={styles.headerUsername}>{displayName}</Text>
         </TouchableOpacity>
-        <View style={styles.headerSideRight}>
+        <TouchableOpacity onPress={showChatMenu} activeOpacity={0.7} style={styles.headerSideRight}>
           <Ionicons name="ellipsis-horizontal" size={22} color={theme.textSecondary} />
-        </View>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -300,6 +366,16 @@ export default function ChatScreen() {
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      {myId && userId && (
+        <ReportSheet
+          visible={reportVisible}
+          onClose={() => setReportVisible(false)}
+          targetType="user"
+          targetId={userId}
+          reporterId={myId}
+        />
+      )}
     </SafeAreaView>
   );
 }

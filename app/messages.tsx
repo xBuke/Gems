@@ -1,3 +1,4 @@
+import { getMyBlockedUsers } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -77,11 +78,16 @@ export default function MessagesScreen() {
       return;
     }
 
+    const blocked = await getMyBlockedUsers(user.id);
+    const blockedIds = new Set(blocked.map((b: { blocked_id: string }) => b.blocked_id));
+
     const conversationMap = new Map<string, Conversation>();
 
     for (const message of messages as Message[]) {
       const isSentByMe = message.sender_id === user.id;
       const otherUserId = isSentByMe ? message.receiver_id : message.sender_id;
+
+      if (blockedIds.has(otherUserId)) continue;
       const otherUsername = isSentByMe
         ? message.receiver?.username ?? 'Unknown'
         : message.sender?.username ?? 'Unknown';

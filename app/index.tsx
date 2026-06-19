@@ -12,6 +12,8 @@ import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { getDistance } from '@/lib/distance';
+import { getMysteryGemOfTheWeek } from '@/lib/mysteryGem';
+import { getMyBlockedUsers } from '@/lib/safety';
 import { consumeLastStreakResult } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +56,7 @@ type Gem = {
 type Category = (typeof CATEGORIES)[number];
 
 type GemWithProfile = Gem & {
+  user_id: string;
   profiles: { username: string } | null;
   community_id?: string | null;
   communities?: CommunityGemInfo | null;
@@ -110,6 +113,7 @@ export default function DiscoverScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [mysteryGem, setMysteryGem] = useState<GemWithProfile | null>(null);
   const [gemOfTheDay, setGemOfTheDay] = useState<GemWithProfile | null>(null);
   const [trendingGems, setTrendingGems] = useState<GemWithProfile[]>([]);
   const [recentGems, setRecentGems] = useState<GemWithProfile[]>([]);
@@ -252,10 +256,14 @@ export default function DiscoverScreen() {
       return;
     }
 
+    const blocked = await getMyBlockedUsers(user.id);
+    const blockedIds = new Set(blocked.map((b: { blocked_id: string }) => b.blocked_id));
+
     const { data: followingIds } = await supabase
       .from('follows')
       .select('following_id')
-      .eq('follower_id', user.id);
+      .eq('follower_id', user.id)
+      .eq('status', 'accepted');
 
     if (!followingIds || followingIds.length === 0) {
       setFollowingGems([]);
@@ -275,12 +283,30 @@ export default function DiscoverScreen() {
     const { data: gems } = await query;
 
     if (gems) {
-      setFollowingGems(gems as GemWithProfile[]);
-      fetchLikeCounts(gems as Gem[]);
+      const filtered = (gems as GemWithProfile[]).filter((g) => !blockedIds.has(g.user_id));
+      setFollowingGems(filtered);
+      fetchLikeCounts(filtered as Gem[]);
     }
   }, [fetchLikeCounts]);
 
   const refreshDiscoverData = useCallback(async (myCommunityIds: string[] = []) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const blocked = user ? await getMyBlockedUsers(user.id) : [];
+    const blockedIds = new Set(blocked.map((b: { blocked_id: string }) => b.blocked_id));
+
+    const filterBlocked = <T extends { user_id: string }>(gems: T[]): T[] =>
+      gems.filter((g) => !blockedIds.has(g.user_id));
+
+    const fetchMysteryGem = async () => {
+      const gem = await getMysteryGemOfTheWeek();
+      if (gem && !blockedIds.has(gem.user_id)) {
+        setMysteryGem(gem as GemWithProfile);
+        fetchLikeCounts([gem as Gem]);
+      } else {
+        setMysteryGem(null);
+      }
+    };
+
     const fetchGemOfTheDay = async () => {
       let query = supabase
         .from('gems')
@@ -293,9 +319,14 @@ export default function DiscoverScreen() {
       const { data } = await query;
 
       if (data && data.length > 0) {
-        const random = data[Math.floor(Math.random() * data.length)] as GemWithProfile;
-        setGemOfTheDay(random);
-        fetchLikeCounts([random]);
+        const eligible = filterBlocked(data as GemWithProfile[]);
+        if (eligible.length > 0) {
+          const random = eligible[Math.floor(Math.random() * eligible.length)];
+          setGemOfTheDay(random);
+          fetchLikeCounts([random]);
+        } else {
+          setGemOfTheDay(null);
+        }
       }
     };
 
@@ -312,8 +343,9 @@ export default function DiscoverScreen() {
       const { data } = await query;
 
       if (data) {
-        setTrendingGems(data as GemWithProfile[]);
-        fetchLikeCounts(data as Gem[]);
+        const filtered = filterBlocked(data as GemWithProfile[]);
+        setTrendingGems(filtered);
+        fetchLikeCounts(filtered as Gem[]);
       }
     };
 
@@ -330,8 +362,9 @@ export default function DiscoverScreen() {
       const { data } = await query;
 
       if (data) {
-        setRecentGems(data as GemWithProfile[]);
-        fetchLikeCounts(data as Gem[]);
+        const filtered = filterBlocked(data as GemWithProfile[]);
+        setRecentGems(filtered);
+        fetchLikeCounts(filtered as Gem[]);
       }
     };
 
@@ -345,7 +378,7 @@ export default function DiscoverScreen() {
 
       const { data } = await query;
 
-      if (data) setAllGems(data as GemWithProfile[]);
+      if (data) setAllGems(filterBlocked(data as GemWithProfile[]));
     };
 
     const fetchNearby = async () => {
@@ -373,7 +406,7 @@ export default function DiscoverScreen() {
       const { data } = await query;
 
       if (data) {
-        const nearby = (data as GemWithProfile[])
+        const nearby = filterBlocked(data as GemWithProfile[])
           .map((gem) => ({
             gem,
             distance: getDistance(
@@ -392,6 +425,7 @@ export default function DiscoverScreen() {
       }
     };
 
+    fetchMysteryGem();
     fetchGemOfTheDay();
     fetchTrending();
     fetchRecent();
@@ -597,6 +631,12 @@ export default function DiscoverScreen() {
     router.push('/gem-swipe');
   };
 
+  const handleTripPlannerPress = async () => {
+    const proceed = await requireAuth('/trip-planner');
+    if (!proceed) return;
+    router.push('/trip-planner');
+  };
+
   const handleMessagesPress = async () => {
     const proceed = await requireAuth('/messages');
     if (!proceed) return;
@@ -755,8 +795,53 @@ export default function DiscoverScreen() {
     );
   };
 
+  const renderMysteryGemCard = () => {
+    if (!mysteryGem) return null;
+
+    const username = mysteryGem.profiles?.username ?? 'unknown';
+
+    return (
+      <TouchableOpacity
+        style={styles.mysteryCard}
+        onPress={() => router.push('/gem/' + mysteryGem.id)}
+        activeOpacity={0.85}>
+        {mysteryGem.image_url ? (
+          <Image source={{ uri: mysteryGem.image_url }} style={styles.mysteryImage} />
+        ) : (
+          <View style={styles.mysteryPlaceholder}>
+            <View style={[styles.mysteryPlaceholderBase, { backgroundColor: theme.card }]} />
+            <View
+              style={[
+                styles.mysteryPlaceholderGradient,
+                { backgroundColor: theme.backgroundTertiary },
+              ]}
+            />
+          </View>
+        )}
+        <View style={styles.mysteryOverlayBottom} />
+        <View style={styles.mysteryBadge}>
+          <Ionicons name="sparkles" size={12} color="#FFFFFF" />
+          <Text style={styles.mysteryBadgeText}>MYSTERY GEM OF THE WEEK</Text>
+        </View>
+        <View style={styles.mysteryBottom}>
+          <Text style={styles.mysteryTitle} numberOfLines={2}>
+            {mysteryGem.title}
+          </Text>
+          <View style={styles.mysteryMetaRow}>
+            <Ionicons name="heart" size={11} color="rgba(255,255,255,0.85)" />
+            <Text style={styles.mysteryMetaText}>
+              {likeCounts[mysteryGem.id] ?? 0} · @{username}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   const renderForYouContent = () => (
     <>
+      {renderMysteryGemCard()}
+
       {filteredGemOfTheDay && (
         <>
           <Text style={styles.sectionTitle}>Gem of the Day</Text>
@@ -866,6 +951,13 @@ export default function DiscoverScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.title}>Discover</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleTripPlannerPress}
+            activeOpacity={0.7}>
+            <Ionicons name="airplane-outline" size={22} color={theme.text} />
+            {!isPremium && <View style={styles.proBadgeDot} />}
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIconButton}
             onPress={handleGemSwipePress}
@@ -1238,6 +1330,79 @@ const createStyles = (theme: Theme) =>
     fontWeight: '600',
     color: theme.text,
     marginBottom: 12,
+  },
+  mysteryCard: {
+    width: '100%',
+    height: 160,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+    position: 'relative',
+  },
+  mysteryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  mysteryPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mysteryPlaceholderBase: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mysteryPlaceholderGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '65%',
+  },
+  mysteryOverlayBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  mysteryBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.coral,
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  mysteryBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  mysteryBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+  },
+  mysteryTitle: {
+    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 18,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  mysteryMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  mysteryMetaText: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.85)',
   },
   heroCard: {
     width: '100%',

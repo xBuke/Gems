@@ -51,7 +51,8 @@ export default function FollowersScreen() {
       const { data: myFollows } = await supabase
         .from('follows')
         .select('following_id')
-        .eq('follower_id', user.id);
+        .eq('follower_id', user.id)
+        .eq('status', 'accepted');
 
       setFollowingIds(new Set((myFollows ?? []).map((f: { following_id: string }) => f.following_id)));
     }
@@ -60,7 +61,8 @@ export default function FollowersScreen() {
       const { data } = await supabase
         .from('follows')
         .select('*, follower:profiles!follows_follower_id_fkey(id, username)')
-        .eq('following_id', userId);
+        .eq('following_id', userId)
+        .eq('status', 'accepted');
 
       const list = (data as FollowRow[] | null)?.map((row) => row.follower).filter(Boolean) as ProfileSummary[];
       setUsers(list ?? []);
@@ -68,7 +70,8 @@ export default function FollowersScreen() {
       const { data } = await supabase
         .from('follows')
         .select('*, following:profiles!follows_following_id_fkey(id, username)')
-        .eq('follower_id', userId);
+        .eq('follower_id', userId)
+        .eq('status', 'accepted');
 
       const list = (data as FollowRow[] | null)?.map((row) => row.following).filter(Boolean) as ProfileSummary[];
       setUsers(list ?? []);

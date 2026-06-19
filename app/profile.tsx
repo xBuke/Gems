@@ -1,15 +1,19 @@
 import { requireAuth } from '@/lib/authGuard';
 import type { CustomCategory } from '@/lib/customCategories';
 import { checkIsPremium } from '@/lib/paywall';
+import { blockUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import {
+  ActionSheetIOS,
   Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +28,13 @@ type Profile = {
   id: string;
   username: string;
   current_streak?: number;
+  is_private?: boolean;
+};
+
+type FollowRequest = {
+  id: string;
+  follower_id: string;
+  follower: { username: string } | null;
 };
 
 type Gem = {
@@ -53,8 +64,12 @@ export default function ProfileScreen() {
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isRequested, setIsRequested] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
+  const [followRequests, setFollowRequests] = useState<FollowRequest[]>([]);
+  const [followRequestsExpanded, setFollowRequestsExpanded] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
 
   const fetchMyCustomCategories = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -111,12 +126,14 @@ export default function ProfileScreen() {
     const { count: following } = await supabase
       .from('follows')
       .select('*', { count: 'exact', head: true })
-      .eq('follower_id', profileId);
+      .eq('follower_id', profileId)
+      .eq('status', 'accepted');
 
     const { count: followers } = await supabase
       .from('follows')
       .select('*', { count: 'exact', head: true })
-      .eq('following_id', profileId);
+      .eq('following_id', profileId)
+      .eq('status', 'accepted');
 
     setFollowingCount(following ?? 0);
     setFollowersCount(followers ?? 0);
@@ -124,13 +141,25 @@ export default function ProfileScreen() {
     if (!isOwn) {
       const { data: followData } = await supabase
         .from('follows')
-        .select('*')
+        .select('status')
         .eq('follower_id', user.id)
-        .eq('following_id', userId);
+        .eq('following_id', userId)
+        .maybeSingle();
 
-      setIsFollowing(!!followData && followData.length > 0);
+      setIsFollowing(followData?.status === 'accepted');
+      setIsRequested(followData?.status === 'pending');
+      setFollowRequests([]);
     } else {
       setIsFollowing(false);
+      setIsRequested(false);
+
+      const { data: pendingRequests } = await supabase
+        .from('follows')
+        .select('*, follower:profiles!follows_follower_id_fkey(username)')
+        .eq('following_id', user.id)
+        .eq('status', 'pending');
+
+      setFollowRequests((pendingRequests as FollowRequest[]) ?? []);
     }
   }, [userId, fetchMyCustomCategories]);
 
@@ -163,22 +192,29 @@ export default function ProfileScreen() {
   };
 
   const handleFollow = async () => {
-    if (!currentUserId || !userId) return;
+    if (!currentUserId || !userId || !profile) return;
+
+    const isPrivate = profile.is_private === true;
 
     await supabase.from('follows').insert({
       follower_id: currentUserId,
       following_id: userId,
+      status: isPrivate ? 'pending' : 'accepted',
     });
 
     await supabase.from('notifications').insert({
       user_id: userId,
       sender_id: currentUserId,
-      type: 'follow',
+      type: isPrivate ? 'follow_request' : 'follow',
       gem_id: null,
       read: false,
     });
 
-    setIsFollowing(true);
+    if (isPrivate) {
+      setIsRequested(true);
+    } else {
+      setIsFollowing(true);
+    }
     await fetchData();
   };
 
@@ -192,7 +228,88 @@ export default function ProfileScreen() {
       .eq('following_id', userId);
 
     setIsFollowing(false);
+    setIsRequested(false);
     await fetchData();
+  };
+
+  const handleAcceptRequest = async (request: FollowRequest) => {
+    await supabase
+      .from('follows')
+      .update({ status: 'accepted' })
+      .eq('id', request.id);
+
+    setFollowRequests((prev) => prev.filter((r) => r.id !== request.id));
+    setFollowersCount((prev) => prev + 1);
+  };
+
+  const handleDeclineRequest = async (request: FollowRequest) => {
+    await supabase.from('follows').delete().eq('id', request.id);
+    setFollowRequests((prev) => prev.filter((r) => r.id !== request.id));
+  };
+
+  const showProfileMenu = () => {
+    if (!userId || isOwnProfile) return;
+
+    const options = ['Report User', 'Block User', 'Cancel'];
+    const cancelIndex = 2;
+
+    const handleSelection = (index: number) => {
+      if (index === 0) setReportVisible(true);
+      if (index === 1) {
+        Alert.alert(
+          `Block @${username}?`,
+          'They won\'t be able to see your content and you won\'t see theirs.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Block',
+              style: 'destructive',
+              onPress: async () => {
+                if (!currentUserId) return;
+                await blockUser(currentUserId, userId);
+                Alert.alert('Blocked', `@${username} has been blocked.`);
+                router.back();
+              },
+            },
+          ],
+        );
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: 1 },
+        handleSelection,
+      );
+    } else {
+      Alert.alert('Options', undefined, [
+        { text: 'Report User', onPress: () => setReportVisible(true) },
+        {
+          text: 'Block User',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              `Block @${username}?`,
+              'They won\'t be able to see your content and you won\'t see theirs.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (!currentUserId) return;
+                    await blockUser(currentUserId, userId);
+                    Alert.alert('Blocked', `@${username} has been blocked.`);
+                    router.back();
+                  },
+                },
+              ],
+            );
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
   };
 
   const handleDeleteGem = async (gemId: string, imageUrl: string | null) => {
@@ -229,7 +346,6 @@ export default function ProfileScreen() {
 
   const renderGemCard = (gem: Gem) => (
     <TouchableOpacity
-      key={gem.id}
       style={styles.gemCard}
       onPress={() => router.push('/gem/' + gem.id)}
       onLongPress={
@@ -278,7 +394,9 @@ export default function ProfileScreen() {
             <Ionicons name="settings-outline" size={22} color={theme.text} />
           </TouchableOpacity>
         ) : (
-          <View style={styles.headerSide} />
+          <TouchableOpacity onPress={showProfileMenu} activeOpacity={0.7} style={styles.headerSide}>
+            <Ionicons name="ellipsis-horizontal" size={22} color={theme.text} />
+          </TouchableOpacity>
         )}
       </View>
 
@@ -377,17 +495,77 @@ export default function ProfileScreen() {
         {!isOwnProfile && (
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={isFollowing ? styles.followingButton : styles.followButton}
-              onPress={isFollowing ? handleUnfollow : handleFollow}
-              activeOpacity={0.8}>
-              <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
-                {isFollowing ? 'Following' : 'Follow'}
+              style={
+                isFollowing
+                  ? styles.followingButton
+                  : isRequested
+                    ? styles.requestedButton
+                    : styles.followButton
+              }
+              onPress={isFollowing || isRequested ? handleUnfollow : handleFollow}
+              activeOpacity={isRequested ? 1 : 0.8}>
+              <Text
+                style={
+                  isFollowing
+                    ? styles.followingButtonText
+                    : isRequested
+                      ? styles.requestedButtonText
+                      : styles.followButtonText
+                }>
+                {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.messageButton} onPress={handleSendMessage} activeOpacity={0.8}>
               <Ionicons name="chatbubble-outline" size={16} color={theme.accent} />
               <Text style={styles.messageButtonText}>Message</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {isOwnProfile && followRequests.length > 0 && (
+          <View style={styles.followRequestsSection}>
+            <TouchableOpacity
+              style={styles.followRequestsBanner}
+              onPress={() => setFollowRequestsExpanded((prev) => !prev)}
+              activeOpacity={0.8}>
+              <Ionicons name="person-add" size={18} color={theme.coral} />
+              <Text style={styles.followRequestsBannerText}>
+                {followRequests.length} follow request{followRequests.length !== 1 ? 's' : ''}
+              </Text>
+              <Ionicons
+                name={followRequestsExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {followRequestsExpanded &&
+              followRequests.map((request) => {
+                const requestUsername = request.follower?.username ?? 'User';
+                const initial = requestUsername.charAt(0).toUpperCase();
+                return (
+                  <View key={request.id} style={styles.followRequestRow}>
+                    <View style={styles.followRequestAvatar}>
+                      <Text style={styles.followRequestAvatarText}>{initial}</Text>
+                    </View>
+                    <Text style={styles.followRequestUsername} numberOfLines={1}>
+                      {requestUsername}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.acceptButton}
+                      onPress={() => handleAcceptRequest(request)}
+                      activeOpacity={0.8}>
+                      <Text style={styles.acceptButtonText}>Accept</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.declineButton}
+                      onPress={() => handleDeclineRequest(request)}
+                      activeOpacity={0.8}>
+                      <Text style={styles.declineButtonText}>Decline</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
           </View>
         )}
 
@@ -414,7 +592,9 @@ export default function ProfileScreen() {
           <View style={styles.gemsGrid}>
             {gemRows.map((row, rowIndex) => (
               <View key={`row-${rowIndex}`} style={styles.gemRow}>
-                {row.map((gem) => renderGemCard(gem))}
+                {row.map((gem) => (
+                  <Fragment key={gem.id}>{renderGemCard(gem)}</Fragment>
+                ))}
                 {row.length === 1 ? <View style={styles.gemCardSpacer} /> : null}
               </View>
             ))}
@@ -428,6 +608,15 @@ export default function ProfileScreen() {
         )}
       </ScrollView>
 
+      {!isOwnProfile && currentUserId && userId && (
+        <ReportSheet
+          visible={reportVisible}
+          onClose={() => setReportVisible(false)}
+          targetType="user"
+          targetId={userId}
+          reporterId={currentUserId}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -564,6 +753,92 @@ const createStyles = (theme: Theme) =>
     fontSize: 14,
     fontWeight: '600',
     color: theme.accent,
+  },
+  requestedButton: {
+    flex: 1,
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+    opacity: 0.7,
+  },
+  requestedButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textSecondary,
+  },
+  followRequestsSection: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  followRequestsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.coralSubtle,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  followRequestsBannerText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.coral,
+  },
+  followRequestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.card,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 8,
+  },
+  followRequestAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  followRequestAvatarText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.background,
+  },
+  followRequestUsername: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  acceptButton: {
+    backgroundColor: theme.accent,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  acceptButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.background,
+  },
+  declineButton: {
+    borderWidth: 0.5,
+    borderColor: theme.danger,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  declineButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.danger,
   },
   messageButton: {
     flex: 1,

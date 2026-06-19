@@ -1,3 +1,4 @@
+import { searchCities } from '@/lib/cityAutocomplete'
 import { CATEGORIES } from '@/lib/categories'
 import {
   ONBOARDING_SEEN_KEY,
@@ -85,6 +86,10 @@ export default function OnboardingScreen() {
   const [homeTown, setHomeTown] = useState('')
   const [homeLat, setHomeLat] = useState<number | null>(null)
   const [homeLng, setHomeLng] = useState<number | null>(null)
+  const [cityQuery, setCityQuery] = useState('')
+  const [citySuggestions, setCitySuggestions] = useState<{ name: string; lat: number; lng: number }[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [prefsSaved, setPrefsSaved] = useState(false)
 
@@ -212,6 +217,7 @@ export default function OnboardingScreen() {
         const detectedCity =
           data.address?.city || data.address?.town || data.address?.village || ''
         setHomeTown(detectedCity)
+        setCityQuery(detectedCity)
         setHomeLat(location.coords.latitude)
         setHomeLng(location.coords.longitude)
       } catch {
@@ -268,6 +274,34 @@ export default function OnboardingScreen() {
       Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start()
     setTimeout(() => animateStepChange(6), 300)
+  }
+
+  const handleCityInput = (text: string) => {
+    setCityQuery(text)
+    setHomeTown(text)
+
+    if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current)
+
+    if (text.length < 2) {
+      setShowSuggestions(false)
+      setCitySuggestions([])
+      return
+    }
+
+    cityDebounceRef.current = setTimeout(async () => {
+      const results = await searchCities(text)
+      setCitySuggestions(results)
+      setShowSuggestions(results.length > 0)
+    }, 400)
+  }
+
+  const selectCity = (city: { name: string; lat: number; lng: number }) => {
+    setHomeTown(city.name)
+    setHomeLat(city.lat)
+    setHomeLng(city.lng)
+    setCityQuery(city.name)
+    setShowSuggestions(false)
+    setCitySuggestions([])
   }
 
   const continueFromHomeTown = () => {
@@ -467,11 +501,31 @@ export default function OnboardingScreen() {
           <View style={styles.homeTownInputWrap}>
             <TextInput
               style={styles.homeTownInput}
-              value={homeTown}
-              onChangeText={setHomeTown}
+              value={cityQuery}
+              onChangeText={handleCityInput}
               placeholder="Your city"
               placeholderTextColor={theme.textSecondary}
+              autoCorrect={false}
             />
+            {showSuggestions && citySuggestions.length > 0 && (
+              <View style={styles.citySuggestions}>
+                <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                  {citySuggestions.map((city, index) => (
+                    <TouchableOpacity
+                      key={`${city.name}-${index}`}
+                      style={[
+                        styles.citySuggestionRow,
+                        index < citySuggestions.length - 1 && styles.citySuggestionRowBorder,
+                      ]}
+                      onPress={() => selectCity(city)}
+                      activeOpacity={0.7}>
+                      <Ionicons name="location-outline" size={14} color={theme.textTertiary} />
+                      <Text style={styles.citySuggestionText}>{city.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
             <Text style={styles.homeTownHint}>Detected automatically — tap to edit</Text>
           </View>
           <TouchableOpacity
@@ -747,6 +801,35 @@ const createStyles = (theme: Theme) =>
     homeTownInputWrap: {
       paddingHorizontal: 16,
       marginTop: 8,
+      zIndex: 10,
+      position: 'relative',
+    },
+    citySuggestions: {
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 10,
+      marginTop: 4,
+      maxHeight: 200,
+      overflow: 'hidden',
+      zIndex: 20,
+      elevation: 4,
+    },
+    citySuggestionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    citySuggestionRowBorder: {
+      borderBottomWidth: 0.5,
+      borderBottomColor: theme.border,
+    },
+    citySuggestionText: {
+      fontSize: 14,
+      color: theme.text,
+      flex: 1,
     },
     homeTownInput: {
       backgroundColor: theme.card,

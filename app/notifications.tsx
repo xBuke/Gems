@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type NotificationType = 'comment' | 'rating' | 'follow' | 'visit' | 'message' | 'like';
+type NotificationType = 'comment' | 'rating' | 'follow' | 'follow_request' | 'visit' | 'message' | 'like';
 
 type Notification = {
   id: string;
@@ -29,46 +29,45 @@ type Notification = {
   gem: { title: string; image_url: string | null } | null;
 };
 
-const TYPE_CONFIG: Record<
-  Exclude<NotificationType, 'rating'>,
-  {
-    icon: keyof typeof Ionicons.glyphMap;
-    iconColor: string;
-    bgColor: string;
-    actionText: string;
-  }
-> = {
-  like: {
-    icon: 'heart',
-    iconColor: '#FF4444',
-    bgColor: 'rgba(255,68,68,0.2)',
-    actionText: 'liked your gem',
-  },
-  comment: {
-    icon: 'chatbubble',
-    iconColor: '#185FA5',
-    bgColor: 'rgba(24,95,165,0.2)',
-    actionText: 'commented on your gem',
-  },
-  visit: {
-    icon: 'location',
-    iconColor: '#1D9E75',
-    bgColor: 'rgba(29,158,117,0.2)',
-    actionText: 'visited your gem',
-  },
-  follow: {
-    icon: 'person-add',
-    iconColor: '#534AB7',
-    bgColor: 'rgba(83,74,183,0.2)',
-    actionText: 'started following you',
-  },
-  message: {
-    icon: 'chatbubble-ellipses',
-    iconColor: '#BA7517',
-    bgColor: 'rgba(186,117,23,0.2)',
-    actionText: 'sent you a message',
-  },
-};
+const getTypeConfig = (theme: Theme) =>
+  ({
+    like: {
+      icon: 'heart' as const,
+      iconColor: '#FF4444',
+      bgColor: 'rgba(255,68,68,0.2)',
+      actionText: 'liked your gem',
+    },
+    comment: {
+      icon: 'chatbubble' as const,
+      iconColor: '#185FA5',
+      bgColor: 'rgba(24,95,165,0.2)',
+      actionText: 'commented on your gem',
+    },
+    visit: {
+      icon: 'location' as const,
+      iconColor: '#1D9E75',
+      bgColor: 'rgba(29,158,117,0.2)',
+      actionText: 'visited your gem',
+    },
+    follow: {
+      icon: 'person-add' as const,
+      iconColor: '#534AB7',
+      bgColor: 'rgba(83,74,183,0.2)',
+      actionText: 'started following you',
+    },
+    follow_request: {
+      icon: 'person-add' as const,
+      iconColor: theme.coral,
+      bgColor: theme.coralSubtle,
+      actionText: 'wants to follow you',
+    },
+    message: {
+      icon: 'chatbubble-ellipses' as const,
+      iconColor: '#BA7517',
+      bgColor: 'rgba(186,117,23,0.2)',
+      actionText: 'sent you a message',
+    },
+  }) as const;
 
 const NOTIFICATION_SELECT =
   '*, sender:profiles!notifications_sender_id_fkey(username, avatar_url), gem:gems(title, image_url)';
@@ -189,8 +188,8 @@ export default function NotificationsScreen() {
           username: notification.sender?.username,
         },
       });
-    } else if (notification.type === 'follow') {
-      router.push('/profile?userId=' + notification.sender_id);
+    } else if (notification.type === 'follow' || notification.type === 'follow_request') {
+      router.push('/profile');
     } else if (
       notification.type === 'like' ||
       notification.type === 'comment' ||
@@ -205,7 +204,7 @@ export default function NotificationsScreen() {
   const renderRightThumbnail = (item: Notification) => {
     const username = item.sender?.username ?? 'S';
 
-    if (item.type === 'follow' || item.type === 'message') {
+    if (item.type === 'follow' || item.type === 'follow_request' || item.type === 'message') {
       return (
         <View style={styles.initialAvatar}>
           <Text style={styles.initialText}>{username.charAt(0).toUpperCase()}</Text>
@@ -231,7 +230,8 @@ export default function NotificationsScreen() {
   const renderNotification = ({ item }: { item: Notification }) => {
     if (item.type === 'rating') return null;
 
-    const config = TYPE_CONFIG[item.type];
+    const typeConfig = getTypeConfig(theme);
+    const config = typeConfig[item.type];
     const username = item.sender?.username ?? 'Someone';
 
     return (
