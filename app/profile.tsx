@@ -1,5 +1,18 @@
 import { requireAuth } from '@/lib/authGuard';
+import { CATEGORIES } from '@/lib/categories';
+import { searchCities } from '@/lib/cityAutocomplete';
 import type { CustomCategory } from '@/lib/customCategories';
+import { getDistance } from '@/lib/distance';
+import { checkLocaleExpertBadge } from '@/lib/localeExpert';
+import {
+  ACHIEVEMENTS,
+  checkAndUnlockAchievements,
+  getExplorerLevel,
+  getMasteryTier,
+  getNextLevel,
+  getNextMasteryTier,
+  MASTERY_TIERS,
+} from '@/lib/gamification';
 import { hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
 import { checkIsPremium } from '@/lib/paywall';
@@ -12,15 +25,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -34,14 +49,50 @@ type Profile = {
   username: string;
   avatar_url?: string | null;
   current_streak?: number;
+  streak_points?: number;
   is_private?: boolean;
   liked_gems_public?: boolean;
   visited_gems_public?: boolean;
+  home_town?: string | null;
+  home_lat?: number | null;
+  home_lng?: number | null;
 };
 
-type GemLinkRow = { gem: Gem | null };
+type UnlockedAchievement = {
+  badge_type: string;
+};
 
-type AccordionPanel = 'gems' | 'liked' | 'visited';
+type AccordionPanel = 'gems' | 'liked' | 'visited' | 'achievements' | 'categoryMastery';
+
+type ExplorationMode = 'city' | 'country';
+
+type VisitedGemRow = {
+  gem_id: string;
+  gems: { latitude: number; longitude: number; title: string } | null;
+};
+
+type ExplorationStats = {
+  exploredCount: number;
+  totalCount: number;
+  hasCenter: boolean;
+};
+
+type CitySuggestion = { name: string; lat: number; lng: number };
+
+type SelectedCity = { name: string; lat: number; lng: number };
+
+type LocaleBadge = {
+  id: string;
+  user_id: string;
+  city_name: string;
+  lat: number;
+  lng: number;
+};
+
+const CITY_RADIUS_M = 25_000;
+const COUNTRY_RADIUS_M = 200_000;
+
+type GemLinkRow = { gem: Gem | null };
 
 type FollowRequest = {
   follower_id: string;
@@ -66,6 +117,92 @@ const chunk = <T,>(items: T[], size: number): T[][] => {
 
 const parseGemLinkRows = (rows: GemLinkRow[] | null): Gem[] =>
   (rows ?? []).map((row) => row.gem).filter((gem): gem is Gem => gem != null);
+
+const getExplorationCenter = (
+  profile: Profile | null,
+  visitedRows: VisitedGemRow[],
+): { lat: number; lng: number } | null => {
+  if (profile?.home_lat != null && profile?.home_lng != null) {
+    return { lat: profile.home_lat, lng: profile.home_lng };
+  }
+
+  const clusters: Record<string, { count: number; lat: number; lng: number }> = {};
+  for (const visit of visitedRows) {
+    const gem = visit.gems;
+    if (gem?.latitude == null || gem?.longitude == null) continue;
+    const key = `${gem.latitude.toFixed(2)},${gem.longitude.toFixed(2)}`;
+    if (!clusters[key]) {
+      clusters[key] = {
+        count: 0,
+        lat: Number(gem.latitude.toFixed(2)),
+        lng: Number(gem.longitude.toFixed(2)),
+      };
+    }
+    clusters[key].count += 1;
+  }
+
+  let best: { count: number; lat: number; lng: number } | null = null;
+  for (const cluster of Object.values(clusters)) {
+    if (!best || cluster.count > best.count) best = cluster;
+  }
+
+  return best ? { lat: best.lat, lng: best.lng } : null;
+};
+
+const computeExplorationStats = (
+  center: { lat: number; lng: number },
+  radiusM: number,
+  visitedRows: VisitedGemRow[],
+  publicGems: { id: string; latitude: number; longitude: number }[],
+): ExplorationStats => {
+  const exploredGemIds = new Set<string>();
+  for (const visit of visitedRows) {
+    const gem = visit.gems;
+    if (!gem) continue;
+    if (getDistance(center.lat, center.lng, gem.latitude, gem.longitude) <= radiusM) {
+      exploredGemIds.add(visit.gem_id);
+    }
+  }
+
+  const totalCount = publicGems.filter(
+    (gem) => getDistance(center.lat, center.lng, gem.latitude, gem.longitude) <= radiusM,
+  ).length;
+
+  return {
+    exploredCount: exploredGemIds.size,
+    totalCount,
+    hasCenter: true,
+  };
+};
+
+const getMasteryTierIndex = (visits: number) => {
+  let index = 0;
+  for (let i = 0; i < MASTERY_TIERS.length; i += 1) {
+    if (visits >= MASTERY_TIERS[i].minVisits) index = i;
+  }
+  return index;
+};
+
+const getMasteryTierColors = (tierIndex: number, categoryColor: string, theme: Theme) => {
+  if (tierIndex === 0) {
+    return {
+      badgeBg: theme.textTertiary + '25',
+      badgeText: theme.textTertiary,
+      progressColor: theme.textTertiary,
+    };
+  }
+
+  const intensity = tierIndex / (MASTERY_TIERS.length - 1);
+  const opacity = Math.round(32 + intensity * 200)
+    .toString(16)
+    .padStart(2, '0');
+
+  return {
+    badgeBg: categoryColor + opacity,
+    badgeText: tierIndex === MASTERY_TIERS.length - 1 ? categoryColor : theme.text,
+    progressColor: categoryColor,
+  };
+};
 
 const uploadAvatar = async (uri: string, userId: string) => {
   const compressedUri = await compressImage(uri);
@@ -117,6 +254,27 @@ export default function ProfileScreen() {
   const [visitedGems, setVisitedGems] = useState<Gem[]>([]);
   const [expandedPanel, setExpandedPanel] = useState<AccordionPanel | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [unlockedAchievementTypes, setUnlockedAchievementTypes] = useState<string[]>([]);
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [explorationMode, setExplorationMode] = useState<ExplorationMode>('city');
+  const [cityExploration, setCityExploration] = useState<ExplorationStats>({
+    exploredCount: 0,
+    totalCount: 0,
+    hasCenter: false,
+  });
+  const [countryExploration, setCountryExploration] = useState<ExplorationStats>({
+    exploredCount: 0,
+    totalCount: 0,
+    hasCenter: false,
+  });
+  const [cityQuery, setCityQuery] = useState('');
+  const [selectedCity, setSelectedCity] = useState<SelectedCity | null>(null);
+  const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchingCities, setSearchingCities] = useState(false);
+  const [localeBadges, setLocaleBadges] = useState<LocaleBadge[]>([]);
+  const citySearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMyCustomCategories = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -164,7 +322,36 @@ export default function ProfileScreen() {
       .select('*')
       .eq('id', profileId)
       .single();
-    if (profileData) setProfile(profileData);
+    if (profileData) {
+      setProfile(profileData);
+
+      if (isOwn) {
+        setCityQuery((prev) => (prev === '' && profileData.home_town ? profileData.home_town : prev));
+        setSelectedCity((prev) => {
+          if (prev) return prev;
+          if (
+            profileData.home_town &&
+            profileData.home_lat != null &&
+            profileData.home_lng != null
+          ) {
+            return {
+              name: profileData.home_town,
+              lat: profileData.home_lat,
+              lng: profileData.home_lng,
+            };
+          }
+          return null;
+        });
+      }
+    }
+
+    const { data: achievementsData } = await supabase
+      .from('achievements')
+      .select('badge_type')
+      .eq('user_id', profileId);
+    setUnlockedAchievementTypes(
+      (achievementsData as UnlockedAchievement[] | null)?.map((a) => a.badge_type) ?? [],
+    );
 
     const likedPublic = profileData?.liked_gems_public !== false;
     const visitedPublic = profileData?.visited_gems_public !== false;
@@ -281,6 +468,160 @@ export default function ProfileScreen() {
       fetchData();
     }, [fetchData]),
   );
+
+  const fetchCategoryMastery = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const isOwn = !userId || userId === user.id;
+    if (!isOwn) return;
+
+    const { data: visits } = await supabase
+      .from('gem_visits')
+      .select('category')
+      .eq('user_id', user.id);
+
+    const counts: Record<string, number> = {};
+    visits?.forEach((v: { category: string | null }) => {
+      if (v.category) counts[v.category] = (counts[v.category] || 0) + 1;
+    });
+    setCategoryCounts(counts);
+  }, [userId]);
+
+  const fetchLocaleBadges = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const isOwn = !userId || userId === user.id;
+    const profileId = isOwn ? user.id : userId;
+    if (!profileId) return;
+
+    const { data: myLocaleBadges } = await supabase
+      .from('locale_badges')
+      .select('*')
+      .eq('user_id', profileId);
+
+    setLocaleBadges((myLocaleBadges as LocaleBadge[] | null) ?? []);
+  }, [userId]);
+
+  const fetchExplorationProgress = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const isOwn = !userId || userId === user.id;
+    if (!isOwn) return;
+
+    const [{ data: profileData }, { data: visitedData }, { data: publicGems }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('home_lat, home_lng, home_town')
+        .eq('id', user.id)
+        .single(),
+      supabase
+        .from('gem_visits')
+        .select('gem_id, gems(latitude, longitude, title)')
+        .eq('user_id', user.id),
+      supabase
+        .from('gems')
+        .select('id, latitude, longitude')
+        .eq('is_private', false)
+        .is('community_id', null),
+    ]);
+
+    const visitedRows = (visitedData as VisitedGemRow[] | null) ?? [];
+    const gems = (publicGems as { id: string; latitude: number; longitude: number }[] | null) ?? [];
+
+    let center: { lat: number; lng: number } | null = null;
+    if (selectedCity) {
+      center = { lat: selectedCity.lat, lng: selectedCity.lng };
+    } else {
+      center = getExplorationCenter(profileData as Profile | null, visitedRows);
+    }
+
+    if (!center) {
+      setCityExploration({ exploredCount: 0, totalCount: 0, hasCenter: false });
+      setCountryExploration({ exploredCount: 0, totalCount: 0, hasCenter: false });
+      return;
+    }
+
+    // V1: radius-based proxy for city/country boundaries. True boundary detection
+    // would require a proper geocoding service — a good V2 improvement.
+    const cityStats = computeExplorationStats(center, CITY_RADIUS_M, visitedRows, gems);
+    const countryStats = computeExplorationStats(center, COUNTRY_RADIUS_M, visitedRows, gems);
+    setCityExploration(cityStats);
+    setCountryExploration(countryStats);
+
+    if (selectedCity) {
+      const isNewLocaleExpert = await checkLocaleExpertBadge(
+        user.id,
+        selectedCity.name,
+        selectedCity.lat,
+        selectedCity.lng,
+      );
+      if (isNewLocaleExpert) {
+        Alert.alert(
+          '🏆 Locale Expert!',
+          `You've explored over 90% of public gems in ${selectedCity.name}. You're a true local expert!`,
+        );
+        await fetchLocaleBadges();
+      }
+    }
+  }, [userId, selectedCity, fetchLocaleBadges]);
+
+  const handleCitySearchInput = useCallback((text: string) => {
+    setCityQuery(text);
+
+    if (citySearchDebounceRef.current) clearTimeout(citySearchDebounceRef.current);
+
+    if (text.length < 2) {
+      setShowSuggestions(false);
+      setCitySuggestions([]);
+      setSearchingCities(false);
+      return;
+    }
+
+    setSearchingCities(true);
+    citySearchDebounceRef.current = setTimeout(async () => {
+      const results = await searchCities(text);
+      setCitySuggestions(results);
+      setShowSuggestions(results.length > 0);
+      setSearchingCities(false);
+    }, 400);
+  }, []);
+
+  const selectExplorationCity = (city: CitySuggestion) => {
+    setCityQuery(city.name);
+    setSelectedCity({ name: city.name, lat: city.lat, lng: city.lng });
+    setShowSuggestions(false);
+    setCitySuggestions([]);
+  };
+
+  const resetToHomeTown = () => {
+    if (!profile?.home_town || profile.home_lat == null || profile.home_lng == null) return;
+
+    setCityQuery(profile.home_town);
+    setSelectedCity({
+      name: profile.home_town,
+      lat: profile.home_lat,
+      lng: profile.home_lng,
+    });
+    setShowSuggestions(false);
+    setCitySuggestions([]);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCategoryMastery();
+      fetchExplorationProgress();
+      fetchLocaleBadges();
+    }, [fetchCategoryMastery, fetchExplorationProgress, fetchLocaleBadges]),
+  );
+
+  useEffect(() => {
+    if (isOwnProfile) {
+      fetchExplorationProgress();
+    }
+  }, [selectedCity, isOwnProfile, fetchExplorationProgress]);
 
   const username = profile?.username ?? 'User';
   const initials = username.charAt(0).toUpperCase();
@@ -473,6 +814,8 @@ export default function ProfileScreen() {
         .eq('following_id', currentUserId)
         .eq('status', 'accepted');
       setFollowersCount(followers ?? 0);
+
+      await checkAndUnlockAchievements(currentUserId);
     }
   };
 
@@ -617,6 +960,50 @@ export default function ProfileScreen() {
   const visitedGemsPublic = profile?.visited_gems_public !== false;
   const showLikedSection = isOwnProfile || likedGemsPublic;
   const showVisitedSection = isOwnProfile || visitedGemsPublic;
+  const streakPoints = profile?.streak_points ?? 0;
+  const explorerLevel = getExplorerLevel(streakPoints);
+  const nextLevel = getNextLevel(streakPoints);
+  const unlockedCount = unlockedAchievementTypes.length;
+  const categoriesWithVisits = CATEGORIES.filter((cat) => (categoryCounts[cat.id] ?? 0) > 0);
+  const visibleCategories = showAllCategories ? CATEGORIES : categoriesWithVisits;
+  const activeExploration = explorationMode === 'city' ? cityExploration : countryExploration;
+  const explorationPercent =
+    activeExploration.totalCount > 0
+      ? Math.round((activeExploration.exploredCount / activeExploration.totalCount) * 100)
+      : 0;
+  const explorationAreaLabel =
+    explorationMode === 'city'
+      ? selectedCity?.name
+        ? `Your City: ${selectedCity.name}`
+        : profile?.home_town
+          ? `Your City: ${profile.home_town}`
+          : 'Your City'
+      : selectedCity?.name
+        ? `Your Region: ${selectedCity.name}`
+        : 'Your Region';
+
+  const showResetHomeTown =
+    isOwnProfile &&
+    profile?.home_town &&
+    selectedCity != null &&
+    selectedCity.name !== profile.home_town;
+
+  const renderLocaleExpertBadges = () => {
+    if (localeBadges.length === 0) return null;
+
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.localeBadgesRow}>
+        {localeBadges.map((badge) => (
+          <View key={badge.id} style={styles.localeExpertChip}>
+            <Text style={styles.localeExpertChipText}>🏆 {badge.city_name} Expert</Text>
+          </View>
+        ))}
+      </ScrollView>
+    );
+  };
 
   const renderGemCard = (gem: Gem) => (
     <TouchableOpacity
@@ -733,6 +1120,7 @@ export default function ProfileScreen() {
     showPrivacy?: boolean,
     isPublic?: boolean,
     onTogglePrivacy?: () => void,
+    totalCount?: number,
   ) => (
     <View style={styles.accordionHeaderRow}>
       <TouchableOpacity
@@ -740,7 +1128,7 @@ export default function ProfileScreen() {
         onPress={() => togglePanel(panel)}
         activeOpacity={0.7}>
         <Text style={styles.sectionTitle}>
-          {title} ({count})
+          {totalCount != null ? `${title} (${count}/${totalCount})` : `${title} (${count})`}
         </Text>
         <Ionicons
           name={expandedPanel === panel ? 'chevron-up' : 'chevron-down'}
@@ -777,7 +1165,13 @@ export default function ProfileScreen() {
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
       ) : (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.profileSection}>
           {isOwnProfile ? (
             <TouchableOpacity
@@ -820,6 +1214,19 @@ export default function ProfileScreen() {
             </View>
           )}
           <Text style={styles.username}>{username}</Text>
+          <View style={styles.levelBadge}>
+            <Ionicons
+              name={explorerLevel.icon as keyof typeof Ionicons.glyphMap}
+              size={14}
+              color={theme.accent}
+            />
+            <Text style={styles.levelBadgeText}>{explorerLevel.name}</Text>
+          </View>
+          {nextLevel && (
+            <Text style={styles.levelProgressText}>
+              {streakPoints} / {nextLevel.minPoints} points to {nextLevel.name}
+            </Text>
+          )}
           <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
           {(profile?.current_streak ?? 0) > 0 && (
             <View style={styles.streakBadge}>
@@ -903,6 +1310,12 @@ export default function ProfileScreen() {
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {!isOwnProfile && localeBadges.length > 0 && (
+          <View style={styles.localeBadgesSection}>
+            {renderLocaleExpertBadges()}
           </View>
         )}
 
@@ -1061,12 +1474,267 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        <View style={styles.accordionSection}>
+          {renderAccordionHeader(
+            'achievements',
+            'Achievements',
+            unlockedCount,
+            false,
+            undefined,
+            undefined,
+            ACHIEVEMENTS.length,
+          )}
+
+          {expandedPanel === 'achievements' && (
+            <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
+              <View style={styles.achievementsGrid}>
+                {ACHIEVEMENTS.map((achievement) => {
+                  const isUnlocked = unlockedAchievementTypes.includes(achievement.type);
+                  return (
+                    <View key={achievement.type} style={styles.achievementItem}>
+                      <View
+                        style={[
+                          styles.achievementIconCircle,
+                          isUnlocked
+                            ? styles.achievementIconCircleUnlocked
+                            : styles.achievementIconCircleLocked,
+                        ]}>
+                        <Ionicons
+                          name={achievement.icon as keyof typeof Ionicons.glyphMap}
+                          size={22}
+                          color={isUnlocked ? theme.accent : theme.textTertiary}
+                        />
+                        {!isUnlocked && (
+                          <View style={styles.achievementLockOverlay}>
+                            <Ionicons name="lock-closed" size={14} color={theme.textTertiary} />
+                          </View>
+                        )}
+                      </View>
+                      <Text
+                        style={[
+                          styles.achievementName,
+                          !isUnlocked && styles.achievementNameLocked,
+                        ]}
+                        numberOfLines={2}>
+                        {achievement.name}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </Animated.View>
+          )}
+        </View>
+
+        {isOwnProfile && (
+          <View style={styles.accordionSection}>
+            {renderAccordionHeader(
+              'categoryMastery',
+              'Category Mastery',
+              categoriesWithVisits.length,
+            )}
+
+            {expandedPanel === 'categoryMastery' && (
+              <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
+                {visibleCategories.length === 0 ? (
+                  <Text style={styles.sectionEmptyText}>
+                    No category visits yet — verify visits to build mastery!
+                  </Text>
+                ) : (
+                  visibleCategories.map((cat) => {
+                    const visits = categoryCounts[cat.id] ?? 0;
+                    const tier = getMasteryTier(visits);
+                    const nextTier = getNextMasteryTier(visits);
+                    const tierIndex = getMasteryTierIndex(visits);
+                    const tierColors = getMasteryTierColors(tierIndex, cat.color, theme);
+                    const progress = nextTier
+                      ? (visits - tier.minVisits) / (nextTier.minVisits - tier.minVisits)
+                      : 1;
+
+                    return (
+                      <View key={cat.id} style={styles.masteryRow}>
+                        <View style={styles.masteryRowHeader}>
+                          <View style={styles.masteryCategoryInfo}>
+                            <View
+                              style={[
+                                styles.masteryIconCircle,
+                                { backgroundColor: cat.color + '20' },
+                              ]}>
+                              <Ionicons
+                                name={cat.icon as keyof typeof Ionicons.glyphMap}
+                                size={16}
+                                color={cat.color}
+                              />
+                            </View>
+                            <Text style={styles.masteryCategoryName}>{cat.name}</Text>
+                          </View>
+                          <View style={styles.masteryRowRight}>
+                            <Text style={styles.masteryVisitCount}>{visits}</Text>
+                            <View
+                              style={[
+                                styles.masteryTierBadge,
+                                { backgroundColor: tierColors.badgeBg },
+                              ]}>
+                              <Text
+                                style={[
+                                  styles.masteryTierBadgeText,
+                                  { color: tierColors.badgeText },
+                                ]}>
+                                {tier.name}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                        <View style={styles.masteryProgressTrack}>
+                          <View
+                            style={[
+                              styles.masteryProgressFill,
+                              {
+                                width: `${Math.min(100, Math.max(0, progress * 100))}%`,
+                                backgroundColor: tierColors.progressColor,
+                              },
+                            ]}
+                          />
+                        </View>
+                        {nextTier ? (
+                          <Text style={styles.masteryProgressHint}>
+                            {nextTier.minVisits - visits} more to {nextTier.name}
+                          </Text>
+                        ) : (
+                          <Text style={styles.masteryProgressHint}>Max tier reached</Text>
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+                {categoriesWithVisits.length < CATEGORIES.length && (
+                  <TouchableOpacity
+                    style={styles.showAllCategoriesButton}
+                    onPress={() => setShowAllCategories((prev) => !prev)}
+                    activeOpacity={0.7}>
+                    <Text style={styles.showAllCategoriesText}>
+                      {showAllCategories ? 'Show visited only' : 'Show all categories'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </Animated.View>
+            )}
+          </View>
+        )}
+
+        {isOwnProfile && (
+          <View style={styles.explorationSection}>
+            <Text style={[styles.sectionTitle, styles.explorationSectionTitle]}>
+              Exploration Progress
+            </Text>
+
+            <View style={styles.citySearchWrap}>
+              <TextInput
+                style={styles.citySearchInput}
+                value={cityQuery}
+                onChangeText={handleCitySearchInput}
+                placeholder="Search a city to check your exploration..."
+                placeholderTextColor={theme.textSecondary}
+                autoCorrect={false}
+              />
+              {searchingCities && (
+                <View style={styles.citySearchIndicator}>
+                  <ActivityIndicator size="small" color={theme.accent} />
+                </View>
+              )}
+              {showSuggestions && citySuggestions.length > 0 && (
+                <View style={styles.citySuggestions}>
+                  <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                    {citySuggestions.map((city, index) => (
+                      <TouchableOpacity
+                        key={`${city.name}-${index}`}
+                        style={[
+                          styles.citySuggestionRow,
+                          index < citySuggestions.length - 1 && styles.citySuggestionRowBorder,
+                        ]}
+                        onPress={() => selectExplorationCity(city)}
+                        activeOpacity={0.7}>
+                        <Ionicons name="location-outline" size={14} color={theme.textTertiary} />
+                        <Text style={styles.citySuggestionText}>{city.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            {showResetHomeTown && (
+              <TouchableOpacity onPress={resetToHomeTown} activeOpacity={0.7}>
+                <Text style={styles.resetHomeTownLink}>Reset to my home town</Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.explorationTabContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.explorationTab,
+                  explorationMode === 'city' && styles.explorationTabActive,
+                ]}
+                onPress={() => setExplorationMode('city')}
+                activeOpacity={0.8}>
+                <Text
+                  style={[
+                    styles.explorationTabText,
+                    explorationMode === 'city' && styles.explorationTabTextActive,
+                  ]}>
+                  City
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.explorationTab,
+                  explorationMode === 'country' && styles.explorationTabActive,
+                ]}
+                onPress={() => setExplorationMode('country')}
+                activeOpacity={0.8}>
+                <Text
+                  style={[
+                    styles.explorationTabText,
+                    explorationMode === 'country' && styles.explorationTabTextActive,
+                  ]}>
+                  Country
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {!activeExploration.hasCenter ? (
+              <Text style={styles.sectionEmptyText}>
+                Set your home town or verify a visit to see exploration progress.
+              </Text>
+            ) : (
+              <View style={styles.explorationCard}>
+                <Text style={styles.explorationLabel}>{explorationAreaLabel}</Text>
+                <Text style={styles.explorationCount}>
+                  {activeExploration.exploredCount} / {activeExploration.totalCount} gems explored
+                </Text>
+                <View style={styles.explorationProgressTrack}>
+                  <View
+                    style={[
+                      styles.explorationProgressFill,
+                      { width: `${explorationPercent}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.explorationPercent}>{explorationPercent}% complete</Text>
+              </View>
+            )}
+
+            {renderLocaleExpertBadges()}
+          </View>
+        )}
+
         {isOwnProfile && (
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
             <Text style={styles.logoutText}>Log out</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
       )}
 
       {!isOwnProfile && currentUserId && userId && (
@@ -1156,6 +1824,28 @@ const createStyles = (theme: Theme) =>
   bio: {
     fontSize: 13,
     color: theme.textSecondary,
+    marginTop: 4,
+  },
+  levelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.accentSubtle,
+    borderWidth: 0.5,
+    borderColor: theme.accent,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 8,
+  },
+  levelBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.accent,
+  },
+  levelProgressText: {
+    fontSize: 11,
+    color: theme.textTertiary,
     marginTop: 4,
   },
   streakBadge: {
@@ -1346,7 +2036,7 @@ const createStyles = (theme: Theme) =>
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
   },
   sectionCount: {
@@ -1588,6 +2278,272 @@ const createStyles = (theme: Theme) =>
     fontSize: 13,
     fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
+    marginTop: 6,
+  },
+  achievementsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  achievementItem: {
+    width: '25%',
+    alignItems: 'center',
+    padding: 8,
+  },
+  achievementIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  achievementIconCircleUnlocked: {
+    backgroundColor: theme.accentSubtle,
+    borderWidth: 0.5,
+    borderColor: theme.accent,
+  },
+  achievementIconCircleLocked: {
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    opacity: 0.6,
+  },
+  achievementLockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    borderRadius: 26,
+  },
+  achievementName: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: theme.text,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  achievementNameLocked: {
+    color: theme.textTertiary,
+  },
+  masteryRow: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+    backgroundColor: theme.card,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+  },
+  masteryRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  masteryCategoryInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  masteryIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  masteryCategoryName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.text,
+    flex: 1,
+  },
+  masteryRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  masteryVisitCount: {
+    fontSize: 14,
+    fontFamily: 'SpaceMono-Regular',
+    color: theme.text,
+  },
+  masteryTierBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  masteryTierBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  masteryProgressTrack: {
+    height: 4,
+    backgroundColor: theme.backgroundTertiary,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  masteryProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  masteryProgressHint: {
+    fontSize: 10,
+    color: theme.textTertiary,
+    marginTop: 4,
+  },
+  showAllCategoriesButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  showAllCategoriesText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.accent,
+  },
+  explorationSection: {
+    marginTop: 8,
+    marginBottom: 8,
+    marginHorizontal: 16,
+  },
+  explorationSectionTitle: {
+    marginBottom: 12,
+  },
+  citySearchWrap: {
+    zIndex: 10,
+    position: 'relative',
+    marginBottom: 8,
+  },
+  citySearchInput: {
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: theme.text,
+  },
+  citySearchIndicator: {
+    marginTop: 6,
+    alignItems: 'flex-start',
+  },
+  citySuggestions: {
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 10,
+    marginTop: 4,
+    maxHeight: 200,
+    overflow: 'hidden',
+    zIndex: 20,
+    elevation: 4,
+  },
+  citySuggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  citySuggestionRowBorder: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: theme.border,
+  },
+  citySuggestionText: {
+    fontSize: 14,
+    color: theme.text,
+    flex: 1,
+  },
+  resetHomeTownLink: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.accent,
+    marginBottom: 10,
+  },
+  localeBadgesSection: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  localeBadgesRow: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  localeExpertChip: {
+    backgroundColor: theme.coralSubtle,
+    borderWidth: 0.5,
+    borderColor: theme.coral,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  localeExpertChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.coral,
+  },
+  explorationTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: theme.card,
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 12,
+  },
+  explorationTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  explorationTabActive: {
+    backgroundColor: theme.accent,
+  },
+  explorationTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: theme.textSecondary,
+  },
+  explorationTabTextActive: {
+    color: theme.background,
+    fontWeight: '600',
+  },
+  explorationCard: {
+    backgroundColor: theme.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+  },
+  explorationLabel: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk-Bold',
+    color: theme.text,
+    marginBottom: 6,
+  },
+  explorationCount: {
+    fontSize: 15,
+    fontFamily: 'SpaceMono-Regular',
+    color: theme.text,
+    marginBottom: 10,
+  },
+  explorationProgressTrack: {
+    height: 8,
+    backgroundColor: theme.backgroundTertiary,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  explorationProgressFill: {
+    height: '100%',
+    backgroundColor: theme.accent,
+    borderRadius: 4,
+  },
+  explorationPercent: {
+    fontSize: 12,
+    fontFamily: 'SpaceMono-Regular',
+    color: theme.textSecondary,
     marginTop: 6,
   },
 });

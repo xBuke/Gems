@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -125,6 +127,9 @@ export default function EditHomeTownScreen() {
         <View style={styles.headerSide} />
       </View>
 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}>
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.accent} />
@@ -181,6 +186,7 @@ export default function EditHomeTownScreen() {
           </TouchableOpacity>
         </View>
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }

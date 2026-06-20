@@ -11,6 +11,7 @@ import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
@@ -519,6 +520,9 @@ export default function SettingsScreen() {
       )}
 
       <Modal visible={promptVisible} transparent animationType="fade">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, justifyContent: 'center' }}>
         <View style={styles.promptOverlay}>
           <View style={[styles.promptBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Text style={[styles.promptTitle, { color: theme.text }]}>
@@ -558,6 +562,7 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

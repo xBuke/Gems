@@ -6,6 +6,7 @@ import {
   fetchVisibleCustomCategories,
   type CustomCategory,
 } from '@/lib/customCategories';
+import { ACHIEVEMENTS, checkAndUnlockAchievements } from '@/lib/gamification';
 import { checkIsLocalPick } from '@/lib/localBadge';
 import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
@@ -25,6 +26,7 @@ import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -217,6 +219,22 @@ export default function AddGemScreen() {
     }
   };
 
+  const checkIfFirstInArea = async (lat: number, lng: number): Promise<boolean> => {
+    const { data: nearbyGems } = await supabase
+      .from('gems')
+      .select('id, latitude, longitude')
+      .eq('is_private', false);
+
+    if (!nearbyGems || nearbyGems.length === 0) return true;
+
+    const isNearby = nearbyGems.some((gem: { latitude: number; longitude: number }) => {
+      const distance = getDistance(lat, lng, gem.latitude, gem.longitude);
+      return distance < 5000;
+    });
+
+    return !isNearby;
+  };
+
   const insertGem = async (verified: boolean) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -229,7 +247,10 @@ export default function AddGemScreen() {
 
     const imageUrl = compressedUri ? await uploadImage(compressedUri) : null;
 
-    const isLocal = await checkIsLocalPick(user.id, latitude!, longitude!);
+    const finalLatitude = latitude!;
+    const finalLongitude = longitude!;
+    const isLocal = await checkIsLocalPick(user.id, finalLatitude, finalLongitude);
+    const isFirstInArea = await checkIfFirstInArea(finalLatitude, finalLongitude);
 
     const communityField = communityId ? { community_id: communityId } : {};
     const bestTime = customBestTime.trim() || selectedBestTime || null;
@@ -241,12 +262,13 @@ export default function AddGemScreen() {
           custom_category_id: selectedCustomCategory.id,
           tags: selectedTags.length > 0 ? selectedTags : null,
           best_time: bestTime,
-          latitude,
-          longitude,
+          latitude: finalLatitude,
+          longitude: finalLongitude,
           user_id: user.id,
           image_url: imageUrl,
           verified,
           is_local_pick: isLocal,
+          is_first_in_area: isFirstInArea,
           ...communityField,
         }
       : {
@@ -256,12 +278,13 @@ export default function AddGemScreen() {
           subcategory: selectedSubcategory,
           tags: selectedTags.length > 0 ? selectedTags : null,
           best_time: bestTime,
-          latitude,
-          longitude,
+          latitude: finalLatitude,
+          longitude: finalLongitude,
           user_id: user.id,
           image_url: imageUrl,
           verified,
           is_local_pick: isLocal,
+          is_first_in_area: isFirstInArea,
           ...communityField,
         };
 
@@ -275,8 +298,20 @@ export default function AddGemScreen() {
     hapticSuccess();
     await addStreakBonus(user.id, 10);
 
+    const newAchievements = await checkAndUnlockAchievements(user.id);
     const successRoute = communityId ? '/community/' + communityId : '/map';
-    Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace(successRoute) }]);
+
+    if (newAchievements.length > 0) {
+      const names = newAchievements
+        .map((type) => ACHIEVEMENTS.find((a) => a.type === type)?.name)
+        .filter(Boolean)
+        .join(', ');
+      Alert.alert('Gem dropped! 🎉', `Achievement unlocked: ${names}`, [
+        { text: 'OK', onPress: () => router.replace(successRoute) },
+      ]);
+    } else {
+      Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace(successRoute) }]);
+    }
   };
 
   const handleCategorySelect = async (category: Category) => {
@@ -394,6 +429,9 @@ export default function AddGemScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -642,6 +680,7 @@ export default function AddGemScreen() {
           </>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

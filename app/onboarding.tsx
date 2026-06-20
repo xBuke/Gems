@@ -18,7 +18,9 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -543,47 +545,51 @@ export default function OnboardingScreen() {
 
     if (step === 9) {
       return (
-        <View style={styles.prefsContainer}>
-          <Text style={styles.prefsTitle}>Where do you call home?</Text>
-          <Text style={styles.prefsSubtitle}>We&apos;ll use this to recognize you as a local</Text>
-          <View style={styles.homeTownInputWrap}>
-            <TextInput
-              style={styles.homeTownInput}
-              value={cityQuery}
-              onChangeText={handleCityInput}
-              placeholder="Your city"
-              placeholderTextColor={theme.textSecondary}
-              autoCorrect={false}
-            />
-            {showSuggestions && citySuggestions.length > 0 && (
-              <View style={styles.citySuggestions}>
-                <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-                  {citySuggestions.map((city, index) => (
-                    <TouchableOpacity
-                      key={`${city.name}-${index}`}
-                      style={[
-                        styles.citySuggestionRow,
-                        index < citySuggestions.length - 1 && styles.citySuggestionRowBorder,
-                      ]}
-                      onPress={() => selectCity(city)}
-                      activeOpacity={0.7}>
-                      <Ionicons name="location-outline" size={14} color={theme.textTertiary} />
-                      <Text style={styles.citySuggestionText}>{city.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-            <Text style={styles.homeTownHint}>Detected automatically — tap to edit</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}>
+          <View style={styles.prefsContainer}>
+            <Text style={styles.prefsTitle}>Where do you call home?</Text>
+            <Text style={styles.prefsSubtitle}>We&apos;ll use this to recognize you as a local</Text>
+            <View style={styles.homeTownInputWrap}>
+              <TextInput
+                style={styles.homeTownInput}
+                value={cityQuery}
+                onChangeText={handleCityInput}
+                placeholder="Your city"
+                placeholderTextColor={theme.textSecondary}
+                autoCorrect={false}
+              />
+              {showSuggestions && citySuggestions.length > 0 && (
+                <View style={styles.citySuggestions}>
+                  <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                    {citySuggestions.map((city, index) => (
+                      <TouchableOpacity
+                        key={`${city.name}-${index}`}
+                        style={[
+                          styles.citySuggestionRow,
+                          index < citySuggestions.length - 1 && styles.citySuggestionRowBorder,
+                        ]}
+                        onPress={() => selectCity(city)}
+                        activeOpacity={0.7}>
+                        <Ionicons name="location-outline" size={14} color={theme.textTertiary} />
+                        <Text style={styles.citySuggestionText}>{city.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+              <Text style={styles.homeTownHint}>Detected automatically — tap to edit</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.continueButton, !homeTown.trim() && styles.continueButtonDisabled]}
+              disabled={!homeTown.trim()}
+              onPress={continueFromHomeTown}
+              activeOpacity={0.8}>
+              <Text style={styles.continueButtonText}>Continue</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={[styles.continueButton, !homeTown.trim() && styles.continueButtonDisabled]}
-            disabled={!homeTown.trim()}
-            onPress={continueFromHomeTown}
-            activeOpacity={0.8}>
-            <Text style={styles.continueButtonText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
+        </KeyboardAvoidingView>
       )
     }
 

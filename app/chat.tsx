@@ -22,10 +22,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const BUBBLE_MAX_WIDTH = SCREEN_WIDTH * 0.75;
+// Custom header row height (paddingVertical 12 × 2 + avatar row). Tune after visual testing on device.
+const HEADER_HEIGHT = 56;
 
 type ProfileRef = {
   username: string;
@@ -89,6 +91,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const { userId, username } = useLocalSearchParams<{ userId: string; username: string }>();
   const [myId, setMyId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -378,7 +381,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + HEADER_HEIGHT : 0}>
         {messagesLoading ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <ActivityIndicator size="large" color={theme.accent} />

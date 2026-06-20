@@ -38,6 +38,7 @@ import Reanimated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const LOCAL_PICK_COLOR = '#7F77DD';
+const PIONEER_COLOR = '#FFD700';
 
 const DISCOVER_GEM_SELECT =
   '*, profiles!gems_user_id_fkey(username, avatar_url), communities(name, icon, color)';
@@ -54,6 +55,7 @@ type Gem = {
   image_url: string | null;
   verified: boolean;
   is_local_pick?: boolean;
+  is_first_in_area?: boolean;
   best_time?: string | null;
   latitude: number;
   longitude: number;
@@ -868,6 +870,13 @@ export default function DiscoverScreen() {
     </View>
   );
 
+  const renderPioneerBadge = () => (
+    <View style={styles.pioneerBadge}>
+      <Ionicons name="star" size={11} color={PIONEER_COLOR} />
+      <Text style={styles.pioneerBadgeText}>First Here</Text>
+    </View>
+  );
+
   const renderCommunityBadge = (gem: GemWithProfile) => {
     if (!gem.community_id || !gem.communities) return null;
     const { name, icon, color } = gem.communities;
@@ -935,6 +944,7 @@ export default function DiscoverScreen() {
               <Text style={styles.listCategoryBadgeText}>{gem.category}</Text>
             </View>
             {gem.is_local_pick && renderLocalPickBadge()}
+            {gem.is_first_in_area && renderPioneerBadge()}
           </View>
           <Text style={styles.listCardTitle} numberOfLines={1}>
             {gem.title}
@@ -1005,8 +1015,11 @@ export default function DiscoverScreen() {
         </View>
         <View style={styles.trendingBody}>
           {renderCommunityBadge(gem)}
-          {gem.is_local_pick && (
-            <View style={styles.trendingBadgeRow}>{renderLocalPickBadge()}</View>
+          {(gem.is_local_pick || gem.is_first_in_area) && (
+            <View style={styles.trendingBadgeRow}>
+              {gem.is_local_pick && renderLocalPickBadge()}
+              {gem.is_first_in_area && renderPioneerBadge()}
+            </View>
           )}
           <Text style={styles.trendingTitle} numberOfLines={2}>
             {gem.title}
@@ -1968,8 +1981,25 @@ const createStyles = (theme: Theme) =>
     fontWeight: '600',
     color: LOCAL_PICK_COLOR,
   },
+  pioneerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: PIONEER_COLOR + '20',
+    borderWidth: 0.5,
+    borderColor: PIONEER_COLOR,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 20,
+  },
+  pioneerBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: PIONEER_COLOR,
+  },
   trendingBadgeRow: {
     flexDirection: 'row',
+    gap: 6,
     marginBottom: 4,
   },
   communityBadge: {

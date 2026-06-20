@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/authGuard';
+import { checkAndUnlockAchievements } from '@/lib/gamification';
 import {
   type CommunityGemInfo,
 } from '@/lib/gemVisibility';
@@ -34,6 +35,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const COMMENT_BLUE = '#185FA5';
 const LOCAL_PICK_COLOR = '#7F77DD';
+const PIONEER_COLOR = '#FFD700';
 
 const GEM_DETAIL_SELECT =
   '*, profiles!gems_user_id_fkey(username, avatar_url), communities(name, icon, color)';
@@ -48,6 +50,7 @@ type Gem = {
   image_url: string | null;
   verified: boolean;
   is_local_pick?: boolean;
+  is_first_in_area?: boolean;
   best_time?: string | null;
   user_id: string;
   community_id?: string | null;
@@ -354,6 +357,10 @@ export default function GemDetailScreen() {
       }
 
       await addStreakBonus(user.id, 2);
+      await checkAndUnlockAchievements(user.id);
+      if (user.id !== gem.user_id) {
+        checkAndUnlockAchievements(gem.user_id);
+      }
     }
   };
 
@@ -452,6 +459,7 @@ export default function GemDetailScreen() {
         user_id: user.id,
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
+        category: gem.category,
       },
       { onConflict: 'gem_id,user_id' },
     );
@@ -468,6 +476,7 @@ export default function GemDetailScreen() {
       setVisitVerified(true);
       fetchVisitCount();
       await addStreakBonus(user.id, 5);
+      await checkAndUnlockAchievements(user.id);
     }
   };
 
@@ -612,6 +621,12 @@ export default function GemDetailScreen() {
                 <View style={styles.localPickBadge}>
                   <Ionicons name="home" size={11} color={LOCAL_PICK_COLOR} />
                   <Text style={styles.localPickBadgeText}>Local&apos;s Pick</Text>
+                </View>
+              )}
+              {gem.is_first_in_area && (
+                <View style={styles.pioneerBadge}>
+                  <Ionicons name="star" size={11} color={PIONEER_COLOR} />
+                  <Text style={styles.pioneerBadgeText}>Pioneer</Text>
                 </View>
               )}
               {gem.community_id && gem.communities && (
@@ -981,6 +996,22 @@ const createStyles = (theme: Theme) =>
     fontSize: 10,
     fontWeight: '600',
     color: LOCAL_PICK_COLOR,
+  },
+  pioneerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: PIONEER_COLOR + '20',
+    borderWidth: 0.5,
+    borderColor: PIONEER_COLOR,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+  },
+  pioneerBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: PIONEER_COLOR,
   },
   communityBadge: {
     flexDirection: 'row',

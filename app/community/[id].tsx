@@ -23,11 +23,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const IMAGE_PLACEHOLDER = '#1A5C3A'
 const SCREEN_WIDTH = Dimensions.get('window').width
 const BUBBLE_MAX_WIDTH = SCREEN_WIDTH * 0.75
+// Heights of UI above the chat-tab KeyboardAvoidingView (always visible when chat is active).
+// Tune after visual testing on device — INFO_SECTION_HEIGHT varies with description length.
+const COMMUNITY_HEADER_HEIGHT = 56
+const INFO_SECTION_HEIGHT = 80
+const TAB_BAR_HEIGHT = 44
 
 type DetailTab = 'feed' | 'chat'
 
@@ -109,6 +114,7 @@ export default function CommunityDetailScreen() {
   const router = useRouter()
   const { theme } = useTheme()
   const styles = useMemo(() => createStyles(theme), [theme])
+  const insets = useSafeAreaInsets()
 
   const [loading, setLoading] = useState(true)
   const [loadingFeed, setLoadingFeed] = useState(true)
@@ -551,12 +557,15 @@ export default function CommunityDetailScreen() {
     }
 
     const canSend = inputText.trim().length > 0 && !sending
+    // Offset = distance from screen top to this KAV: safe area + header + info/join block + tab row.
+    const chatKeyboardOffset =
+      insets.top + COMMUNITY_HEADER_HEIGHT + INFO_SECTION_HEIGHT + TAB_BAR_HEIGHT
 
     return (
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? chatKeyboardOffset : 0}>
         <FlatList
           ref={listRef}
           data={chatItems}
