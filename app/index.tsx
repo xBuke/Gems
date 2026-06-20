@@ -671,10 +671,17 @@ export default function DiscoverScreen() {
   useEffect(() => {
     let channel: any = null;
     let cancelled = false;
+    let isSubscribing = false;
 
     const setupSubscription = async () => {
+      if (isSubscribing) return;
+      isSubscribing = true;
+
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user || cancelled) return;
+      if (!user || cancelled) {
+        isSubscribing = false;
+        return;
+      }
 
       const { count } = await supabase
         .from('notifications')
@@ -682,12 +689,27 @@ export default function DiscoverScreen() {
         .eq('user_id', user.id)
         .eq('read', false);
 
-      if (cancelled) return;
+      if (cancelled) {
+        isSubscribing = false;
+        return;
+      }
 
       setUnreadNotificationCount(count || 0);
 
+      const channelName = 'notifications-badge-' + user.id;
+      const existingChannels = supabase.getChannels();
+      const existing = existingChannels.find((ch) => ch.topic === 'realtime:' + channelName);
+      if (existing) {
+        await supabase.removeChannel(existing);
+      }
+
+      if (cancelled) {
+        isSubscribing = false;
+        return;
+      }
+
       channel = supabase
-        .channel('notifications-badge-' + user.id)
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -701,13 +723,18 @@ export default function DiscoverScreen() {
           },
         )
         .subscribe();
+
+      isSubscribing = false;
     };
 
     setupSubscription();
 
     return () => {
       cancelled = true;
-      if (channel) supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
     };
   }, []);
 
