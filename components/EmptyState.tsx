@@ -1,6 +1,7 @@
+import { PressableScale } from '@/components/PressableScale';
 import { useTheme } from '@/lib/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 type EmptyStateProps = {
   icon: string;
@@ -48,7 +49,7 @@ export const EmptyState = ({
         </Text>
       ) : null}
       {ctaText && onCtaPress ? (
-        <TouchableOpacity
+        <PressableScale
           onPress={onCtaPress}
           style={{
             marginTop: 20,
@@ -60,7 +61,7 @@ export const EmptyState = ({
           <Text style={{ color: theme.accentText, fontSize: 14, fontWeight: '600' }}>
             {ctaText}
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
       ) : null}
     </View>
   );

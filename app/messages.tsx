@@ -1,4 +1,5 @@
 import { getMyBlockedUsers } from '@/lib/safety';
+import { ErrorBanner } from '@/components/ErrorBanner';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -60,8 +61,11 @@ export default function MessagesScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
 
   const fetchConversations = useCallback(async () => {
+    setMessagesError(null);
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setConversations([]);
@@ -69,13 +73,20 @@ export default function MessagesScreen() {
       return;
     }
 
-    const { data: messages } = await supabase
+    const { data: messages, error } = await supabase
       .from('messages')
       .select(
         '*, sender:profiles!messages_sender_id_fkey(username, avatar_url), receiver:profiles!messages_receiver_id_fkey(username, avatar_url)',
       )
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
+
+    if (error) {
+      setMessagesError('Something went wrong loading your messages. Tap retry to try again.');
+      setConversations([]);
+      setLoading(false);
+      return;
+    }
 
     if (!messages) {
       setConversations([]);
@@ -120,6 +131,12 @@ export default function MessagesScreen() {
     setConversations(Array.from(conversationMap.values()));
     setLoading(false);
   }, []);
+
+  const handleRetryMessages = useCallback(() => {
+    setMessagesError(null);
+    setLoading(true);
+    fetchConversations();
+  }, [fetchConversations]);
 
   useEffect(() => {
     fetchConversations();
@@ -189,6 +206,10 @@ export default function MessagesScreen() {
           <Ionicons name="create-outline" size={22} color={theme.accent} />
         </TouchableOpacity>
       </View>
+
+      {messagesError && !loading && (
+        <ErrorBanner message={messagesError} onRetry={handleRetryMessages} />
+      )}
 
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 }}>

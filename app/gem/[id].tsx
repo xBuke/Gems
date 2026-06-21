@@ -10,6 +10,7 @@ import { getDistance } from '@/lib/distance';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/lib/haptics';
 import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
+import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -107,6 +108,7 @@ export default function GemDetailScreen() {
     id: string;
   } | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [unlockedBadge, setUnlockedBadge] = useState<string | null>(null);
 
   const heartScale = useSharedValue(1);
   const heartAnimatedStyle = useAnimatedStyle(() => ({
@@ -357,7 +359,10 @@ export default function GemDetailScreen() {
       }
 
       await addStreakBonus(user.id, 2);
-      await checkAndUnlockAchievements(user.id);
+      const newAchievements = await checkAndUnlockAchievements(user.id);
+      if (newAchievements.length > 0) {
+        setUnlockedBadge(newAchievements[0]);
+      }
       if (user.id !== gem.user_id) {
         checkAndUnlockAchievements(gem.user_id);
       }
@@ -476,7 +481,10 @@ export default function GemDetailScreen() {
       setVisitVerified(true);
       fetchVisitCount();
       await addStreakBonus(user.id, 5);
-      await checkAndUnlockAchievements(user.id);
+      const newAchievements = await checkAndUnlockAchievements(user.id);
+      if (newAchievements.length > 0) {
+        setUnlockedBadge(newAchievements[0]);
+      }
     }
   };
 
@@ -871,6 +879,12 @@ export default function GemDetailScreen() {
           onReportSuccess={hapticSuccess}
         />
       )}
+
+      <AchievementUnlockModal
+        visible={!!unlockedBadge}
+        badgeType={unlockedBadge}
+        onClose={() => setUnlockedBadge(null)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -974,7 +988,7 @@ const createStyles = (theme: Theme) =>
     borderColor: theme.coral,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 20,
+    borderRadius: 10,
   },
   verifiedBadgeText: {
     fontSize: 11,
@@ -990,10 +1004,10 @@ const createStyles = (theme: Theme) =>
     borderColor: LOCAL_PICK_COLOR,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 20,
+    borderRadius: 10,
   },
   localPickBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: LOCAL_PICK_COLOR,
   },
@@ -1006,10 +1020,10 @@ const createStyles = (theme: Theme) =>
     borderColor: PIONEER_COLOR,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 20,
+    borderRadius: 10,
   },
   pioneerBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: PIONEER_COLOR,
   },
@@ -1019,11 +1033,11 @@ const createStyles = (theme: Theme) =>
     gap: 4,
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   communityBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
   heroTitle: {

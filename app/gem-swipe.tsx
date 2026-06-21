@@ -76,12 +76,15 @@ type SwipeCardProps = {
   theme: Theme;
   onSwipeComplete: (action: 'save' | 'skip') => void;
   triggerRef: React.MutableRefObject<((action: 'save' | 'skip') => void) | null>;
+  promoteOnMount?: boolean;
 };
 
-function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef }: SwipeCardProps) {
+function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef, promoteOnMount }: SwipeCardProps) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const isAnimating = useSharedValue(false);
+  const entryScale = useSharedValue(promoteOnMount ? 0.95 : 1);
+  const entryOpacity = useSharedValue(promoteOnMount ? 0.5 : 1);
   const cat = CATEGORIES.find((c) => c.id === gem.category);
   const username = gem.profiles?.username ?? 'unknown';
 
@@ -113,6 +116,13 @@ function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef }: 
       triggerRef.current = null;
     };
   }, [animateOffScreen, triggerRef]);
+
+  useEffect(() => {
+    if (promoteOnMount) {
+      entryScale.value = withTiming(1, { duration: 250 });
+      entryOpacity.value = withTiming(1, { duration: 250 });
+    }
+  }, [promoteOnMount, entryScale, entryOpacity]);
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -147,9 +157,11 @@ function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef }: 
     });
 
   const cardStyle = useAnimatedStyle(() => ({
+    opacity: entryOpacity.value,
     transform: [
       { translateX: translateX.value },
       { translateY: translateY.value },
+      { scale: entryScale.value },
       {
         rotate: `${interpolate(translateX.value, [-200, 0, 200], [-15, 0, 15], Extrapolation.CLAMP)}deg`,
       },
@@ -325,6 +337,7 @@ export default function GemSwipeScreen() {
 
   const swipeTriggerRef = useRef<((action: 'save' | 'skip') => void) | null>(null);
   const processingRef = useRef(false);
+  const [hasSwiped, setHasSwiped] = useState(false);
 
   const fetchDeck = useCallback(async (myId: string, categoryFilter: string | null) => {
     setLoadingDeck(true);
@@ -355,6 +368,7 @@ export default function GemSwipeScreen() {
     const shuffled = shuffleArray(filtered).slice(0, 30);
 
     setDeck(shuffled as Gem[]);
+    setHasSwiped(false);
     setLoadingDeck(false);
   }, []);
 
@@ -432,6 +446,7 @@ export default function GemSwipeScreen() {
       }
 
       setDeck((prev) => prev.slice(1));
+      setHasSwiped(true);
       processingRef.current = false;
     },
     [deck, userId],
@@ -589,6 +604,7 @@ export default function GemSwipeScreen() {
                 theme={theme}
                 onSwipeComplete={handleSwipeAction}
                 triggerRef={swipeTriggerRef}
+                promoteOnMount={hasSwiped}
               />
             )}
           </View>

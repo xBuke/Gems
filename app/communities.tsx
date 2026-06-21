@@ -1,4 +1,5 @@
 import { EmptyState } from '@/components/EmptyState'
+import { PressableScale } from '@/components/PressableScale'
 import {
   canJoinMoreCommunities,
   fetchCommunities,
@@ -183,13 +184,12 @@ export default function CommunitiesScreen() {
           </View>
 
           {showJoinButton && (
-            <TouchableOpacity
+            <PressableScale
               style={[styles.joinButton, isJoined && styles.joinedButton]}
               onPress={() => {
                 if (!isJoined) handleJoin(community.id)
               }}
-              disabled={isJoined || joiningId === community.id}
-              activeOpacity={0.8}>
+              disabled={isJoined || joiningId === community.id}>
               {joiningId === community.id ? (
                 <ActivityIndicator size="small" color={isJoined ? theme.accent : theme.accentText} />
               ) : (
@@ -197,7 +197,7 @@ export default function CommunitiesScreen() {
                   {isJoined ? 'Joined' : 'Join'}
                 </Text>
               )}
-            </TouchableOpacity>
+            </PressableScale>
           )}
         </View>
       </TouchableOpacity>
@@ -208,12 +208,9 @@ export default function CommunitiesScreen() {
     <View style={styles.emptyState}>
       <Ionicons name="people-outline" size={48} color={theme.textTertiary} />
       <Text style={styles.emptyText}>You haven't joined any communities yet</Text>
-      <TouchableOpacity
-        style={styles.emptyButton}
-        onPress={() => setActiveTab('discover')}
-        activeOpacity={0.8}>
+      <PressableScale style={styles.emptyButton} onPress={() => setActiveTab('discover')}>
         <Text style={styles.emptyButtonText}>Browse Communities</Text>
-      </TouchableOpacity>
+      </PressableScale>
     </View>
   )
 
@@ -226,13 +223,13 @@ export default function CommunitiesScreen() {
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Communities</Text>
-        <TouchableOpacity onPress={handleCreatePress} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.createButton}>
+        <PressableScale onPress={handleCreatePress} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.createButton}>
           {isPremium ? (
             <Text style={styles.createButtonText}>+ Create</Text>
           ) : (
             <Ionicons name="lock-closed" size={20} color={theme.textSecondary} />
           )}
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       <View style={styles.tabContainer}>

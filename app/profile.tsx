@@ -20,8 +20,12 @@ import { blockUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorBanner } from '@/components/ErrorBanner';
+import { PressableScale } from '@/components/PressableScale';
 import ReportSheet from '@/components/ReportSheet';
+import { SkeletonCard } from '@/components/SkeletonCard';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,18 +36,24 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const IMAGE_PLACEHOLDER = '#1A5C3A';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type Profile = {
   id: string;
@@ -255,6 +265,7 @@ export default function ProfileScreen() {
   const [visitedGems, setVisitedGems] = useState<Gem[]>([]);
   const [expandedPanel, setExpandedPanel] = useState<AccordionPanel | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [unlockedAchievementTypes, setUnlockedAchievementTypes] = useState<string[]>([]);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [showAllCategories, setShowAllCategories] = useState(false);
@@ -275,6 +286,7 @@ export default function ProfileScreen() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchingCities, setSearchingCities] = useState(false);
   const [localeBadges, setLocaleBadges] = useState<LocaleBadge[]>([]);
+  const [unlockedBadge, setUnlockedBadge] = useState<string | null>(null);
   const citySearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMyCustomCategories = useCallback(async () => {
@@ -304,47 +316,57 @@ export default function ProfileScreen() {
   }, [userId]);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setProfileLoading(false);
-      return;
-    }
+    try {
+      setProfileError(null);
 
-    const isOwn = !userId || userId === user.id;
-    const profileId = isOwn ? user.id : userId;
-
-    setIsOwnProfile(isOwn);
-    setCurrentUserId(user.id);
-
-    await fetchMyCustomCategories();
-
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', profileId)
-      .single();
-    if (profileData) {
-      setProfile(profileData);
-
-      if (isOwn) {
-        setCityQuery((prev) => (prev === '' && profileData.home_town ? profileData.home_town : prev));
-        setSelectedCity((prev) => {
-          if (prev) return prev;
-          if (
-            profileData.home_town &&
-            profileData.home_lat != null &&
-            profileData.home_lng != null
-          ) {
-            return {
-              name: profileData.home_town,
-              lat: profileData.home_lat,
-              lng: profileData.home_lng,
-            };
-          }
-          return null;
-        });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setProfileLoading(false);
+        return;
       }
-    }
+
+      const isOwn = !userId || userId === user.id;
+      const profileId = isOwn ? user.id : userId;
+
+      setIsOwnProfile(isOwn);
+      setCurrentUserId(user.id);
+
+      await fetchMyCustomCategories();
+
+      const { data: profileData, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profileId)
+        .single();
+
+      if (profileFetchError) {
+        setProfileError('Something went wrong loading this profile. Tap retry to try again.');
+        setProfileLoading(false);
+        return;
+      }
+
+      if (profileData) {
+        setProfile(profileData);
+
+        if (isOwn) {
+          setCityQuery((prev) => (prev === '' && profileData.home_town ? profileData.home_town : prev));
+          setSelectedCity((prev) => {
+            if (prev) return prev;
+            if (
+              profileData.home_town &&
+              profileData.home_lat != null &&
+              profileData.home_lng != null
+            ) {
+              return {
+                name: profileData.home_town,
+                lat: profileData.home_lat,
+                lng: profileData.home_lng,
+              };
+            }
+            return null;
+          });
+        }
+      }
 
     const { data: achievementsData } = await supabase
       .from('achievements')
@@ -458,7 +480,17 @@ export default function ProfileScreen() {
     }
 
     setProfileLoading(false);
+    } catch {
+      setProfileError('Something went wrong loading this profile. Tap retry to try again.');
+      setProfileLoading(false);
+    }
   }, [userId, fetchMyCustomCategories]);
+
+  const handleRetryProfile = useCallback(() => {
+    setProfileError(null);
+    setProfileLoading(true);
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     fetchData();
@@ -830,7 +862,10 @@ export default function ProfileScreen() {
         .eq('status', 'accepted');
       setFollowersCount(followers ?? 0);
 
-      await checkAndUnlockAchievements(currentUserId);
+      const newAchievements = await checkAndUnlockAchievements(currentUserId);
+      if (newAchievements.length > 0) {
+        setUnlockedBadge(newAchievements[0]);
+      }
     }
   };
 
@@ -944,6 +979,7 @@ export default function ProfileScreen() {
   };
 
   const togglePanel = (panel: AccordionPanel) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedPanel((prev) => (prev === panel ? null : panel));
   };
 
@@ -1180,9 +1216,19 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      {profileError && !profileLoading && (
+        <ErrorBanner message={profileError} onRetry={handleRetryProfile} />
+      )}
+
       {profileLoading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
-          <ActivityIndicator size="large" color={theme.accent} />
+        <View style={{ padding: 16 }}>
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <View style={{ width: 88 }}>
+              <SkeletonCard height={88} borderRadius={44} />
+            </View>
+          </View>
+          <SkeletonCard height={70} borderRadius={12} />
+          <SkeletonCard height={120} borderRadius={12} />
         </View>
       ) : (
       <KeyboardAvoidingView
@@ -1341,7 +1387,7 @@ export default function ProfileScreen() {
 
         {!isOwnProfile && (
           <View style={styles.actionRow}>
-            <TouchableOpacity
+            <PressableScale
               style={
                 isFollowing
                   ? styles.followingButton
@@ -1350,7 +1396,7 @@ export default function ProfileScreen() {
                     : styles.followButton
               }
               onPress={isFollowing || isRequested ? handleUnfollow : handleFollow}
-              activeOpacity={isRequested ? 1 : 0.8}>
+              disabled={isRequested}>
               <Text
                 style={
                   isFollowing
@@ -1361,11 +1407,11 @@ export default function ProfileScreen() {
                 }>
                 {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.messageButton} onPress={handleSendMessage} activeOpacity={0.8}>
+            </PressableScale>
+            <PressableScale style={styles.messageButton} onPress={handleSendMessage}>
               <Ionicons name="chatbubble-outline" size={16} color={theme.accent} />
               <Text style={styles.messageButtonText}>Message</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         )}
 
@@ -1432,12 +1478,11 @@ export default function ProfileScreen() {
                   <Text style={styles.emptyTitle}>No gems yet</Text>
                   <Text style={styles.emptySubtitle}>Start exploring and drop your first gem!</Text>
                   {isOwnProfile && (
-                    <TouchableOpacity
+                    <PressableScale
                       style={styles.addButton}
-                      onPress={() => router.push('/add-gem')}
-                      activeOpacity={0.8}>
+                      onPress={() => router.push('/add-gem')}>
                       <Text style={styles.addButtonText}>Add Gem</Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   )}
                 </View>
               ) : (
@@ -1776,6 +1821,12 @@ export default function ProfileScreen() {
           reporterId={currentUserId}
         />
       )}
+
+      <AchievementUnlockModal
+        visible={!!unlockedBadge}
+        badgeType={unlockedBadge}
+        onClose={() => setUnlockedBadge(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -2166,15 +2217,17 @@ const createStyles = (theme: Theme) =>
   },
   categoryBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: theme.accent,
-    borderRadius: 4,
+    backgroundColor: theme.accentSubtle,
+    borderWidth: 0.5,
+    borderColor: theme.accent,
+    borderRadius: 20,
     paddingVertical: 2,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
   },
   categoryBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: theme.background,
+    color: theme.accent,
   },
   gemTitle: {
     fontSize: 12,

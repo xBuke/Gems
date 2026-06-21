@@ -6,7 +6,9 @@ import {
   fetchVisibleCustomCategories,
   type CustomCategory,
 } from '@/lib/customCategories';
-import { ACHIEVEMENTS, checkAndUnlockAchievements } from '@/lib/gamification';
+import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
+import { PressableScale } from '@/components/PressableScale';
+import { checkAndUnlockAchievements } from '@/lib/gamification';
 import { checkIsLocalPick } from '@/lib/localBadge';
 import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
@@ -98,6 +100,8 @@ export default function AddGemScreen() {
   const [locationChoice, setLocationChoice] = useState<LocationChoice | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [communityName, setCommunityName] = useState<string | null>(null);
+  const [unlockedBadge, setUnlockedBadge] = useState<string | null>(null);
+  const [pendingSuccessRoute, setPendingSuccessRoute] = useState<string | null>(null);
 
   useEffect(() => {
     if (hasMapLocation) {
@@ -302,13 +306,9 @@ export default function AddGemScreen() {
     const successRoute = communityId ? '/community/' + communityId : '/map';
 
     if (newAchievements.length > 0) {
-      const names = newAchievements
-        .map((type) => ACHIEVEMENTS.find((a) => a.type === type)?.name)
-        .filter(Boolean)
-        .join(', ');
-      Alert.alert('Gem dropped! 🎉', `Achievement unlocked: ${names}`, [
-        { text: 'OK', onPress: () => router.replace(successRoute) },
-      ]);
+      setUnlockedBadge(newAchievements[0]);
+      setPendingSuccessRoute(successRoute);
+      Alert.alert('Gem dropped! 🎉');
     } else {
       Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace(successRoute) }]);
     }
@@ -541,6 +541,7 @@ export default function AddGemScreen() {
                         <Text style={styles.categoryName}>{category.name}</Text>
                         {category.premium && (
                           <View style={styles.proBadge}>
+                            <Ionicons name="diamond" size={10} color="#FFD700" />
                             <Text style={styles.proBadgeText}>PRO</Text>
                           </View>
                         )}
@@ -666,21 +667,32 @@ export default function AddGemScreen() {
               <Text style={styles.locationStatusText}>{locationStatusText}</Text>
             </View>
 
-            <TouchableOpacity
+            <PressableScale
               style={styles.submitButton}
               onPress={handleSubmit}
-              disabled={submitting}
-              activeOpacity={0.8}>
+              disabled={submitting}>
               {submitting ? (
                 <ActivityIndicator color={theme.text} />
               ) : (
                 <Text style={styles.submitButtonText}>Drop this Gem</Text>
               )}
-            </TouchableOpacity>
+            </PressableScale>
           </>
         )}
       </ScrollView>
       </KeyboardAvoidingView>
+
+      <AchievementUnlockModal
+        visible={!!unlockedBadge}
+        badgeType={unlockedBadge}
+        onClose={() => {
+          setUnlockedBadge(null);
+          if (pendingSuccessRoute) {
+            router.replace(pendingSuccessRoute);
+            setPendingSuccessRoute(null);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -861,14 +873,17 @@ const createStyles = (theme: Theme) =>
     position: 'absolute',
     top: 6,
     right: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
     backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
   },
   proBadgeText: {
     color: '#FFD700',
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '700',
   },
   subcategoryScroll: {

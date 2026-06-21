@@ -1,3 +1,4 @@
+import { PressableScale } from '@/components/PressableScale'
 import { checkIsPremium } from '@/lib/paywall'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
@@ -127,14 +128,13 @@ export default function CreateCategoryScreen() {
           <Text style={styles.premiumSubtitle}>
             Create your own categories to organize gems your way
           </Text>
-          <TouchableOpacity
+          <PressableScale
             style={[styles.upgradeButton, { backgroundColor: theme.accent }]}
-            onPress={() => router.push('/paywall')}
-            activeOpacity={0.8}>
+            onPress={() => router.push('/paywall')}>
             <Text style={[styles.upgradeButtonText, { color: theme.accentText }]}>
               Upgrade to Premium
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </SafeAreaView>
     )
@@ -233,17 +233,16 @@ export default function CreateCategoryScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
+        <PressableScale
           style={styles.submitButton}
           onPress={handleSubmit}
-          disabled={submitting}
-          activeOpacity={0.8}>
+          disabled={submitting}>
           {submitting ? (
             <ActivityIndicator color={theme.accentText} />
           ) : (
             <Text style={styles.submitButtonText}>Create Category</Text>
           )}
-        </TouchableOpacity>
+        </PressableScale>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

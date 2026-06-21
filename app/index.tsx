@@ -1,5 +1,6 @@
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { SkeletonCard } from '@/components/SkeletonCard';
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
 import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customCategories';
@@ -26,7 +27,6 @@ import * as Location from 'expo-location';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   RefreshControl,
   ScrollView,
@@ -36,7 +36,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Reanimated, { FadeInDown } from 'react-native-reanimated';
+import Reanimated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const LOCAL_PICK_COLOR = '#7F77DD';
@@ -104,6 +104,37 @@ const formatDistanceKm = (meters: number) => {
   if (km < 1) return `${Math.round(meters)} m`;
   return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
 };
+
+type TabBarIconProps = {
+  isActive: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+  size: number;
+  color: string;
+};
+
+function TabBarIcon({ isActive, icon, activeIcon, size, color }: TabBarIconProps) {
+  const tabScale = useSharedValue(1);
+
+  useEffect(() => {
+    if (isActive) {
+      tabScale.value = withSequence(
+        withTiming(1.15, { duration: 150 }),
+        withTiming(1, { duration: 150 }),
+      );
+    }
+  }, [isActive, tabScale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: tabScale.value }],
+  }));
+
+  return (
+    <Reanimated.View style={animatedStyle}>
+      <Ionicons name={isActive ? activeIcon : icon} size={size} color={color} />
+    </Reanimated.View>
+  );
+}
 
 const matchesSearch = (gem: GemWithProfile, query: string) => {
   if (!query.trim()) return true;
@@ -875,7 +906,7 @@ export default function DiscoverScreen() {
   const renderPioneerBadge = () => (
     <View style={styles.pioneerBadge}>
       <Ionicons name="star" size={11} color={PIONEER_COLOR} />
-      <Text style={styles.pioneerBadgeText}>First Here</Text>
+      <Text style={styles.pioneerBadgeText}>Pioneer</Text>
     </View>
   );
 
@@ -1262,14 +1293,6 @@ export default function DiscoverScreen() {
     });
   };
 
-  if (initialLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
-        <ActivityIndicator size="large" color={theme.accent} />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {streakBannerText && (
@@ -1526,7 +1549,18 @@ export default function DiscoverScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
         }>
-        {feedTab === 'forYou' ? renderForYouContent() : renderFollowingContent()}
+        {initialLoading ? (
+          <View style={{ padding: 16 }}>
+            <SkeletonCard height={160} borderRadius={16} />
+            <SkeletonCard height={90} />
+            <SkeletonCard height={90} />
+            <SkeletonCard height={90} />
+          </View>
+        ) : feedTab === 'forYou' ? (
+          renderForYouContent()
+        ) : (
+          renderFollowingContent()
+        )}
       </ScrollView>
 
       <BlurView
@@ -1570,8 +1604,10 @@ export default function DiscoverScreen() {
                 }}
                 activeOpacity={0.7}>
                 <View style={styles.tabIconWrap}>
-                  <Ionicons
-                    name={isActive ? tab.activeIcon : tab.icon}
+                  <TabBarIcon
+                    isActive={isActive}
+                    icon={tab.icon}
+                    activeIcon={tab.activeIcon}
                     size={isAddButton ? 34 : 24}
                     color={isAddButton ? theme.accent : isActive ? theme.accent : theme.textTertiary}
                   />
@@ -1980,12 +2016,12 @@ const createStyles = (theme: Theme) =>
     backgroundColor: LOCAL_PICK_COLOR + '20',
     borderWidth: 0.5,
     borderColor: LOCAL_PICK_COLOR,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 10,
   },
   localPickBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: LOCAL_PICK_COLOR,
   },
@@ -1996,12 +2032,12 @@ const createStyles = (theme: Theme) =>
     backgroundColor: PIONEER_COLOR + '20',
     borderWidth: 0.5,
     borderColor: PIONEER_COLOR,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 10,
   },
   pioneerBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: PIONEER_COLOR,
   },
@@ -2017,13 +2053,13 @@ const createStyles = (theme: Theme) =>
     gap: 4,
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     marginBottom: 4,
     maxWidth: '100%',
   },
   communityBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     flexShrink: 1,
   },

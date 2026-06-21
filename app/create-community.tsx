@@ -1,3 +1,4 @@
+import { PressableScale } from '@/components/PressableScale'
 import { CATEGORIES } from '@/lib/categories'
 import { checkIsPremium } from '@/lib/paywall'
 import { useTheme } from '@/lib/ThemeContext'
@@ -151,14 +152,13 @@ export default function CreateCommunityScreen() {
           <Text style={styles.premiumSubtitle}>
             Create and manage your own communities to connect with fellow explorers
           </Text>
-          <TouchableOpacity
+          <PressableScale
             style={[styles.upgradeButton, { backgroundColor: theme.accent }]}
-            onPress={() => router.push('/paywall')}
-            activeOpacity={0.8}>
+            onPress={() => router.push('/paywall')}>
             <Text style={[styles.upgradeButtonText, { color: theme.accentText }]}>
               Upgrade to Premium
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </SafeAreaView>
     )
@@ -303,17 +303,16 @@ export default function CreateCommunityScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
+        <PressableScale
           style={styles.submitButton}
           onPress={handleSubmit}
-          disabled={submitting}
-          activeOpacity={0.8}>
+          disabled={submitting}>
           {submitting ? (
             <ActivityIndicator color={theme.accentText} />
           ) : (
             <Text style={styles.submitButtonText}>Create Community</Text>
           )}
-        </TouchableOpacity>
+        </PressableScale>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

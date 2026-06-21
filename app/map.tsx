@@ -91,6 +91,7 @@ export default function MapScreen() {
   const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
   const [gemsLoading, setGemsLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [selectedGem, setSelectedGem] = useState<Gem | null>(null);
   const [selectedLikeCount, setSelectedLikeCount] = useState(0);
   const [selectedCommentCount, setSelectedCommentCount] = useState(0);
@@ -134,11 +135,20 @@ export default function MapScreen() {
 
       query = applyCommunityGemFilter(query, myCommunityIds);
 
-      const { data } = await query;
+      const { data, error } = await query;
+
+      if (error) {
+        setMapError('Could not load gems for this area.');
+        return;
+      }
+
+      setMapError(null);
       if (data) {
         setGems(data);
         lastFetchedRegionRef.current = region;
       }
+    } catch {
+      setMapError('Could not load gems for this area.');
     } finally {
       setGemsLoading(false);
     }
@@ -516,6 +526,20 @@ export default function MapScreen() {
         </View>
       )}
 
+      {mapError && (
+        <View style={styles.mapErrorBanner}>
+          <Ionicons name="alert-circle-outline" size={14} color={theme.danger} />
+          <Text style={styles.mapErrorText} numberOfLines={1}>
+            {mapError}
+          </Text>
+          <TouchableOpacity
+            onPress={() => fetchVisibleGems(lastFetchedRegionRef.current ?? INITIAL_REGION)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.mapErrorRetry}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.filterContainer}>
         <ScrollView
           horizontal
@@ -842,6 +866,31 @@ const createStyles = (theme: Theme, overlay: string) =>
       fontWeight: '500',
       color: theme.text,
     },
+    mapErrorBanner: {
+      position: 'absolute',
+      top: 110,
+      left: 16,
+      right: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.card,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderWidth: 0.5,
+      borderColor: theme.danger,
+    },
+    mapErrorText: {
+      flex: 1,
+      fontSize: 12,
+      color: theme.text,
+    },
+    mapErrorRetry: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.accent,
+    },
     marker: {
       width: 36,
       height: 36,
@@ -976,7 +1025,7 @@ const createStyles = (theme: Theme, overlay: string) =>
       borderColor: theme.coral,
       paddingVertical: 4,
       paddingHorizontal: 10,
-      borderRadius: 20,
+      borderRadius: 10,
     },
     sheetVerifiedBadgeText: {
       fontSize: 11,

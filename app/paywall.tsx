@@ -1,3 +1,4 @@
+import { PressableScale } from '@/components/PressableScale';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -120,12 +121,11 @@ export default function PaywallScreen() {
               <Text style={styles.priceAmount}>5.99€</Text>
               <Text style={styles.pricePeriod}>/month</Text>
             </View>
-            <TouchableOpacity
+            <PressableScale
               style={styles.monthlyButton}
-              onPress={() => showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE)}
-              activeOpacity={0.8}>
+              onPress={() => showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE)}>
               <Text style={styles.monthlyButtonText}>Start Monthly</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <View style={styles.pricingCardFeatured}>
@@ -138,12 +138,11 @@ export default function PaywallScreen() {
               <Text style={styles.pricePeriod}>/year · 3.75€/mo</Text>
             </View>
             <Text style={styles.saveLabel}>Save 37%</Text>
-            <TouchableOpacity
+            <PressableScale
               style={styles.yearlyButton}
-              onPress={() => showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE)}
-              activeOpacity={0.8}>
+              onPress={() => showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE)}>
               <Text style={styles.yearlyButtonText}>Start Yearly</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           {showLifetimeCard && (
@@ -170,22 +169,18 @@ export default function PaywallScreen() {
               <Text style={styles.lifetimeFinePrint}>
                 No refunds. Early supporter pricing — won't be offered again.
               </Text>
-              <TouchableOpacity
+              <PressableScale
                 style={styles.lifetimeButton}
-                onPress={handleLifetimePurchase}
-                activeOpacity={0.8}>
+                onPress={handleLifetimePurchase}>
                 <Text style={styles.lifetimeButtonText}>Claim Lifetime Deal</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           )}
         </View>
 
-        <TouchableOpacity
-          style={styles.laterButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}>
+        <PressableScale style={styles.laterButton} onPress={() => router.back()}>
           <Text style={styles.laterButtonText}>Maybe later</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </ScrollView>
     </SafeAreaView>
   );
