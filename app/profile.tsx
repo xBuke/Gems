@@ -20,6 +20,7 @@ import { blockUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import { EmptyState } from '@/components/EmptyState';
 import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -781,7 +782,7 @@ export default function ProfileScreen() {
     await fetchData();
   };
 
-  const handleUnfollow = async () => {
+  const performUnfollow = async () => {
     if (!currentUserId || !userId) return;
 
     hapticLight();
@@ -795,6 +796,20 @@ export default function ProfileScreen() {
     setIsFollowing(false);
     setIsRequested(false);
     await fetchData();
+  };
+
+  const handleUnfollow = () => {
+    if (!currentUserId || !userId) return;
+
+    if (isFollowing) {
+      Alert.alert('Unfollow', `Stop following @${username}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Unfollow', style: 'destructive', onPress: () => performUnfollow() },
+      ]);
+      return;
+    }
+
+    performUnfollow();
   };
 
   const handleAcceptRequest = async (followerId: string) => {
@@ -1083,9 +1098,14 @@ export default function ProfileScreen() {
     </TouchableOpacity>
   );
 
-  const renderHorizontalGemList = (gemsList: Gem[], emptyText: string) =>
+  const renderHorizontalGemList = (
+    gemsList: Gem[],
+    emptyIcon: string,
+    emptyTitle: string,
+    emptySubtitle?: string,
+  ) =>
     gemsList.length === 0 ? (
-      <Text style={styles.sectionEmptyText}>{emptyText}</Text>
+      <EmptyState icon={emptyIcon} title={emptyTitle} subtitle={emptySubtitle} />
     ) : (
       <ScrollView
         horizontal
@@ -1449,7 +1469,12 @@ export default function ProfileScreen() {
 
             {expandedPanel === 'liked' && (
               <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
-                {renderHorizontalGemList(likedGems, 'No liked gems yet')}
+                {renderHorizontalGemList(
+                  likedGems,
+                  'heart-outline',
+                  'No liked gems yet',
+                  'Gems you like will appear here',
+                )}
               </Animated.View>
             )}
           </View>
@@ -1468,7 +1493,12 @@ export default function ProfileScreen() {
 
             {expandedPanel === 'visited' && (
               <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
-                {renderHorizontalGemList(visitedGems, 'No verified visits yet')}
+                {renderHorizontalGemList(
+                  visitedGems,
+                  'checkmark-circle-outline',
+                  'No verified visits yet',
+                  'Verify visits at gem locations to track them here',
+                )}
               </Animated.View>
             )}
           </View>
@@ -2099,6 +2129,13 @@ const createStyles = (theme: Theme) =>
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   gemCardSpacer: {
     flex: 1,
@@ -2241,6 +2278,11 @@ const createStyles = (theme: Theme) =>
     overflow: 'hidden',
     borderWidth: 0.5,
     borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   horizontalGemImage: {
     height: 120,

@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/EmptyState'
 import {
   canJoinMoreCommunities,
   fetchCommunities,
@@ -267,7 +268,17 @@ export default function CommunitiesScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => renderCommunityCard(item, activeTab === 'discover')}
-          ListEmptyComponent={activeTab === 'mine' ? renderEmptyMine : undefined}
+          ListEmptyComponent={
+            activeTab === 'mine' ? (
+              renderEmptyMine()
+            ) : (
+              <EmptyState
+                icon="people-circle-outline"
+                title="No communities found"
+                subtitle="Check back later as new communities are created"
+              />
+            )
+          }
         />
       )}
     </SafeAreaView>

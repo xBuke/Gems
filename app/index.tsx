@@ -1,3 +1,5 @@
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorBanner } from '@/components/ErrorBanner';
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
 import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customCategories';
@@ -1179,7 +1181,17 @@ export default function DiscoverScreen() {
           <Text style={styles.sectionTitle}>Near You</Text>
           {filteredNearbyGems.length === 0 ? (
             <>
-              <Text style={styles.emptyText}>No gems near you yet — be the first!</Text>
+              <EmptyState
+                icon={searchQuery.trim() ? 'search-outline' : 'location-outline'}
+                title={
+                  searchQuery.trim() ? 'No gems match your search' : 'No gems near you yet'
+                }
+                subtitle={
+                  searchQuery.trim()
+                    ? 'Try a different search term'
+                    : 'Be the first to drop a gem nearby!'
+                }
+              />
               {hasMoreNearby && !searchQuery.trim() && (
                 <TouchableOpacity
                   style={styles.loadMoreButton}
@@ -1230,7 +1242,13 @@ export default function DiscoverScreen() {
     }
 
     if (filteredFollowingGems.length === 0) {
-      return <Text style={styles.emptyText}>No gems match your search.</Text>;
+      return (
+        <EmptyState
+          icon="search-outline"
+          title="No gems match your search"
+          subtitle="Try a different search term"
+        />
+      );
     }
 
     return filteredFollowingGems.map((gem) => {
@@ -1500,27 +1518,7 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
-      {feedError && (
-        <View
-          style={{
-            backgroundColor: theme.card,
-            borderRadius: 12,
-            padding: 14,
-            marginHorizontal: 16,
-            marginBottom: 12,
-            borderWidth: 0.5,
-            borderColor: theme.danger,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 10,
-          }}>
-          <Ionicons name="alert-circle-outline" size={20} color={theme.danger} />
-          <Text style={{ color: theme.text, fontSize: 13, flex: 1 }}>{feedError}</Text>
-          <TouchableOpacity onPress={handleRetryFeed}>
-            <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '600' }}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {feedError && <ErrorBanner message={feedError} onRetry={handleRetryFeed} />}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -1858,6 +1856,11 @@ const createStyles = (theme: Theme) =>
     borderColor: theme.border,
     borderRadius: 12,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   trendingImage: {
     height: 130,
@@ -1930,6 +1933,11 @@ const createStyles = (theme: Theme) =>
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   listCardImageWrap: {
     width: 90,

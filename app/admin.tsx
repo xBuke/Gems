@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/EmptyState';
 import { CATEGORIES } from '@/lib/categories';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -784,7 +785,7 @@ export default function AdminScreen() {
             </View>
           }
           ListEmptyComponent={
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No gems</Text>
+            <EmptyState icon="diamond-outline" title="No gems" subtitle="No gems match the current filters" />
           }
         />
       );

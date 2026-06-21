@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/EmptyState'
 import { requireAuth } from '@/lib/authGuard'
 import { CATEGORIES } from '@/lib/categories'
 import { canJoinMoreCommunities, getCommunityMemberCount } from '@/lib/communities'
@@ -516,7 +517,11 @@ export default function CommunityDetailScreen() {
       </TouchableOpacity>
 
       {gems.length === 0 ? (
-        <Text style={styles.emptyText}>No gems in this community yet. Be the first!</Text>
+        <EmptyState
+          icon="location-outline"
+          title="No gems in this community yet"
+          subtitle="Be the first to add one!"
+        />
       ) : (
         gems.map(renderGemCard)
       )}

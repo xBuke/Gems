@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/EmptyState'
 import { getMyBlockedUsers, unblockUser } from '@/lib/safety'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
@@ -93,10 +94,11 @@ export default function BlockedUsersScreen() {
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
       ) : blockedUsers.length === 0 ? (
-        <View style={styles.centered}>
-          <Ionicons name="ban-outline" size={56} color={theme.textTertiary} />
-          <Text style={styles.emptyText}>You haven&apos;t blocked anyone</Text>
-        </View>
+        <EmptyState
+          icon="shield-checkmark-outline"
+          title="No blocked users"
+          subtitle="You haven't blocked anyone"
+        />
       ) : (
         <FlatList
           data={blockedUsers}

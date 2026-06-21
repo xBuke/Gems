@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -112,7 +113,7 @@ export default function FollowersScreen() {
     setFollowingIds((prev) => new Set(prev).add(targetId));
   };
 
-  const handleUnfollow = async (targetId: string) => {
+  const performUnfollow = async (targetId: string) => {
     if (!currentUserId) return;
 
     await supabase
@@ -126,6 +127,24 @@ export default function FollowersScreen() {
       next.delete(targetId);
       return next;
     });
+  };
+
+  const confirmUnfollow = (targetId: string, targetUsername: string, onSuccess?: () => void) => {
+    Alert.alert('Unfollow', `Stop following @${targetUsername}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Unfollow',
+        style: 'destructive',
+        onPress: async () => {
+          await performUnfollow(targetId);
+          onSuccess?.();
+        },
+      },
+    ]);
+  };
+
+  const handleUnfollow = (targetId: string, targetUsername: string) => {
+    confirmUnfollow(targetId, targetUsername);
   };
 
   const handleRemoveFollower = (followerId: string, followerUsername: string) => {
@@ -153,20 +172,9 @@ export default function FollowersScreen() {
     );
   };
 
-  const handleUnfollowFromOwnList = async (targetId: string) => {
-    if (!currentUserId) return;
-
-    await supabase
-      .from('follows')
-      .delete()
-      .eq('follower_id', currentUserId)
-      .eq('following_id', targetId);
-
-    setUsers((prev) => prev.filter((user) => user.id !== targetId));
-    setFollowingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(targetId);
-      return next;
+  const handleUnfollowFromOwnList = (targetId: string, targetUsername: string) => {
+    confirmUnfollow(targetId, targetUsername, () => {
+      setUsers((prev) => prev.filter((user) => user.id !== targetId));
     });
   };
 
@@ -201,7 +209,7 @@ export default function FollowersScreen() {
             style={isFollowing ? styles.followingButton : styles.followButton}
             onPress={() => {
               if (isFollowing) {
-                handleUnfollow(item.id);
+                handleUnfollow(item.id, item.username);
               } else {
                 handleFollow(item.id);
               }
@@ -223,7 +231,7 @@ export default function FollowersScreen() {
         {isOwnList && !isFollowers && !isSelf ? (
           <TouchableOpacity
             style={styles.unfollowButton}
-            onPress={() => handleUnfollowFromOwnList(item.id)}
+            onPress={() => handleUnfollowFromOwnList(item.id, item.username)}
             activeOpacity={0.8}>
             <Text style={styles.unfollowButtonText}>Unfollow</Text>
           </TouchableOpacity>
@@ -247,9 +255,15 @@ export default function FollowersScreen() {
           <ActivityIndicator color={theme.accent} />
         </View>
       ) : users.length === 0 ? (
-        <View style={styles.centered}>
-          <Text style={styles.emptyText}>No {title.toLowerCase()} yet</Text>
-        </View>
+        <EmptyState
+          icon="people-outline"
+          title={`No ${title.toLowerCase()} yet`}
+          subtitle={
+            isFollowers
+              ? "When people follow you, they'll show up here"
+              : "When you follow people, they'll show up here"
+          }
+        />
       ) : (
         <FlatList
           data={users}
