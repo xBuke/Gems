@@ -415,13 +415,7 @@ export default function MapScreen() {
       : null;
 
   const selectedGemLocationLabel = selectedGem
-    ? [
-        selectedLocationName ??
-          formatCoordinates(selectedGem.latitude, selectedGem.longitude),
-        selectedGemDistance,
-      ]
-        .filter(Boolean)
-        .join(' · ')
+    ? formatCoordinates(selectedGem.latitude, selectedGem.longitude)
     : '';
 
   const handleMyLocation = async () => {
@@ -474,6 +468,10 @@ export default function MapScreen() {
 
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
         <Ionicons name="arrow-back" size={20} color={theme.text} />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocation} activeOpacity={0.8}>
+        <Ionicons name="locate" size={22} color={theme.accent} />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -663,10 +661,6 @@ export default function MapScreen() {
           </View>
         )}
       </View>
-
-      <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocation} activeOpacity={0.8}>
-        <Ionicons name="locate" size={22} color={theme.accent} />
-      </TouchableOpacity>
 
       {tapLocation && (
         <View style={[styles.actionSheet, { paddingBottom: 20 + insets.bottom }]}>
@@ -1007,7 +1001,7 @@ const createStyles = (theme: Theme, overlay: string) =>
     sheetLocation: {
       fontFamily: 'SpaceMono-Regular',
       fontSize: 10,
-      color: theme.textSecondary,
+      color: theme.accent,
       marginBottom: 12,
     },
     sheetStatsRow: {
