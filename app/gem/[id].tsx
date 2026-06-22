@@ -662,10 +662,6 @@ export default function GemDetailScreen() {
             <Text style={styles.heroTitle} numberOfLines={2} ellipsizeMode="tail">
               {gem.title}
             </Text>
-            <Text style={styles.heroCoords}>
-              {formatCoordinates(gem.latitude, gem.longitude)}
-              {locationName ? ` · ${locationName}` : ''}
-            </Text>
           </View>
         </View>
 
@@ -713,6 +709,11 @@ export default function GemDetailScreen() {
               <Text style={styles.bestTimeValue}>{gem.best_time}</Text>
             </View>
           ) : null}
+
+          <Text style={styles.primaryLocationLabel}>
+            {formatCoordinates(gem.latitude, gem.longitude)}
+            {locationName ? ` · ${locationName}` : ''}
+          </Text>
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
@@ -771,7 +772,7 @@ export default function GemDetailScreen() {
                   styles.beenHereButtonText,
                   visitVerified && styles.beenHereButtonTextVerified,
                 ]}>
-                {visitVerified ? 'Visit verified! ✓' : 'Check In'}
+                {visitVerified ? 'Check In ✓' : 'Check In'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1049,11 +1050,10 @@ const createStyles = (theme: Theme) =>
     fontSize: 22,
     fontFamily: 'SpaceGrotesk-Bold',
   },
-  heroCoords: {
+  primaryLocationLabel: {
     fontFamily: 'SpaceMono-Regular',
     fontSize: 11,
-    color: theme.textSecondary,
-    marginTop: 4,
+    color: theme.accent,
     marginBottom: 12,
   },
   content: {
@@ -1137,35 +1137,35 @@ const createStyles = (theme: Theme) =>
   },
   statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
     backgroundColor: theme.card,
     borderWidth: 0.5,
     borderColor: theme.border,
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    marginVertical: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
   },
   statItem: {
     flex: 1,
+    padding: 11,
     alignItems: 'center',
-    gap: 2,
   },
   statDivider: {
     width: 0.5,
-    height: 28,
     backgroundColor: theme.border,
+    marginVertical: 10,
   },
   statCount: {
-    color: theme.text,
-    fontSize: 18,
     fontFamily: 'SpaceMono-Regular',
+    fontSize: 18,
     fontWeight: '700',
+    color: theme.text,
+    lineHeight: 18,
   },
   statLabel: {
+    fontFamily: 'SpaceGrotesk-Regular',
     fontSize: 11,
     color: theme.textSecondary,
+    marginTop: 2,
   },
   descriptionWrap: {
     marginBottom: 16,
@@ -1201,7 +1201,7 @@ const createStyles = (theme: Theme) =>
   navigateButtonText: {
     color: theme.accent,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   beenHereButton: {
     flex: 1,
@@ -1219,7 +1219,7 @@ const createStyles = (theme: Theme) =>
   beenHereButtonText: {
     color: theme.accentText,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   beenHereButtonTextVerified: {
     color: theme.accentText,

@@ -13,7 +13,7 @@ import { checkIsLocalPick } from '@/lib/localBadge';
 import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
-import { formatCoordinates } from '@/lib/coordinates';
+import { formatLatitude } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticError, hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
@@ -433,9 +433,11 @@ export default function AddGemScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <Text style={styles.stepIndicator}>
-        STEP {addGemStep} OF 3 — {addGemStepLabels[addGemStep - 1]}
-      </Text>
+      <View style={styles.stepIndicatorWrap}>
+        <Text style={styles.stepIndicator}>
+          STEP {addGemStep} OF 3 — {addGemStepLabels[addGemStep - 1]}
+        </Text>
+      </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -458,40 +460,61 @@ export default function AddGemScreen() {
               style={[
                 styles.locationCard,
                 locationChoice === 'here' && styles.locationCardSelected,
-                locationChoice === 'here' && locationDetected && styles.locationCardSelectedFill,
+                locationChoice === 'here' && styles.locationCardSelectedFill,
               ]}
               onPress={handleSelectHere}
               activeOpacity={0.8}>
-              <Ionicons name="locate" size={22} color={theme.accent} style={styles.locationCardIcon} />
-              <Text style={styles.locationCardTitle}>I'm here now</Text>
-              <Text style={styles.locationCardSubtitle}>Use my GPS</Text>
-              {locationChoice === 'here' && locationDetected && latitude != null && longitude != null && (
-                <Text style={styles.locationCardCoords}>
-                  {formatCoordinates(latitude, longitude)}
-                </Text>
+              <View
+                style={[
+                  styles.locationCardIconCircle,
+                  locationChoice === 'here' && styles.locationCardIconCircleSelected,
+                ]}>
+                <Ionicons
+                  name="locate"
+                  size={16}
+                  color={locationChoice === 'here' ? theme.accentText : theme.accent}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.locationCardTitle,
+                  locationChoice === 'here' && styles.locationCardTitleSelected,
+                ]}>
+                I'm here now
+              </Text>
+              {locationChoice === 'here' && locationDetected && latitude != null ? (
+                <Text style={styles.locationCardCoordsPreview}>{formatLatitude(latitude)}</Text>
+              ) : (
+                <Text style={styles.locationCardSubtitle}>Use my GPS</Text>
               )}
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.locationCard,
                 locationChoice === 'else' && styles.locationCardSelected,
-                hasMapLocation && styles.locationCardSelectedFill,
+                locationChoice === 'else' && styles.locationCardSelectedFill,
               ]}
               onPress={handleSelectElse}
               activeOpacity={0.8}>
-              <Ionicons
-                name="map-outline"
-                size={22}
-                color={theme.textSecondary}
-                style={styles.locationCardIcon}
-              />
-              <Text style={styles.locationCardTitle}>Pick on map</Text>
+              <View
+                style={[
+                  styles.locationCardIconCircle,
+                  locationChoice === 'else' && styles.locationCardIconCircleSelected,
+                ]}>
+                <Ionicons
+                  name="map-outline"
+                  size={16}
+                  color={locationChoice === 'else' ? theme.accentText : theme.textSecondary}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.locationCardTitle,
+                  locationChoice === 'else' && styles.locationCardTitleSelected,
+                ]}>
+                Pick on map
+              </Text>
               <Text style={styles.locationCardSubtitle}>Choose location</Text>
-              {hasMapLocation && latitude != null && longitude != null && (
-                <Text style={styles.locationCardCoords}>
-                  {formatCoordinates(latitude, longitude)}
-                </Text>
-              )}
             </TouchableOpacity>
           </View>
         )}
@@ -527,7 +550,7 @@ export default function AddGemScreen() {
             </TouchableOpacity>
 
             <View style={styles.formSection}>
-              <Text style={styles.fieldLabel}>GEM NAME</Text>
+              <Text style={styles.journalFieldLabel}>GEM NAME</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Give your gem a name..."
@@ -537,7 +560,7 @@ export default function AddGemScreen() {
                 maxLength={60}
               />
 
-              <Text style={styles.fieldLabel}>WHAT MAKES IT SPECIAL?</Text>
+              <Text style={styles.journalFieldLabel}>WHAT MAKES IT SPECIAL?</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Share what makes this spot worth visiting..."
@@ -549,7 +572,7 @@ export default function AddGemScreen() {
                 maxLength={500}
               />
 
-              <Text style={styles.fieldLabel}>CATEGORY</Text>
+              <Text style={styles.journalFieldLabel}>CATEGORY</Text>
               <View style={styles.categoryGrid}>
                 {CATEGORIES.map((category) => {
                   const isSelected = selectedMainCategory?.id === category.id;
@@ -748,13 +771,15 @@ const createStyles = (theme: Theme) =>
   headerSpacer: {
     width: 22,
   },
+  stepIndicatorWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
   stepIndicator: {
     fontFamily: 'SpaceMono-Regular',
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: theme.textSecondary,
-    textAlign: 'center',
-    marginBottom: 12,
+    fontSize: 9,
+    letterSpacing: 2,
+    color: theme.accent,
     textTransform: 'uppercase',
   },
   scrollView: {
@@ -798,8 +823,17 @@ const createStyles = (theme: Theme) =>
   locationCardSelectedFill: {
     backgroundColor: theme.accentSub,
   },
-  locationCardIcon: {
-    marginBottom: 6,
+  locationCardIconCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: theme.bgTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  locationCardIconCircleSelected: {
+    backgroundColor: theme.accent,
   },
   locationCardTitle: {
     fontSize: 13,
@@ -807,15 +841,18 @@ const createStyles = (theme: Theme) =>
     color: theme.text,
     marginBottom: 2,
   },
+  locationCardTitleSelected: {
+    color: theme.accent,
+  },
   locationCardSubtitle: {
     fontSize: 11,
     color: theme.textTertiary,
   },
-  locationCardCoords: {
+  locationCardCoordsPreview: {
     fontFamily: 'SpaceMono-Regular',
-    fontSize: 9,
-    color: theme.textSecondary,
-    marginTop: 6,
+    fontSize: 10,
+    color: theme.accent,
+    opacity: 0.7,
   },
   imagePicker: {
     height: 220,
@@ -861,6 +898,14 @@ const createStyles = (theme: Theme) =>
   },
   formSection: {
     marginHorizontal: 16,
+  },
+  journalFieldLabel: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 9,
+    letterSpacing: 1.5,
+    color: theme.accent,
+    marginBottom: 4,
+    textTransform: 'uppercase',
   },
   fieldLabel: {
     fontFamily: 'SpaceMono-Regular',

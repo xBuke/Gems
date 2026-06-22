@@ -1,3 +1,8 @@
+export const formatLatitude = (latitude: number): string => {
+  const latDir = latitude >= 0 ? 'N' : 'S';
+  return `${Math.abs(latitude).toFixed(4)}° ${latDir}`;
+};
+
 export const formatCoordinates = (latitude: number, longitude: number): string => {
   const latDir = latitude >= 0 ? 'N' : 'S';
   const lngDir = longitude >= 0 ? 'E' : 'W';
