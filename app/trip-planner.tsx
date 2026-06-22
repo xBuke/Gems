@@ -498,9 +498,10 @@ const createStyles = (theme: Theme) =>
     },
     fieldLabel: {
       fontFamily: 'SpaceMono-Regular',
-      fontSize: 10,
-      letterSpacing: 1.5,
-      color: theme.textTertiary,
+      fontSize: 9,
+      letterSpacing: 2,
+      color: theme.accent,
+      marginBottom: 7,
       textTransform: 'uppercase',
     },
     fieldLabelSpaced: {
@@ -634,7 +635,7 @@ const createStyles = (theme: Theme) =>
       fontFamily: 'SpaceMono-Regular',
       fontSize: 10,
       letterSpacing: 1.5,
-      color: theme.textSecondary,
+      color: theme.accent,
       marginBottom: 12,
       textTransform: 'uppercase',
     },

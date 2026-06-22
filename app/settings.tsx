@@ -50,7 +50,13 @@ function SettingItem({
   theme,
 }: SettingItemProps) {
   const content = (
-    <View style={[styles.settingItem, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+    <View
+      style={[
+        styles.settingItem,
+        danger
+          ? { backgroundColor: 'rgba(255, 68, 68, 0.04)', borderBottomColor: 'rgba(255, 68, 68, 0.15)' }
+          : { backgroundColor: theme.card, borderBottomColor: theme.border },
+      ]}>
       <Ionicons
         name={icon}
         size={20}
@@ -107,7 +113,6 @@ export default function SettingsScreen() {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
   const [explorerLevelIndex, setExplorerLevelIndex] = useState(1);
-  const [streakPoints, setStreakPoints] = useState(0);
 
   const languageLabel = language === 'hr' ? 'Hrvatski' : 'English';
 
@@ -138,9 +143,7 @@ export default function SettingsScreen() {
       setHomeTown(profile.home_town ?? '');
       setIsPrivate(profile.is_private ?? false);
       setIsAdmin(profile.is_admin ?? false);
-      const points = profile.streak_points ?? 0;
-      setStreakPoints(points);
-      setExplorerLevelIndex(getExplorerLevelIndex(points));
+      setExplorerLevelIndex(getExplorerLevelIndex(profile.streak_points ?? 0));
       if (profile.language) {
         setLanguage(profile.language);
         await AsyncStorage.setItem(LANGUAGE_KEY, profile.language);
@@ -398,46 +401,24 @@ export default function SettingsScreen() {
         <View
           style={[
             styles.premiumBanner,
-            {
-              backgroundColor: isPremium ? theme.accentSub : theme.card,
-              borderColor: isPremium ? theme.accent : theme.coral,
-            },
+            { backgroundColor: theme.accentSub, borderColor: theme.accent },
           ]}>
           <View style={styles.premiumBannerLeft}>
-            <View>
-              {isPremium ? (
-                <>
-                  <Text style={[styles.premiumBannerLevel, { color: theme.textSecondary }]}>
-                    EXPLORER LV. {explorerLevelIndex}
-                  </Text>
-                  <Text style={[styles.premiumBannerTitle, { color: theme.text }]}>
-                    Premium Active
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={[styles.premiumBannerTitle, { color: theme.text }]}>
-                    Upgrade to Premium
-                  </Text>
-                  <Text style={[styles.premiumBannerSubtitle, { color: theme.textSecondary }]}>
-                    Unlock swipe, communities, trip planner & more
-                  </Text>
-                </>
-              )}
-            </View>
+            <Text style={[styles.premiumBannerLevel, { color: theme.accent }]}>
+              Explorer Lv. {explorerLevelIndex}
+            </Text>
+            <Text style={[styles.premiumBannerTitle, { color: theme.text }]}>
+              {isPremium ? 'Premium Active' : 'Free Plan'}
+            </Text>
           </View>
-          {isPremium ? (
-            <TouchableOpacity
-              style={[styles.manageButton, { backgroundColor: theme.accent }]}
-              onPress={() => router.push('/paywall')}
-              activeOpacity={0.8}>
-              <Text style={[styles.manageButtonText, { color: theme.accentText }]}>Manage</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => router.push('/paywall')} activeOpacity={0.8}>
-              <Ionicons name="chevron-forward" size={16} color={theme.coral} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.premiumBannerButton, { backgroundColor: theme.accent }]}
+            onPress={() => router.push('/paywall')}
+            activeOpacity={0.8}>
+            <Text style={[styles.premiumBannerButtonText, { color: theme.accentText }]}>
+              {isPremium ? 'Manage' : 'Upgrade'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <SectionHeader title="Account" theme={theme} />
@@ -551,7 +532,7 @@ export default function SettingsScreen() {
         </View>
 
         <SectionHeader title="Danger Zone" theme={theme} danger />
-        <View style={[styles.sectionGroup, styles.dangerSection]}>
+        <View style={styles.sectionGroup}>
           <SettingItem
             icon="log-out-outline"
             label="Log Out"
@@ -663,8 +644,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 14,
+    marginBottom: 6,
+    paddingVertical: 11,
     paddingHorizontal: 14,
     borderRadius: 14,
     borderWidth: 1,
@@ -680,25 +661,23 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   premiumBannerTitle: {
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'SpaceGrotesk-SemiBold',
     fontSize: 14,
+    fontWeight: '600',
   },
-  premiumBannerSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  manageButton: {
+  premiumBannerButton: {
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  manageButtonText: {
+  premiumBannerButtonText: {
     fontFamily: 'SpaceGrotesk-Bold',
     fontSize: 12,
+    fontWeight: '700',
   },
   sectionHeader: {
     fontFamily: 'SpaceMono-Regular',
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 2,
     textTransform: 'uppercase',
     paddingHorizontal: 16,
@@ -706,12 +685,6 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
   },
   sectionGroup: {
-    overflow: 'hidden',
-  },
-  dangerSection: {
-    backgroundColor: 'rgba(255, 68, 68, 0.06)',
-    borderRadius: 12,
-    marginHorizontal: 16,
     overflow: 'hidden',
   },
   settingItem: {
