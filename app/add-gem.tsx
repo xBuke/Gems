@@ -102,6 +102,9 @@ export default function AddGemScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [communityName, setCommunityName] = useState<string | null>(null);
   const [unlockedBadge, setUnlockedBadge] = useState<string | null>(null);
+  const [unlockCoords, setUnlockCoords] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
   const [pendingSuccessRoute, setPendingSuccessRoute] = useState<string | null>(null);
 
   useEffect(() => {
@@ -308,6 +311,7 @@ export default function AddGemScreen() {
 
     if (newAchievements.length > 0) {
       setUnlockedBadge(newAchievements[0]);
+      setUnlockCoords({ latitude: finalLatitude, longitude: finalLongitude });
       setPendingSuccessRoute(successRoute);
       Alert.alert('Gem dropped! 🎉');
     } else {
@@ -734,8 +738,11 @@ export default function AddGemScreen() {
       <AchievementUnlockModal
         visible={!!unlockedBadge}
         badgeType={unlockedBadge}
+        latitude={unlockCoords?.latitude}
+        longitude={unlockCoords?.longitude}
         onClose={() => {
           setUnlockedBadge(null);
+          setUnlockCoords(null);
           if (pendingSuccessRoute) {
             router.replace(pendingSuccessRoute);
             setPendingSuccessRoute(null);

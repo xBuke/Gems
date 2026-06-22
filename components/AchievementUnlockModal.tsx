@@ -8,19 +8,20 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '@/lib/ThemeContext';
 import { ACHIEVEMENTS } from '@/lib/gamification';
 import { hapticSuccess } from '@/lib/haptics';
-
-const EASTER_EGG_COORDS = { latitude: 43.0512, longitude: 17.4291 };
 
 type Props = {
   visible: boolean;
   badgeType: string | null;
   onClose: () => void;
+  latitude?: number;
+  longitude?: number;
 };
 
-export const AchievementUnlockModal = ({ visible, badgeType, onClose }: Props) => {
+export const AchievementUnlockModal = ({ visible, badgeType, onClose, latitude, longitude }: Props) => {
   const { theme } = useTheme();
   const scale = useSharedValue(0);
   const rotation = useSharedValue(0);
@@ -44,7 +45,8 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose }: Props) =
 
   if (!achievement) return null;
 
-  const coordLabel = formatCoordinates(EASTER_EGG_COORDS.latitude, EASTER_EGG_COORDS.longitude);
+  const coordLabel =
+    latitude != null && longitude != null ? formatCoordinates(latitude, longitude) : null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -66,57 +68,82 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose }: Props) =
             alignItems: 'center',
             maxWidth: 320,
             width: '100%',
+            overflow: 'hidden',
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 24 },
             shadowOpacity: 0.6,
             shadowRadius: 64,
             elevation: 12,
           }}>
-          <View style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <View
+            style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 16,
+              width: 240,
+              height: 120,
+            }}>
             <View
+              pointerEvents="none"
               style={{
                 position: 'absolute',
+                top: -60,
                 width: 240,
                 height: 240,
-                borderRadius: 120,
-                top: -60,
-                backgroundColor: theme.accent + '2E',
-              }}
-            />
-            <View
-              style={{
-                position: 'absolute',
-                width: 126,
-                height: 126,
-                borderRadius: 63,
-                backgroundColor: theme.accent + '0A',
-              }}
-            />
-            <View
-              style={{
-                position: 'absolute',
-                width: 110,
-                height: 110,
-                borderRadius: 55,
-                backgroundColor: theme.accent + '14',
-              }}
-            />
-            <Animated.View
-              style={[
-                {
-                  width: 88,
-                  height: 88,
-                  borderRadius: 44,
-                  backgroundColor: theme.accent + '1F',
-                  borderWidth: 2,
-                  borderColor: theme.accent,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-                animatedStyle,
-              ]}>
-              <Ionicons name={achievement.icon as any} size={38} color={theme.accent} />
-            </Animated.View>
+                zIndex: 0,
+              }}>
+              <Svg width={240} height={240}>
+                <Defs>
+                  <RadialGradient id="achievementGlow" cx="50%" cy="50%" r="50%">
+                    <Stop offset="0%" stopColor={theme.accent} stopOpacity={0.18} />
+                    <Stop offset="65%" stopColor={theme.accent} stopOpacity={0} />
+                  </RadialGradient>
+                </Defs>
+                <Rect x="0" y="0" width="240" height="240" fill="url(#achievementGlow)" />
+              </Svg>
+            </View>
+            <View style={{ width: 88, height: 88, alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  width: 124,
+                  height: 124,
+                  borderRadius: 62,
+                  top: -18,
+                  left: -18,
+                  backgroundColor: theme.accent + '0A',
+                }}
+              />
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  width: 108,
+                  height: 108,
+                  borderRadius: 54,
+                  top: -10,
+                  left: -10,
+                  backgroundColor: theme.accent + '14',
+                }}
+              />
+              <Animated.View
+                style={[
+                  {
+                    width: 88,
+                    height: 88,
+                    borderRadius: 44,
+                    backgroundColor: theme.accent + '1F',
+                    borderWidth: 2,
+                    borderColor: theme.accent,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  },
+                  animatedStyle,
+                ]}>
+                <Ionicons name={achievement.icon as any} size={38} color={theme.accent} />
+              </Animated.View>
+            </View>
           </View>
           <Text
             style={{
@@ -126,6 +153,7 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose }: Props) =
               letterSpacing: 2,
               textTransform: 'uppercase',
               marginBottom: 8,
+              zIndex: 1,
             }}>
             ACHIEVEMENT UNLOCKED
           </Text>
@@ -136,6 +164,7 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose }: Props) =
               fontFamily: 'SpaceGrotesk-Bold',
               textAlign: 'center',
               marginBottom: 6,
+              zIndex: 1,
             }}>
             {achievement.name}
           </Text>
@@ -145,19 +174,23 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose }: Props) =
               fontSize: 13,
               textAlign: 'center',
               lineHeight: 20,
-              marginBottom: 8,
+              marginBottom: coordLabel ? 8 : 20,
+              zIndex: 1,
             }}>
             {achievement.description}
           </Text>
-          <Text
-            style={{
-              fontFamily: 'SpaceMono-Regular',
-              fontSize: 10,
-              color: theme.textSecondary,
-              marginBottom: 20,
-            }}>
-            {coordLabel}
-          </Text>
+          {coordLabel ? (
+            <Text
+              style={{
+                fontFamily: 'SpaceMono-Regular',
+                fontSize: 10,
+                color: theme.accent,
+                marginBottom: 20,
+                zIndex: 1,
+              }}>
+              {coordLabel}
+            </Text>
+          ) : null}
           <TouchableOpacity
             onPress={onClose}
             style={{
@@ -166,6 +199,7 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose }: Props) =
               borderRadius: 12,
               paddingVertical: 14,
               alignItems: 'center',
+              zIndex: 1,
             }}>
             <Text
               style={{

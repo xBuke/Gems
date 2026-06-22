@@ -109,6 +109,9 @@ export default function GemDetailScreen() {
   } | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [unlockedBadge, setUnlockedBadge] = useState<string | null>(null);
+  const [unlockCoords, setUnlockCoords] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
 
   const heartScale = useSharedValue(1);
   const heartAnimatedStyle = useAnimatedStyle(() => ({
@@ -362,6 +365,7 @@ export default function GemDetailScreen() {
       const newAchievements = await checkAndUnlockAchievements(user.id);
       if (newAchievements.length > 0) {
         setUnlockedBadge(newAchievements[0]);
+        setUnlockCoords(null);
       }
       if (user.id !== gem.user_id) {
         checkAndUnlockAchievements(gem.user_id);
@@ -484,6 +488,7 @@ export default function GemDetailScreen() {
       const newAchievements = await checkAndUnlockAchievements(user.id);
       if (newAchievements.length > 0) {
         setUnlockedBadge(newAchievements[0]);
+        setUnlockCoords({ latitude: gem.latitude, longitude: gem.longitude });
       }
     }
   };
@@ -888,7 +893,12 @@ export default function GemDetailScreen() {
       <AchievementUnlockModal
         visible={!!unlockedBadge}
         badgeType={unlockedBadge}
-        onClose={() => setUnlockedBadge(null)}
+        latitude={unlockCoords?.latitude}
+        longitude={unlockCoords?.longitude}
+        onClose={() => {
+          setUnlockedBadge(null);
+          setUnlockCoords(null);
+        }}
       />
     </KeyboardAvoidingView>
   );
