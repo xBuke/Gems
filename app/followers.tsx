@@ -38,6 +38,7 @@ export default function FollowersScreen() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [followerIds, setFollowerIds] = useState<Set<string>>(new Set());
 
   const isFollowers = type === 'followers';
   const title = isFollowers ? 'Followers' : 'Following';
@@ -52,13 +53,21 @@ export default function FollowersScreen() {
     setCurrentUserId(user?.id ?? null);
 
     if (user) {
-      const { data: myFollows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', user.id)
-        .eq('status', 'accepted');
+      const [{ data: myFollows }, { data: myFollowers }] = await Promise.all([
+        supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', user.id)
+          .eq('status', 'accepted'),
+        supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', user.id)
+          .eq('status', 'accepted'),
+      ]);
 
       setFollowingIds(new Set((myFollows ?? []).map((f: { following_id: string }) => f.following_id)));
+      setFollowerIds(new Set((myFollowers ?? []).map((f: { follower_id: string }) => f.follower_id)));
     }
 
     if (isFollowers) {
@@ -181,11 +190,77 @@ export default function FollowersScreen() {
   const renderItem = ({ item }: { item: ProfileSummary }) => {
     const initials = (item.username ?? 'U').charAt(0).toUpperCase();
     const isSelf = item.id === currentUserId;
+    const isYou = !isOwnList && isSelf;
     const isFollowing = followingIds.has(item.id);
+    const followsMe = followerIds.has(item.id);
+    const isMutual = isFollowing && followsMe;
+
+    const followButtonState = isFollowing
+      ? 'following'
+      : followsMe
+        ? 'followBack'
+        : 'follow';
+
+    const renderFollowButton = () => {
+      if (isSelf || isOwnList) return null;
+
+      if (isFollowers) {
+        const buttonStyle =
+          followButtonState === 'following'
+            ? styles.followersFollowingButton
+            : followButtonState === 'followBack'
+              ? styles.followBackButton
+              : styles.followDiscoverButton;
+        const textStyle =
+          followButtonState === 'following'
+            ? styles.followersFollowingButtonText
+            : followButtonState === 'followBack'
+              ? styles.followBackButtonText
+              : styles.followDiscoverButtonText;
+        const label =
+          followButtonState === 'following'
+            ? 'Following'
+            : followButtonState === 'followBack'
+              ? 'Follow Back'
+              : 'Follow';
+
+        return (
+          <TouchableOpacity
+            style={buttonStyle}
+            onPress={() => {
+              if (isFollowing) {
+                handleUnfollow(item.id, item.username);
+              } else {
+                handleFollow(item.id);
+              }
+            }}
+            activeOpacity={0.8}>
+            <Text style={textStyle}>{label}</Text>
+          </TouchableOpacity>
+        );
+      }
+
+      return (
+        <TouchableOpacity
+          style={isFollowing ? styles.followingButton : styles.followButton}
+          onPress={() => {
+            if (isFollowing) {
+              handleUnfollow(item.id, item.username);
+            } else {
+              handleFollow(item.id);
+            }
+          }}
+          activeOpacity={0.8}>
+          <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
+            {isFollowing ? 'Following' : 'Follow'}
+          </Text>
+        </TouchableOpacity>
+      );
+    };
 
     return (
       <TouchableOpacity
-        style={styles.userItem}
+        style={[styles.userItem, isYou && styles.userItemYou]}
         onPress={() => router.push({ pathname: '/profile', params: { userId: item.id } })}
         activeOpacity={0.7}>
         <View style={styles.avatar}>
@@ -201,25 +276,22 @@ export default function FollowersScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           )}
         </View>
-        <Text style={styles.username} numberOfLines={1}>
-          {item.username}
-        </Text>
-        {!isSelf && !isOwnList ? (
-          <TouchableOpacity
-            style={isFollowing ? styles.followingButton : styles.followButton}
-            onPress={() => {
-              if (isFollowing) {
-                handleUnfollow(item.id, item.username);
-              } else {
-                handleFollow(item.id);
-              }
-            }}
-            activeOpacity={0.8}>
-            <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
-              {isFollowing ? 'Following' : 'Follow'}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
+        <View style={styles.nameRow}>
+          <Text style={styles.username} numberOfLines={1}>
+            {item.username}
+          </Text>
+          {isYou ? (
+            <View style={styles.youBadge}>
+              <Text style={styles.youBadgeText}>YOU</Text>
+            </View>
+          ) : null}
+          {isMutual ? (
+            <View style={styles.mutualBadge}>
+              <Text style={styles.mutualBadgeText}>MUTUAL</Text>
+            </View>
+          ) : null}
+        </View>
+        {renderFollowButton()}
         {isOwnList && isFollowers && !isSelf ? (
           <TouchableOpacity
             style={styles.removeButton}
@@ -332,11 +404,87 @@ const createStyles = (theme: Theme) =>
       fontWeight: '700',
       color: theme.text,
     },
-    username: {
+    nameRow: {
       flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      minWidth: 0,
+    },
+    username: {
+      flexShrink: 1,
       fontSize: 15,
       fontWeight: '600',
       color: theme.text,
+    },
+    mutualBadge: {
+      backgroundColor: theme.accentSub,
+      borderWidth: 0.5,
+      borderColor: theme.accent,
+      borderRadius: 5,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      flexShrink: 0,
+    },
+    mutualBadgeText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 8,
+      color: theme.accent,
+    },
+    youBadge: {
+      backgroundColor: theme.accent,
+      borderRadius: 5,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      flexShrink: 0,
+    },
+    youBadgeText: {
+      fontFamily: 'SpaceMono-Bold',
+      fontSize: 8,
+      color: theme.accentText,
+    },
+    userItemYou: {
+      backgroundColor: theme.accentSub,
+    },
+    followBackButton: {
+      backgroundColor: theme.accent,
+      borderRadius: 16,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+    },
+    followBackButtonText: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.accentText,
+    },
+    followersFollowingButton: {
+      backgroundColor: theme.bgTertiary,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 16,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+    },
+    followersFollowingButtonText: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    followDiscoverButton: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: theme.accent,
+      borderRadius: 16,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+    },
+    followDiscoverButtonText: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.accent,
     },
     followButton: {
       backgroundColor: theme.accent,
