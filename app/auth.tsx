@@ -21,40 +21,77 @@ import { supabase } from '@/lib/supabase';
 
 type AuthMode = 'login' | 'register';
 
-function CompassLogo({ accent, coral }: { accent: string; coral: string }) {
+function CompassLogo({ theme }: { theme: Theme }) {
   return (
-    <View style={{ alignItems: 'center', marginBottom: 28 }}>
+    <View
+      style={{
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        borderWidth: 2,
+        borderColor: theme.accent,
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 18,
+        alignSelf: 'center',
+      }}>
       <View
         style={{
-          width: 72,
-          height: 72,
-          borderRadius: 36,
-          borderWidth: 2,
-          borderColor: accent,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-        <View
-          style={{
-            position: 'absolute',
-            width: 2,
-            height: 26,
-            backgroundColor: coral,
-            borderRadius: 1,
-            transform: [{ rotate: '-45deg' }],
-          }}
-        />
-        <Text
-          style={{
-            position: 'absolute',
-            top: 10,
-            fontSize: 9,
-            fontFamily: 'SpaceMono-Bold',
-            color: coral,
-          }}>
-          N
-        </Text>
-      </View>
+          position: 'absolute',
+          top: 8,
+          alignSelf: 'center',
+          width: 2.5,
+          height: 18,
+          backgroundColor: theme.coral,
+          borderTopLeftRadius: 2,
+          borderTopRightRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 8,
+          alignSelf: 'center',
+          width: 2.5,
+          height: 18,
+          backgroundColor: theme.accent,
+          borderBottomLeftRadius: 2,
+          borderBottomRightRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          left: 8,
+          top: 34.75,
+          height: 2.5,
+          width: 18,
+          backgroundColor: theme.accent,
+          borderTopLeftRadius: 2,
+          borderBottomLeftRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          right: 8,
+          top: 34.75,
+          height: 2.5,
+          width: 18,
+          backgroundColor: theme.accent,
+          borderTopRightRadius: 2,
+          borderBottomRightRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          width: 8,
+          height: 8,
+          backgroundColor: theme.accent,
+          borderRadius: 4,
+        }}
+      />
     </View>
   );
 }
@@ -209,9 +246,9 @@ export default function AuthScreen() {
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
-            <CompassLogo accent={theme.accent} coral={theme.coral} />
+            <CompassLogo theme={theme} />
             <Text style={styles.title}>Hidden Gems</Text>
-            <Text style={styles.subtitle}>DISCOVER SECRET PLACES NEAR YOU</Text>
+            <Text style={styles.subtitle}>Discover secret places near you</Text>
 
             <SegmentedPill
               tabs={[
@@ -301,22 +338,21 @@ const createStyles = (theme: Theme) =>
       fontSize: 30,
       fontFamily: 'SpaceGrotesk-Bold',
       color: theme.text,
+      marginBottom: 5,
     },
     subtitle: {
       fontFamily: 'SpaceMono-Regular',
-      fontSize: 10,
-      letterSpacing: 1.5,
+      fontSize: 11,
+      letterSpacing: 0.5,
       color: theme.textSecondary,
-      marginTop: 6,
-      marginBottom: 32,
-      textTransform: 'uppercase',
+      marginBottom: 26,
     },
     fieldLabel: {
       fontFamily: 'SpaceMono-Regular',
-      fontSize: 10,
+      fontSize: 9,
       letterSpacing: 1.5,
-      color: theme.textTertiary,
-      marginBottom: 6,
+      color: theme.accent,
+      marginBottom: 4,
       textTransform: 'uppercase',
     },
     tabRow: {

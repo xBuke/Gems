@@ -97,9 +97,8 @@ const getDateGroupLabel = (dateString: string): string => {
 
   if (dayDiff === 0) return 'TODAY';
   if (dayDiff === 1) return 'YESTERDAY';
-  if (dayDiff < 7) return `${dayDiff} DAYS AGO`;
-  if (dayDiff < 14) return '1 WEEK AGO';
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase();
+  if (dayDiff <= 6) return `${dayDiff} DAYS AGO`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
 };
 
 const groupNotifications = (items: Notification[]): NotificationSection[] => {
@@ -126,6 +125,9 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [followRequestStatus, setFollowRequestStatus] = useState<
+    Record<string, 'accepted' | 'declined'>
+  >({});
 
   const sections = useMemo(() => groupNotifications(notifications), [notifications]);
 
@@ -258,7 +260,7 @@ export default function NotificationsScreen() {
     if (!error) {
       hapticSuccess();
       await markAsRead(notification);
-      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+      setFollowRequestStatus((prev) => ({ ...prev, [notification.id]: 'accepted' }));
     }
   };
 
@@ -274,7 +276,7 @@ export default function NotificationsScreen() {
       .eq('following_id', currentUserId);
 
     await markAsRead(notification);
-    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+    setFollowRequestStatus((prev) => ({ ...prev, [notification.id]: 'declined' }));
   };
 
   const renderRightThumbnail = (item: Notification) => {
@@ -309,6 +311,43 @@ export default function NotificationsScreen() {
     );
   };
 
+  const renderFollowRequestActions = (item: Notification, username: string) => {
+    const status = followRequestStatus[item.id];
+
+    if (status === 'accepted') {
+      return (
+        <View style={styles.acceptConfirmation}>
+          <Text style={styles.acceptConfirmationText}>✓ Now following {username}</Text>
+        </View>
+      );
+    }
+
+    if (status === 'declined') {
+      return (
+        <View style={styles.declineConfirmation}>
+          <Text style={styles.declineConfirmationText}>Request declined</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.followRequestActions}>
+        <TouchableOpacity
+          style={styles.declineButton}
+          onPress={() => handleDeclineRequest(item)}
+          activeOpacity={0.8}>
+          <Text style={styles.declineButtonText}>Decline</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.acceptButton}
+          onPress={() => handleAcceptRequest(item)}
+          activeOpacity={0.8}>
+          <Text style={styles.acceptButtonText}>Accept ✓</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const renderNotification = (item: Notification) => {
     if (item.type === 'rating') return null;
 
@@ -317,15 +356,13 @@ export default function NotificationsScreen() {
     const username = item.sender?.username ?? 'Someone';
     const isFollowRequest = item.type === 'follow_request';
 
-    return (
-      <TouchableOpacity
-        style={[
-          styles.notificationItem,
-          item.read ? styles.notificationRead : styles.notificationUnread,
-        ]}
-        onPress={() => handleNotificationPress(item)}
-        activeOpacity={isFollowRequest ? 1 : 0.7}
-        disabled={isFollowRequest}>
+    const rowStyle = [
+      styles.notificationItem,
+      item.read ? styles.notificationRead : styles.notificationUnread,
+    ];
+
+    const content = (
+      <>
         <View style={[styles.iconCircle, { backgroundColor: config.bgColor }]}>
           <Ionicons name={config.icon} size={18} color={config.iconColor} />
         </View>
@@ -335,24 +372,32 @@ export default function NotificationsScreen() {
             <Text style={styles.actionText}> {config.actionText}</Text>
           </View>
           <Text style={styles.notificationTime}>{timeAgo(item.created_at)}</Text>
-          {isFollowRequest && (
-            <View style={styles.followRequestActions}>
-              <TouchableOpacity
-                style={styles.declineButton}
-                onPress={() => handleDeclineRequest(item)}
-                activeOpacity={0.8}>
-                <Text style={styles.declineButtonText}>Decline</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={() => handleAcceptRequest(item)}
-                activeOpacity={0.8}>
-                <Text style={styles.acceptButtonText}>Accept ✓</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {isFollowRequest && renderFollowRequestActions(item, username)}
         </View>
-        {renderRightThumbnail(item)}
+        {isFollowRequest ? (
+          <TouchableOpacity
+            onPress={() =>
+              router.push({ pathname: '/profile', params: { userId: item.sender_id } })
+            }
+            activeOpacity={0.7}>
+            {renderRightThumbnail(item)}
+          </TouchableOpacity>
+        ) : (
+          renderRightThumbnail(item)
+        )}
+      </>
+    );
+
+    if (isFollowRequest) {
+      return <View style={rowStyle}>{content}</View>;
+    }
+
+    return (
+      <TouchableOpacity
+        style={rowStyle}
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.7}>
+        {content}
       </TouchableOpacity>
     );
   };
@@ -383,9 +428,11 @@ export default function NotificationsScreen() {
         <FlatList
           data={sections}
           keyExtractor={(section) => section.title}
-          renderItem={({ item: section }) => (
+          renderItem={({ item: section, index }) => (
             <View>
-              <Text style={styles.dateHeader}>{section.title}</Text>
+              <Text style={[styles.dateHeader, index > 0 && styles.dateHeaderNotFirst]}>
+                {section.title}
+              </Text>
               {section.data.map((notification) => (
                 <View key={notification.id}>{renderNotification(notification)}</View>
               ))}
@@ -456,9 +503,13 @@ const createStyles = (theme: Theme) =>
       fontSize: 10,
       color: theme.textTertiary,
       letterSpacing: 2,
+      textTransform: 'uppercase',
       paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 8,
+      paddingTop: 6,
+      paddingBottom: 4,
+    },
+    dateHeaderNotFirst: {
+      paddingTop: 10,
     },
     notificationItem: {
       flexDirection: 'row',
@@ -476,8 +527,7 @@ const createStyles = (theme: Theme) =>
     },
     notificationRead: {
       backgroundColor: theme.background,
-      borderLeftWidth: 3,
-      borderLeftColor: 'transparent',
+      borderLeftWidth: 0,
     },
     iconCircle: {
       width: 40,
@@ -521,8 +571,8 @@ const createStyles = (theme: Theme) =>
       alignItems: 'center',
     },
     acceptButtonText: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
       fontSize: 13,
-      fontWeight: '600',
       color: theme.accentText,
     },
     declineButton: {
@@ -532,10 +582,36 @@ const createStyles = (theme: Theme) =>
       borderRadius: 8,
       paddingVertical: 7,
       alignItems: 'center',
+      backgroundColor: 'transparent',
     },
     declineButtonText: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
       fontSize: 13,
+      color: theme.textSecondary,
+    },
+    acceptConfirmation: {
+      backgroundColor: theme.accentSub,
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      marginTop: 10,
+      alignSelf: 'flex-start',
+    },
+    acceptConfirmationText: {
+      fontSize: 12,
       fontWeight: '600',
+      color: theme.accent,
+    },
+    declineConfirmation: {
+      backgroundColor: theme.textSecondary + '26',
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      marginTop: 10,
+      alignSelf: 'flex-start',
+    },
+    declineConfirmationText: {
+      fontSize: 12,
       color: theme.textSecondary,
     },
     gemThumbnail: {
