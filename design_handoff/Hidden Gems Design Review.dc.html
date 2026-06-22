@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; } button { cursor: pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <!-- PAGE HEADER -->
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — June 2026</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">Hidden Gems<br>UI/UX Audit</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:520px">4 redesigned screens — visual hierarchy, gamification, social actions, palette personality. All changes reference existing <span style="font-family:'Space Mono',monospace; font-size:12px; background:rgba(0,0,0,0.08); padding:1px 5px; border-radius:3px">theme.*</span> tokens and are directly actionable in Cursor.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px; white-space:nowrap">{{schemeLabel}}</button>
+  </div>
+
+  <!-- PHONES ROW -->
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══ COL 1: DISCOVER ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Discover</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Feed Hierarchy</div>
+      </div>
+
+      <!-- Phone -->
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <!-- Status bar -->
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Screen -->
+          <div style="height:700px; overflow:hidden">
+            <!-- Header -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 16px 10px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{text}}">Discover</span>
+              <div style="display:flex; align-items:center; gap:14px">
+                <div style="position:relative; width:22px; height:22px">
+                  <div style="width:18px; height:2px; background:{{textSec}}; border-radius:1px; position:absolute; top:4px"></div>
+                  <div style="width:13px; height:2px; background:{{textSec}}; border-radius:1px; position:absolute; top:9px"></div>
+                  <div style="width:8px; height:2px; background:{{textSec}}; border-radius:1px; position:absolute; top:14px"></div>
+                  <div style="width:7px; height:7px; background:{{coral}}; border-radius:50%; position:absolute; top:-1px; right:-1px; border:1.5px solid {{bg}}"></div>
+                </div>
+                <div style="width:20px; height:16px; border:1.5px solid {{textSec}}; border-radius:3px; display:flex; flex-direction:column; gap:2px; padding:2px">
+                  <div style="height:2px; background:{{textSec}}; border-radius:1px"></div>
+                  <div style="height:2px; background:{{textSec}}; border-radius:1px"></div>
+                </div>
+                <div style="position:relative">
+                  <div style="width:18px; height:16px; border:1.5px solid {{textSec}}; border-radius:3px 3px 2px 2px"></div>
+                  <div style="width:8px; height:5px; border:1.5px solid {{textSec}}; border-top:none; border-radius:0 0 4px 4px; position:absolute; bottom:-4px; left:50%; transform:translateX(-50%)"></div>
+                  <div style="width:7px; height:7px; background:#FF4444; border-radius:50%; position:absolute; top:-3px; right:-3px; border:1.5px solid {{bg}}"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Search -->
+            <div style="margin:0 16px 10px; background:{{card}}; border-radius:24px; height:44px; display:flex; align-items:center; padding:0 16px; gap:9px; border:0.5px solid {{border}}">
+              <div style="width:16px; height:16px; border:1.5px solid {{textTer}}; border-radius:50%; position:relative">
+                <div style="width:5px; height:1.5px; background:{{textTer}}; position:absolute; bottom:-1px; right:-2px; transform:rotate(45deg); border-radius:1px"></div>
+              </div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textTer}}">Search gems...</span>
+            </div>
+            <!-- Category pills -->
+            <div style="display:flex; gap:7px; padding:0 16px 10px; overflow:hidden">
+              <div style="background:{{accent}}; color:{{accentText}}; border-radius:20px; padding:6px 14px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; white-space:nowrap; flex:none">All</div>
+              <div style="background:{{card}}; border:0.5px solid {{border}}; color:{{textSec}}; border-radius:20px; padding:6px 11px; font-family:'Space Grotesk',sans-serif; font-size:13px; white-space:nowrap; flex:none">🌿 Nature</div>
+              <div style="background:{{card}}; border:0.5px solid {{border}}; color:{{textSec}}; border-radius:20px; padding:6px 11px; font-family:'Space Grotesk',sans-serif; font-size:13px; white-space:nowrap; flex:none">👁 Views</div>
+              <div style="background:{{card}}; border:0.5px solid {{border}}; color:{{textSec}}; border-radius:20px; padding:6px 11px; font-family:'Space Grotesk',sans-serif; font-size:13px; white-space:nowrap; flex:none">🚴 Sport</div>
+            </div>
+            <!-- IMPROVED: compact segmented tab -->
+            <div style="padding:0 16px 12px; display:flex; justify-content:center">
+              <div style="background:{{card}}; border-radius:24px; padding:3px; display:flex; border:0.5px solid {{border}}; width:226px">
+                <button onClick="{{setForYou}}" style="flex:1; padding:9px 0; border-radius:20px; border:none; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; background:{{foryouBg}}; color:{{foryouColor}}">For You</button>
+                <button onClick="{{setFollowing}}" style="flex:1; padding:9px 0; border-radius:20px; border:none; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; background:{{followingBg}}; color:{{followingColor}}">Following</button>
+              </div>
+            </div>
+            <!-- Hero card -->
+            <div style="margin:0 16px 14px; border-radius:14px; overflow:hidden; position:relative; height:190px">
+              <div style="position:absolute; inset:0; background:linear-gradient(155deg,#1e5a40 0%,#2d7555 30%,#1a4a38 60%,#0e2820 100%)"></div>
+              <div style="position:absolute; inset:0; background:linear-gradient(180deg,transparent 35%,rgba(5,14,11,0.94) 100%)"></div>
+              <div style="position:absolute; top:12px; left:12px; background:{{coral}}; border-radius:11px; padding:5px 10px; display:flex; align-items:center; gap:4px">
+                <span style="font-size:10px; color:#fff">✦</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; color:#fff; letter-spacing:0.3px">MYSTERY GEM OF THE WEEK</span>
+              </div>
+              <div style="position:absolute; bottom:12px; left:14px; right:14px">
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:21px; font-weight:700; color:#EAF6F4; margin-bottom:2px">Jezera</div>
+                <!-- IMPROVED: SpaceMono coordinates -->
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; margin-bottom:5px">43.0512° N, 17.4291° E</div>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-size:11px; color:rgba(234,246,244,0.6)">♥ 1</span>
+                  <span style="color:rgba(234,246,244,0.3)">·</span>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:rgba(234,246,244,0.6)">@buke</span>
+                </div>
+              </div>
+            </div>
+            <!-- IMPROVED: Gem of Day with real content -->
+            <div style="padding:0 16px 14px">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">Gem of the Day</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{accent}}">→</span>
+              </div>
+              <div style="background:{{card}}; border-radius:14px; overflow:hidden; border:0.5px solid {{border}}; display:flex; height:110px">
+                <div style="width:86px; flex:none; background:linear-gradient(155deg,#1e3a6a,#0a1830)"></div>
+                <div style="padding:11px 13px; display:flex; flex-direction:column; justify-content:center; gap:4px; flex:1">
+                  <div style="background:{{coral}}; border-radius:6px; padding:3px 7px; display:inline-flex; align-self:flex-start">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:9px; font-weight:700; color:#fff; letter-spacing:0.5px">GEM OF THE DAY</span>
+                  </div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">Plitvice Cliffs</div>
+                  <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">44.8802° N, 15.6167° E</div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">🌿 Nature · 12.4 km</div>
+                </div>
+              </div>
+            </div>
+            <!-- Trending -->
+            <div style="padding:0 16px">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">Trending</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{accent}}">→</span>
+              </div>
+              <div style="display:flex; gap:10px; overflow:hidden">
+                <div style="flex:none; width:150px; border-radius:12px; overflow:hidden; border:0.5px solid {{border}}">
+                  <div style="height:86px; background:linear-gradient(140deg,#2a4a24,#1a3418)"></div>
+                  <div style="background:{{card}}; padding:8px 10px">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">Gornji Karin</div>
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">🌿 5.2 km</div>
+                  </div>
+                </div>
+                <div style="flex:none; width:150px; border-radius:12px; overflow:hidden; border:0.5px solid {{border}}">
+                  <div style="height:86px; background:linear-gradient(140deg,#1a2a4c,#0e1838)"></div>
+                  <div style="background:{{card}}; padding:8px 10px">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">Brela Coastal</div>
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">👁 8.1 km</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Discover annotations -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Compact tab control</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Reduced from full-width teal button to 226px centered pill. Reads as a mode switcher, not a CTA. Try tapping it above.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Coordinates on hero card</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">SpaceMono coords below the gem title. Costs nothing, lands the "explorer field journal" brand promise on the highest-visibility card.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Gem of the Day has content</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Photo strip + name + coords + category instead of empty dark rectangle. No new tokens needed — just content structure.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">4</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Category pills with labels</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Original screenshot shows empty grey capsules — likely a loading state. Add skeleton shimmer matching the existing SkeletonCard pattern.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 2: PROFILE ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Profile</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Gamification Surface</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden">
+            <!-- Nav -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 18px 12px">
+              <div style="width:8px; height:14px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600; color:{{text}}">Profile</span>
+              <div style="width:20px; height:20px; border:1.5px solid {{text}}; border-radius:50%; position:relative; display:flex; align-items:center; justify-content:center">
+                <div style="width:5px; height:5px; background:{{text}}; border-radius:50%"></div>
+              </div>
+            </div>
+            <!-- IMPROVED: Avatar identity anchor -->
+            <div style="display:flex; flex-direction:column; align-items:center; padding:6px 16px 14px">
+              <div style="width:72px; height:72px; border-radius:36px; background:{{accent}}; display:flex; align-items:center; justify-content:center; margin-bottom:9px; box-shadow:0 0 0 3px {{bg}}, 0 0 0 5px {{coral}}">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; color:{{accentText}}">B</span>
+              </div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600; color:{{text}}; margin-bottom:8px">@buke</div>
+              <div style="background:{{coralSub}}; border:1px solid {{coral}}; border-radius:20px; padding:5px 12px; display:flex; align-items:center; gap:5px">
+                <span style="font-size:13px">🔥</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{coral}}">3 day streak</span>
+              </div>
+            </div>
+            <!-- IMPROVED: Explorer Level card -->
+            <div style="margin:0 16px 10px; background:{{card}}; border-radius:14px; padding:12px 15px; border:0.5px solid {{border}}">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+                <div>
+                  <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1px; text-transform:uppercase; margin-bottom:2px">Explorer Level</div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{text}}">Pathfinder</div>
+                </div>
+                <div style="background:{{accentSub}}; border:1px solid {{accent}}; border-radius:10px; padding:4px 10px">
+                  <span style="font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:{{accent}}">Lv. 2</span>
+                </div>
+              </div>
+              <div style="height:6px; background:{{bgTer}}; border-radius:3px; overflow:hidden; margin-bottom:5px">
+                <div style="width:60%; height:100%; background:{{accent}}; border-radius:3px"></div>
+              </div>
+              <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">240 XP · 160 to Trailblazer</div>
+            </div>
+            <!-- Stats -->
+            <div style="margin:0 16px 12px; background:{{card}}; border-radius:14px; border:0.5px solid {{border}}; display:flex">
+              <div style="flex:1; padding:14px; text-align:center">
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{text}}; line-height:1">10</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; margin-top:3px">Gems</div>
+              </div>
+              <div style="width:0.5px; background:{{border}}; margin:12px 0"></div>
+              <div style="flex:1; padding:14px; text-align:center">
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{text}}; line-height:1">0</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; margin-top:3px">Following</div>
+              </div>
+              <div style="width:0.5px; background:{{border}}; margin:12px 0"></div>
+              <div style="flex:1; padding:14px; text-align:center">
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{text}}; line-height:1">0</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; margin-top:3px">Followers</div>
+              </div>
+            </div>
+            <!-- IMPROVED: Achievement badges row -->
+            <div style="margin:0 16px 12px">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">Achievements</span>
+                <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">5 / 8</span>
+              </div>
+              <div style="display:flex; gap:7px; justify-content:space-between">
+                <div style="width:38px; height:38px; border-radius:19px; background:rgba(45,212,191,0.12); border:1.5px solid {{accent}}; display:flex; align-items:center; justify-content:center; font-size:16px">🧭</div>
+                <div style="width:38px; height:38px; border-radius:19px; background:rgba(45,212,191,0.12); border:1.5px solid {{accent}}; display:flex; align-items:center; justify-content:center; font-size:16px">💎</div>
+                <div style="width:38px; height:38px; border-radius:19px; background:rgba(255,159,90,0.12); border:1.5px solid {{coral}}; display:flex; align-items:center; justify-content:center; font-size:16px">🔥</div>
+                <div style="width:38px; height:38px; border-radius:19px; background:rgba(45,212,191,0.12); border:1.5px solid {{accent}}; display:flex; align-items:center; justify-content:center; font-size:16px">⭐</div>
+                <div style="width:38px; height:38px; border-radius:19px; background:rgba(45,212,191,0.12); border:1.5px solid {{accent}}; display:flex; align-items:center; justify-content:center; font-size:16px">📍</div>
+                <div style="width:38px; height:38px; border-radius:19px; background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:16px; opacity:0.35">🌍</div>
+                <div style="width:38px; height:38px; border-radius:19px; background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:16px; opacity:0.35">👥</div>
+                <div style="width:38px; height:38px; border-radius:19px; background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:16px; opacity:0.35">🏆</div>
+              </div>
+            </div>
+            <!-- Accordions -->
+            <div style="margin:0 16px">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:0.5px solid {{border}}">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">My Gems (10)</span>
+                <span style="color:{{textSec}}; font-size:12px">∨</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:13px 0; border-bottom:0.5px solid {{border}}">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}; flex:1">Liked Gems (2)</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; margin-right:8px">👁 Public</span>
+                <span style="color:{{textSec}}; font-size:12px">∨</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:13px 0; border-bottom:0.5px solid {{border}}">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}; flex:1">Visited Gems (1)</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; margin-right:8px">👁 Public</span>
+                <span style="color:{{textSec}}; font-size:12px">∨</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 0">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">Category Mastery (0)</span>
+                <span style="color:{{textSec}}; font-size:12px">∨</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile annotations -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Avatar identity anchor added</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The profile opens on a floating streak pill with nothing above it. Added 72px avatar + @username — gives the screen a clear identity anchor before any stats.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Explorer Level as a visible card</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Level name + progress bar + XP in SpaceMono surfaced above stats. Gamification feels earned and visible rather than a label buried in an accordion.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Achievement badges surfaced</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">8 badge circles shown before the accordions — 5 earned (teal/coral) + 3 greyed-out. No longer buried behind "Achievements (5/8) ∨".</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">4</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Stats numbers at 28px</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Number fontSize bumped to 28px Space Grotesk Bold, labels reduced to 12px. The numbers carry the meaning — they deserve to be big.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 3: NOTIFICATIONS ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Notifications</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Social Actions</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden">
+            <!-- Header -->
+            <div style="display:flex; align-items:center; padding:2px 16px 12px">
+              <div style="width:8px; height:14px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px; flex:none"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600; color:{{text}}; flex:1; text-align:center">Notifications</span>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{accent}}; flex:none">Mark all read</span>
+            </div>
+            <!-- TODAY group label -->
+            <div style="padding:6px 16px 4px">
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; letter-spacing:2px">TODAY</span>
+            </div>
+            <!-- IMPROVED: Follow request with actions -->
+            <div style="display:flex; align-items:flex-start; padding:11px 14px 11px 13px; border-bottom:0.5px solid {{border}}; background:{{card}}; border-left:3px solid {{accent}}; margin-left:0">
+              <div style="width:40px; height:40px; border-radius:20px; background:{{coralSub}}; border:1px solid {{coral}}; display:flex; align-items:center; justify-content:center; flex:none; margin-right:11px">
+                <span style="font-size:17px">👤</span>
+              </div>
+              <div style="flex:1; min-width:0">
+                <div style="display:flex; flex-wrap:wrap; margin-bottom:2px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">test1</span>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}"> wants to follow you</span>
+                </div>
+                <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}; margin-bottom:9px">1d ago</div>
+                <sc-if value="{{followPending}}" hint-placeholder-val="{{true}}">
+                  <div style="display:flex; gap:8px">
+                    <button onClick="{{doDecline}}" style="flex:1; padding:7px 0; border-radius:8px; border:1px solid {{border}}; background:transparent; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{textSec}}">Decline</button>
+                    <button onClick="{{doAccept}}" style="flex:1; padding:7px 0; border-radius:8px; border:none; background:{{accent}}; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{accentText}}">Accept ✓</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{followAccepted}}" hint-placeholder-val="{{false}}">
+                  <div style="background:{{accentSub}}; border-radius:8px; padding:6px 10px; display:inline-flex">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:{{accent}}">✓ Now following test1</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{followDeclined}}" hint-placeholder-val="{{false}}">
+                  <div style="background:rgba(92,132,132,0.1); border-radius:8px; padding:6px 10px; display:inline-flex">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Request declined</span>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="width:44px; height:44px; border-radius:22px; background:{{accent}}; display:flex; align-items:center; justify-content:center; flex:none; margin-left:10px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:700; color:{{accentText}}">T</span>
+              </div>
+            </div>
+            <!-- Like notif (unread) -->
+            <div style="display:flex; align-items:center; padding:11px 14px; border-bottom:0.5px solid {{border}}; background:{{card}}; border-left:3px solid {{accent}}">
+              <div style="width:40px; height:40px; border-radius:20px; background:rgba(255,68,68,0.15); display:flex; align-items:center; justify-content:center; flex:none; margin-right:11px; font-size:17px">♥</div>
+              <div style="flex:1">
+                <div style="display:flex; flex-wrap:wrap; margin-bottom:2px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">ana_travels</span>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}"> liked your gem</span>
+                </div>
+                <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">2h ago</div>
+              </div>
+              <div style="width:44px; height:44px; border-radius:8px; background:linear-gradient(135deg,#1a4a3a,#0e2820); flex:none; margin-left:10px"></div>
+            </div>
+            <!-- 2 DAYS AGO group -->
+            <div style="padding:10px 16px 4px">
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; letter-spacing:2px">2 DAYS AGO</span>
+            </div>
+            <!-- Visit notif (read) -->
+            <div style="display:flex; align-items:center; padding:11px 14px; border-bottom:0.5px solid {{border}}">
+              <div style="width:40px; height:40px; border-radius:20px; background:rgba(29,158,117,0.18); display:flex; align-items:center; justify-content:center; flex:none; margin-right:11px; font-size:17px">📍</div>
+              <div style="flex:1">
+                <div style="display:flex; flex-wrap:wrap; margin-bottom:2px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">buke</span>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}"> visited your gem</span>
+                </div>
+                <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">2d ago</div>
+              </div>
+              <div style="width:44px; height:44px; border-radius:8px; background:linear-gradient(135deg,#1a5a2a,#0e3a14); flex:none; margin-left:10px"></div>
+            </div>
+            <!-- Comment notif (read) -->
+            <div style="display:flex; align-items:center; padding:11px 14px; border-bottom:0.5px solid {{border}}">
+              <div style="width:40px; height:40px; border-radius:20px; background:rgba(24,95,165,0.18); display:flex; align-items:center; justify-content:center; flex:none; margin-right:11px; font-size:17px">💬</div>
+              <div style="flex:1">
+                <div style="display:flex; flex-wrap:wrap; margin-bottom:2px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">marko_hr</span>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}"> commented on your gem</span>
+                </div>
+                <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">2d ago</div>
+              </div>
+              <div style="width:44px; height:44px; border-radius:8px; background:linear-gradient(135deg,#2a3a5a,#1a2a4a); flex:none; margin-left:10px"></div>
+            </div>
+            <!-- Follow notif (read) -->
+            <div style="display:flex; align-items:center; padding:11px 14px">
+              <div style="width:40px; height:40px; border-radius:20px; background:rgba(83,74,183,0.18); display:flex; align-items:center; justify-content:center; flex:none; margin-right:11px; font-size:17px">👥</div>
+              <div style="flex:1">
+                <div style="display:flex; flex-wrap:wrap; margin-bottom:2px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">croatia_hiker</span>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}"> started following you</span>
+                </div>
+                <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">3d ago</div>
+              </div>
+              <div style="width:44px; height:44px; border-radius:22px; background:{{accentSub}}; border:1px solid {{border}}; display:flex; align-items:center; justify-content:center; flex:none; margin-left:10px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:{{accent}}">C</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications annotations -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Follow request inline actions — critical fix</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Currently navigates to /profile with no action affordance. Added Accept/Decline button pair. Tap them above — they're wired up.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Date group headers</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"TODAY" / "2 DAYS AGO" in <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">SpaceMono 10px textTertiary</span>. Consistent with the explorer personality, easy to scan.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Left border unread indicator</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">3px <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">theme.accent</span> left border on unread rows in addition to card background. More visible on OLED dark mode where background contrast alone is subtle.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 4: ACHIEVEMENT MODAL ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">04 — Gamification</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Achievement Modal</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:#0B1A1C; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <!-- Full screen as relative container -->
+          <div style="height:785px; position:relative">
+            <!-- Dim background -->
+            <div style="position:absolute; inset:0; overflow:hidden">
+              <div style="height:59px"></div>
+              <div style="padding:2px 16px; opacity:0.2">
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; color:#EAF6F4; margin-bottom:12px">Discover</div>
+                <div style="background:linear-gradient(155deg,#1e5a40,#0e2820); border-radius:14px; height:176px; margin-bottom:14px"></div>
+                <div style="background:#142B2E; border-radius:14px; height:80px"></div>
+              </div>
+            </div>
+            <!-- Dark overlay -->
+            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.78); z-index:1"></div>
+            <!-- Status bar on top -->
+            <div style="position:absolute; top:0; left:0; right:0; height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px; z-index:3">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:#EAF6F4; letter-spacing:-0.3px">9:41</span>
+              <div style="display:flex; align-items:center; gap:5px">
+                <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                  <div style="width:3px; height:4px; background:#EAF6F4; border-radius:1px; opacity:0.4"></div>
+                  <div style="width:3px; height:6px; background:#EAF6F4; border-radius:1px; opacity:0.6"></div>
+                  <div style="width:3px; height:9px; background:#EAF6F4; border-radius:1px; opacity:0.8"></div>
+                  <div style="width:3px; height:11px; background:#EAF6F4; border-radius:1px"></div>
+                </div>
+                <div style="width:22px; height:11px; border:1.5px solid #EAF6F4; border-radius:3px; padding:1.5px">
+                  <div style="background:#EAF6F4; height:100%; width:72%; border-radius:1px"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Modal centered -->
+            <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:24px; z-index:2">
+              <div style="background:#142B2E; border-radius:24px; padding:28px 20px 24px; width:100%; max-width:320px; display:flex; flex-direction:column; align-items:center; overflow:hidden; position:relative; box-shadow:0 24px 64px rgba(0,0,0,0.6)">
+                <!-- IMPROVED: Glow at top of card -->
+                <div style="position:absolute; top:-60px; left:50%; transform:translateX(-50%); width:240px; height:240px; background:radial-gradient(circle,rgba(45,212,191,0.18) 0%,transparent 65%); pointer-events:none; z-index:0"></div>
+                <!-- IMPROVED: Layered badge rings -->
+                <div style="position:relative; margin-bottom:14px; z-index:1">
+                  <div style="position:absolute; inset:-18px; border-radius:50%; background:rgba(45,212,191,0.04)"></div>
+                  <div style="position:absolute; inset:-10px; border-radius:50%; background:rgba(45,212,191,0.08)"></div>
+                  <div style="width:88px; height:88px; border-radius:44px; background:rgba(45,212,191,0.12); border:2px solid #2DD4BF; display:flex; align-items:center; justify-content:center; position:relative">
+                    <span style="font-size:38px">🧭</span>
+                  </div>
+                </div>
+                <!-- IMPROVED: SpaceMono label -->
+                <div style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; z-index:1; position:relative">Achievement Unlocked</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; color:#EAF6F4; text-align:center; margin-bottom:6px; z-index:1; position:relative">First Explorer</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:#7FA8A8; text-align:center; line-height:1.6; margin-bottom:10px; z-index:1; position:relative">You dropped your first hidden gem for others to discover.</div>
+                <!-- IMPROVED: Coordinates easter egg -->
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; margin-bottom:20px; z-index:1; position:relative">43.0512° N, 17.4291° E</div>
+                <button style="width:100%; padding:14px; background:#2DD4BF; border:none; border-radius:12px; font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#0A1F1C; z-index:1; position:relative">Nice!</button>
+              </div>
+            </div>
+            <!-- Home indicator -->
+            <div style="position:absolute; bottom:0; left:0; right:0; height:34px; display:flex; align-items:center; justify-content:center; z-index:3">
+              <div style="width:134px; height:5px; background:rgba(234,246,244,0.2); border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Achievement annotations -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Glow ring + layered depth</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Radial gradient bloom behind badge + two nested opacity rings. Creates spatial depth — the badge feels earned, not just rendered flat.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Coordinates easter egg</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">SpaceMono teal coordinates below the description. Small but high-impact — reinforces the field journal personality at the most emotionally resonant moment in the app.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">"ACHIEVEMENT UNLOCKED" in SpaceMono</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Changed from system font weight to <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">fontFamily:'SpaceMono-Bold'</span> + <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">letterSpacing:2</span>. The app's signature data font makes this label feel special.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">4</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Spacing consistency note</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Card padding varies 8–16px across the app — this is fine as contextual variation (tight gem rows vs. spacious hero cards). Not a problem worth standardising.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 5: AUTH ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">05 — Auth</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Login / Register</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; display:flex; flex-direction:column">
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px 24px 0">
+              <!-- Compass logomark -->
+              <div style="width:72px; height:72px; border-radius:36px; border:2px solid {{accent}}; display:flex; align-items:center; justify-content:center; position:relative; margin-bottom:18px">
+                <div style="position:absolute; top:8px; left:50%; transform:translateX(-50%); width:2.5px; height:18px; background:{{coral}}; border-radius:2px 2px 0 0"></div>
+                <div style="position:absolute; bottom:8px; left:50%; transform:translateX(-50%); width:2.5px; height:18px; background:{{accent}}; border-radius:0 0 2px 2px"></div>
+                <div style="position:absolute; left:8px; top:50%; transform:translateY(-50%); height:2.5px; width:18px; background:{{accent}}; border-radius:2px 0 0 2px"></div>
+                <div style="position:absolute; right:8px; top:50%; transform:translateY(-50%); height:2.5px; width:18px; background:{{accent}}; border-radius:0 2px 2px 0"></div>
+                <div style="width:8px; height:8px; background:{{accent}}; border-radius:50%"></div>
+              </div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:30px; font-weight:700; color:{{text}}; margin-bottom:5px">Hidden Gems</div>
+              <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}; letter-spacing:0.5px; margin-bottom:26px">Discover secret places near you</div>
+              <!-- Login / Register tab -->
+              <div style="background:{{card}}; border-radius:24px; padding:3px; display:flex; border:0.5px solid {{border}}; width:226px; margin-bottom:22px">
+                <button onClick="{{setAuthLogin}}" style="flex:1; padding:9px 0; border-radius:20px; border:none; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; background:{{authLoginBg}}; color:{{authLoginColor}}">Log in</button>
+                <button onClick="{{setAuthRegister}}" style="flex:1; padding:9px 0; border-radius:20px; border:none; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; background:{{authRegisterBg}}; color:{{authRegisterColor}}">Register</button>
+              </div>
+              <!-- Form -->
+              <div style="width:100%">
+                <sc-if value="{{isRegister}}" hint-placeholder-val="{{false}}">
+                  <div style="margin-bottom:10px">
+                    <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px">Username</div>
+                    <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:10px; padding:12px 14px; font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textTer}}">@your_username</div>
+                  </div>
+                </sc-if>
+                <div style="margin-bottom:10px">
+                  <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px">Email</div>
+                  <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:10px; padding:12px 14px; font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textTer}}">you@example.com</div>
+                </div>
+                <div style="margin-bottom:20px">
+                  <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px">Password</div>
+                  <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textTer}}">••••••••</span>
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{accent}}">Show</span>
+                  </div>
+                </div>
+                <div style="background:{{accent}}; border-radius:12px; padding:14px; text-align:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{accentText}}">{{authCTA}}</span>
+                </div>
+              </div>
+            </div>
+            <div style="padding:14px 24px; text-align:center">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textTer}}">Forgot your password? </span>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{accent}}">Reset</span>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Compass logomark hero</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">72px compass ring (teal) + coral N-needle matches the app icon motif. Currently the auth screen has no brand visual. Tap Register above to see the username field appear.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Title 30px + SpaceMono tagline</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Was <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">fontSize:24, weight:600</span>. Now 30px Space Grotesk Bold. Tagline moved to SpaceMono — same treatment as coordinates throughout the app.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono field labels</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Added uppercase SpaceMono labels above each input. Current version has no labels — users must rely on placeholders alone, which vanish on focus.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 6: MAP ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">06 — Map</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Location Button Fix</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:#0B1A1C; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:785px; position:relative; overflow:hidden">
+            <!-- Satellite map -->
+            <div style="position:absolute; inset:0; background:linear-gradient(160deg,#2a4820 0%,#3a5828 18%,#2d4f22 36%,#314b26 54%,#264020 72%,#1e3818 100%)"></div>
+            <div style="position:absolute; bottom:0; left:0; right:0; height:44%; background:linear-gradient(0deg,#0d2035 0%,#152a42 35%,#1a3050 65%,rgba(18,40,64,0) 100%)"></div>
+            <div style="position:absolute; bottom:39%; left:0; width:52%; height:7%; background:rgba(18,40,64,0.65); border-radius:0 60% 60% 0 / 0 100% 100% 0"></div>
+            <div style="position:absolute; bottom:28%; left:30%; width:38px; height:15px; background:#243d1c; border-radius:40%"></div>
+            <div style="position:absolute; bottom:20%; left:47%; width:58px; height:20px; background:#243d1c; border-radius:40%"></div>
+            <div style="position:absolute; bottom:13%; left:63%; width:28px; height:11px; background:#243d1c; border-radius:40%"></div>
+            <!-- Status bar -->
+            <div style="position:absolute; top:0; left:0; right:0; height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px; z-index:5">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:#EAF6F4; letter-spacing:-0.3px">9:41</span>
+              <div style="display:flex; align-items:center; gap:5px">
+                <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                  <div style="width:3px; height:4px; background:#EAF6F4; border-radius:1px; opacity:0.4"></div>
+                  <div style="width:3px; height:6px; background:#EAF6F4; border-radius:1px; opacity:0.6"></div>
+                  <div style="width:3px; height:9px; background:#EAF6F4; border-radius:1px; opacity:0.8"></div>
+                  <div style="width:3px; height:11px; background:#EAF6F4; border-radius:1px"></div>
+                </div>
+                <div style="width:22px; height:11px; border:1.5px solid #EAF6F4; border-radius:3px; padding:1.5px">
+                  <div style="background:#EAF6F4; height:100%; width:72%; border-radius:1px"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Back -->
+            <div style="position:absolute; top:68px; left:16px; width:44px; height:44px; border-radius:22px; background:rgba(13,13,13,0.85); border:0.5px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; z-index:5">
+              <div style="width:9px; height:9px; border-left:2px solid #EAF6F4; border-bottom:2px solid #EAF6F4; transform:rotate(45deg); margin-left:3px"></div>
+            </div>
+            <!-- FIXED: My Location — right after back -->
+            <div style="position:absolute; top:68px; left:68px; width:44px; height:44px; border-radius:22px; background:rgba(13,13,13,0.85); border:1px solid rgba(45,212,191,0.5); display:flex; align-items:center; justify-content:center; z-index:5">
+              <div style="width:18px; height:18px; border:2px solid #2DD4BF; border-radius:50%; position:relative; display:flex; align-items:center; justify-content:center">
+                <div style="width:4px; height:4px; background:#2DD4BF; border-radius:50%"></div>
+                <div style="position:absolute; top:-5px; left:50%; transform:translateX(-50%); width:1.5px; height:4px; background:#2DD4BF"></div>
+                <div style="position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); width:1.5px; height:4px; background:#2DD4BF"></div>
+                <div style="position:absolute; left:-5px; top:50%; transform:translateY(-50%); height:1.5px; width:4px; background:#2DD4BF"></div>
+                <div style="position:absolute; right:-5px; top:50%; transform:translateY(-50%); height:1.5px; width:4px; background:#2DD4BF"></div>
+              </div>
+            </div>
+            <!-- Place Gem -->
+            <div style="position:absolute; top:68px; right:92px; height:44px; background:rgba(13,13,13,0.85); border:0.5px solid rgba(255,255,255,0.12); border-radius:22px; padding:0 16px; display:flex; align-items:center; z-index:5">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:500; color:#EAF6F4">Place Gem</span>
+            </div>
+            <!-- Satellite -->
+            <div style="position:absolute; top:68px; right:16px; height:44px; background:rgba(13,13,13,0.85); border:0.5px solid rgba(255,255,255,0.12); border-radius:22px; padding:0 14px; display:flex; align-items:center; z-index:5">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:500; color:#EAF6F4">Satellite</span>
+            </div>
+            <!-- Category filters -->
+            <div style="position:absolute; top:122px; left:0; right:0; z-index:4; padding:4px 16px; display:flex; gap:8px; overflow:hidden">
+              <div style="background:#2DD4BF; border-radius:20px; padding:7px 16px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#0A1F1C; flex:none">All</div>
+              <div style="background:rgba(20,43,46,0.9); border:0.5px solid rgba(255,255,255,0.1); border-radius:20px; padding:7px 12px; font-family:'Space Grotesk',sans-serif; font-size:13px; color:#EAF6F4; flex:none">🌿 Nature</div>
+              <div style="background:rgba(20,43,46,0.9); border:0.5px solid rgba(255,255,255,0.1); border-radius:20px; padding:7px 12px; font-family:'Space Grotesk',sans-serif; font-size:13px; color:#EAF6F4; flex:none">👁 Views</div>
+              <div style="background:rgba(20,43,46,0.9); border:0.5px solid rgba(255,255,255,0.1); border-radius:20px; padding:7px 12px; font-family:'Space Grotesk',sans-serif; font-size:13px; color:#EAF6F4; flex:none">🚴 Sport</div>
+            </div>
+            <!-- Pins -->
+            <div style="position:absolute; bottom:44%; left:56%; width:36px; height:36px; border-radius:18px; background:#FF9F5A; border:2px solid rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; z-index:3">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:#fff">v</span>
+            </div>
+            <div style="position:absolute; bottom:33%; left:71%; width:36px; height:36px; border-radius:18px; background:#2DD4BF; border:2.5px solid rgba(45,212,191,0.3); box-shadow:0 0 0 6px rgba(45,212,191,0.12); display:flex; align-items:center; justify-content:center; z-index:3">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:#0A1F1C">c</span>
+            </div>
+            <div style="position:absolute; bottom:27%; left:77%; width:32px; height:32px; border-radius:16px; background:#142B2E; border:2px solid #2DD4BF; display:flex; align-items:center; justify-content:center; z-index:3">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:700; color:#2DD4BF">c</span>
+            </div>
+            <!-- Bottom sheet -->
+            <div style="position:absolute; bottom:0; left:0; right:0; background:#142B2E; border-top-left-radius:20px; border-top-right-radius:20px; padding:12px 16px 24px; z-index:5; border-top:0.5px solid #1C3438">
+              <div style="width:36px; height:4px; background:#1C3438; border-radius:2px; margin:0 auto 12px"></div>
+              <div style="display:flex; align-items:flex-start; gap:12px">
+                <div style="width:58px; height:58px; border-radius:10px; background:linear-gradient(135deg,#1a4a3a,#0e2820); flex:none"></div>
+                <div style="flex:1">
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:#EAF6F4; margin-bottom:3px">Jezera Viewpoint</div>
+                  <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; margin-bottom:6px">43.0512° N, 17.4291° E</div>
+                  <div style="display:flex; gap:7px; align-items:center">
+                    <div style="background:#1C3438; border:0.5px solid #2DD4BF; border-radius:10px; padding:3px 8px"><span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; color:#2DD4BF">Nature</span></div>
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:#7FA8A8">♥ 24 · 💬 8</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Location button moved to top row</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">myLocationButton: <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">bottom:40, right:16</span> → <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">top:68, left:68</span> (16 + 44 + 8). Grouped with back button as you requested.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Control grouping logic</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Left: ← + 📍 = "where am I?" Right: Place Gem + Satellite = map tools. Spatial grouping reduces time scanning the toolbar.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono coords in bottom sheet</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Bottom sheet preview shows coords in SpaceMono teal. The <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">sheetLocation</span> style already exists — just format with degree notation.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 7: ADD GEM ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">07 — Add Gem</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Drop a Gem Form</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden">
+            <div style="display:flex; align-items:center; padding:2px 16px 8px">
+              <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px; flex:none"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600; color:{{text}}; flex:1; text-align:center">Drop a Gem</span>
+              <div style="width:22px"></div>
+            </div>
+            <!-- Step indicator -->
+            <div style="padding:0 16px 12px">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase">Step 1 of 3 — Location</div>
+            </div>
+            <!-- Location cards -->
+            <div style="display:flex; gap:10px; padding:0 16px 14px">
+              <div style="flex:1; background:{{accentSub}}; border:1.5px solid {{accent}}; border-radius:14px; padding:14px 12px">
+                <div style="width:30px; height:30px; border-radius:15px; background:{{accent}}; display:flex; align-items:center; justify-content:center; margin-bottom:8px">
+                  <div style="width:14px; height:14px; border:2px solid {{accentText}}; border-radius:50%; display:flex; align-items:center; justify-content:center">
+                    <div style="width:3px; height:3px; background:{{accentText}}; border-radius:50%"></div>
+                  </div>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{accent}}; margin-bottom:2px">I'm here now</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}; opacity:0.7">43.0512° N</div>
+              </div>
+              <div style="flex:1; background:{{card}}; border:0.5px solid {{border}}; border-radius:14px; padding:14px 12px">
+                <div style="width:30px; height:30px; border-radius:15px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; margin-bottom:8px">
+                  <div style="width:14px; height:11px; border:1.5px solid {{textSec}}; border-radius:2px"></div>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}; margin-bottom:2px">Pick on map</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:10px; color:{{textSec}}">Choose location</div>
+              </div>
+            </div>
+            <!-- Photo -->
+            <div style="margin:0 16px 12px; background:{{card}}; border-radius:14px; height:106px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; border:0.5px solid {{border}}">
+              <div style="width:38px; height:38px; border-radius:19px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; font-size:18px">📷</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{accent}}">Add a photo</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">Tap to choose from library or camera</div>
+            </div>
+            <!-- Fields -->
+            <div style="padding:0 16px 10px">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px">Gem Name</div>
+              <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:10px; padding:11px 14px; font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textTer}}">Give your gem a name...</div>
+            </div>
+            <div style="padding:0 16px 12px">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px">What Makes It Special?</div>
+              <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:10px; padding:11px 14px; font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textTer}}; height:64px">Share what makes this spot worth visiting...</div>
+            </div>
+            <!-- Category -->
+            <div style="padding:0 16px">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">Category</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                <div style="background:{{accentSub}}; border:1.5px solid {{accent}}; border-radius:12px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:5px">
+                  <span style="font-size:20px">🌿</span><span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{accent}}">Nature</span>
+                </div>
+                <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:12px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:5px">
+                  <span style="font-size:20px">👁</span><span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}">Views</span>
+                </div>
+                <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:12px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:5px">
+                  <span style="font-size:20px">🚴</span><span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}">Sport</span>
+                </div>
+                <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:12px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:5px">
+                  <span style="font-size:20px">🍺</span><span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}">Social</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Step indicator</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"STEP 1 OF 3 — LOCATION" in SpaceMono. Users currently have no progress signal — they don't know how many steps the flow has.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">GPS card selected state + coords</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Active GPS card shows teal fill + SpaceMono coordinate preview on lock. Confirms location is captured before user scrolls down to the form.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono form labels</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"GEM NAME", "WHAT MAKES IT SPECIAL?", "CATEGORY" in SpaceMono uppercase. Consistent with auth screen and the field-journal brand language across the app.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 8: GEM DETAIL ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">08 — Gem Detail</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Stats + Actions</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden">
+            <!-- Hero image full-width -->
+            <div style="height:196px; position:relative; overflow:hidden">
+              <div style="position:absolute; inset:0; background:linear-gradient(155deg,#1e5a40 0%,#2d7555 30%,#1a4a38 60%,#0e2820 100%)"></div>
+              <div style="position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(11,26,28,0.5) 100%)"></div>
+              <div style="position:absolute; top:12px; left:14px; width:36px; height:36px; border-radius:18px; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center">
+                <div style="width:7px; height:7px; border-left:2px solid #EAF6F4; border-bottom:2px solid #EAF6F4; transform:rotate(45deg); margin-left:2px"></div>
+              </div>
+              <div style="position:absolute; top:12px; right:14px; width:36px; height:36px; border-radius:18px; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center">
+                <span style="font-size:17px; color:#EAF6F4">♡</span>
+              </div>
+              <div style="position:absolute; bottom:12px; right:12px; background:{{coralSub}}; border:1px solid {{coral}}; border-radius:10px; padding:4px 8px; display:flex; align-items:center; gap:4px">
+                <span style="font-size:11px; color:{{coral}}">✓</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; color:{{coral}}">Verified</span>
+              </div>
+            </div>
+            <!-- Content -->
+            <div style="padding:14px 16px">
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}; margin-bottom:8px">Jezera Viewpoint</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px">
+                <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:10px; padding:4px 10px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; color:{{accent}}">🌿 Nature</span>
+                </div>
+                <div style="background:{{coralSub}}; border:0.5px solid {{coral}}; border-radius:10px; padding:4px 10px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; color:{{coral}}">Pioneer</span>
+                </div>
+                <div style="background:{{bgTer}}; border:0.5px solid {{border}}; border-radius:10px; padding:4px 10px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">Local's Pick</span>
+                </div>
+              </div>
+              <!-- SpaceMono coords -->
+              <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}; margin-bottom:12px">43.0512° N, 17.4291° E · Grad Ploče</div>
+              <!-- Stats bar -->
+              <div style="display:flex; background:{{card}}; border-radius:12px; border:0.5px solid {{border}}; margin-bottom:12px; overflow:hidden">
+                <div style="flex:1; padding:11px; text-align:center">
+                  <div style="font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:{{text}}; line-height:1">127</div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; margin-top:2px">Visits</div>
+                </div>
+                <div style="width:0.5px; background:{{border}}; margin:10px 0"></div>
+                <div style="flex:1; padding:11px; text-align:center">
+                  <div style="font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:{{text}}; line-height:1">24</div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; margin-top:2px">Likes</div>
+                </div>
+                <div style="width:0.5px; background:{{border}}; margin:10px 0"></div>
+                <div style="flex:1; padding:11px; text-align:center">
+                  <div style="font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:{{text}}; line-height:1">8</div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; margin-top:2px">Comments</div>
+                </div>
+              </div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.65; margin-bottom:14px">A hidden viewpoint overlooking Jezero Lake with panoramic views of the Dalmatian coastline. Best visited at sunrise or golden hour.</div>
+              <!-- Check In primary, Navigate secondary -->
+              <div style="display:flex; gap:10px">
+                <div style="flex:1; background:{{card}}; border:1px solid {{accent}}; border-radius:12px; padding:14px; text-align:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:{{accent}}">Navigate</span>
+                </div>
+                <div style="flex:1; background:{{accent}}; border-radius:12px; padding:14px; text-align:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:{{accentText}}">Check In ✓</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono stats bar</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Visits / Likes / Comments grouped in one card with SpaceMono numbers. Was scattered individually. Matches the "data/explorer field" convention used for coordinates.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Coordinates as primary location label</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">SpaceMono coords shown prominently under the title — this is the app's signature detail and deserves more presence than a small secondary label.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Check In is the primary CTA</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Flipped: Check In gets the accent fill, Navigate gets the outline. Check In drives visits, streaks, and achievements — it's the more important action for the engagement loop.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1800, &quot;height&quot;: 1100 }
+}">
+class Component extends DCLogic {
+  state = {
+    scheme: 'dark',
+    discoverTab: 'foryou',
+    followAction: null,
+    authMode: 'login',
+  };
+
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg = dark ? '#0B1A1C' : '#F7FAF9';
+    const card = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer = dark ? '#1C3438' : '#E3F1EF';
+    const border = dark ? '#1C3438' : '#DCE8E6';
+    const text = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub = dark ? '#1C3438' : '#E3F1EF';
+    const coral = dark ? '#FF9F5A' : '#E8723D';
+    const coralSub = dark ? 'rgba(255,159,90,0.15)' : 'rgba(232,114,61,0.12)';
+    const homeInd = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+    const isForyou = this.state.discoverTab === 'foryou';
+
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, accentText: '#0A1F1C', coral, coralSub, homeInd,
+      toggleScheme: () => this.setState(s => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+      setForYou: () => this.setState({ discoverTab: 'foryou' }),
+      setFollowing: () => this.setState({ discoverTab: 'following' }),
+      foryouBg: isForyou ? accent : 'transparent',
+      foryouColor: isForyou ? '#0A1F1C' : textSec,
+      followingBg: !isForyou ? accent : 'transparent',
+      followingColor: !isForyou ? '#0A1F1C' : textSec,
+      followPending: this.state.followAction === null,
+      followAccepted: this.state.followAction === 'accepted',
+      followDeclined: this.state.followAction === 'declined',
+      doAccept: () => this.setState({ followAction: 'accepted' }),
+      doDecline: () => this.setState({ followAction: 'declined' }),
+      isRegister: this.state.authMode === 'register',
+      authLoginBg: this.state.authMode === 'login' ? accent : 'transparent',
+      authLoginColor: this.state.authMode === 'login' ? '#0A1F1C' : textSec,
+      authRegisterBg: this.state.authMode === 'register' ? accent : 'transparent',
+      authRegisterColor: this.state.authMode === 'register' ? '#0A1F1C' : textSec,
+      setAuthLogin: () => this.setState({ authMode: 'login' }),
+      setAuthRegister: () => this.setState({ authMode: 'register' }),
+      authCTA: this.state.authMode === 'login' ? 'Sign In' : 'Create Account',
+    };
+  }
+}
+</script>
+</body>
+</html>

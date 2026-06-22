@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; } button { cursor: pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <!-- PAGE HEADER -->
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Brand Assets</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">App icon,<br>splash + badges</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:520px">The brand artefacts that ship alongside the code — app icon, splash screen, achievement badges, and the OG card that appears when a gem link is shared anywhere.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px">{{schemeLabel}}</button>
+  </div>
+
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══════════════════════════════════════
+         COL 1: APP ICON
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Brand</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">App Icon</div>
+      </div>
+
+      <!-- Dark showcase card -->
+      <div style="background:#0F1E20; border-radius:20px; padding:28px 24px; display:flex; flex-direction:column; align-items:center; gap:24px">
+
+        <!-- Master icon -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:9px">
+          <div style="width:200px; height:200px; border-radius:22.37%; background:#0B1A1C; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(45,212,191,0.12)">
+            <svg viewBox="0 0 100 100" width="140" height="140" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="1.8" fill="none"></circle>
+              <line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="3" stroke-linecap="round"></line>
+              <line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line>
+              <line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line>
+              <line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line>
+              <circle cx="50" cy="50" r="5.5" fill="#2DD4BF"></circle>
+            </svg>
+          </div>
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:#5C8484; letter-spacing:1.5px">1024 × 1024 — MASTER</div>
+        </div>
+
+        <!-- Size strip -->
+        <div style="width:100%">
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:#5C8484; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:12px">Size Preview</div>
+          <div style="display:flex; align-items:flex-end; gap:16px">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:5px">
+              <div style="width:120px; height:120px; border-radius:22.37%; background:#0B1A1C; overflow:hidden; display:flex; align-items:center; justify-content:center">
+                <svg viewBox="0 0 100 100" width="84" height="84" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="1.8" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="3" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line><circle cx="50" cy="50" r="5.5" fill="#2DD4BF"></circle></svg>
+              </div>
+              <span style="font-family:'Space Mono',monospace; font-size:8px; color:#5C8484">180px</span>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:5px">
+              <div style="width:80px; height:80px; border-radius:22.37%; background:#0B1A1C; overflow:hidden; display:flex; align-items:center; justify-content:center">
+                <svg viewBox="0 0 100 100" width="56" height="56" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="1.8" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="3" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line><circle cx="50" cy="50" r="5.5" fill="#2DD4BF"></circle></svg>
+              </div>
+              <span style="font-family:'Space Mono',monospace; font-size:8px; color:#5C8484">120px</span>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:5px">
+              <div style="width:48px; height:48px; border-radius:22.37%; background:#0B1A1C; overflow:hidden; display:flex; align-items:center; justify-content:center">
+                <svg viewBox="0 0 100 100" width="34" height="34" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="2.5" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="4.5" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="4.5" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="4.5" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="4.5" stroke-linecap="round"></line><circle cx="50" cy="50" r="7" fill="#2DD4BF"></circle></svg>
+              </div>
+              <span style="font-family:'Space Mono',monospace; font-size:8px; color:#5C8484">60px</span>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:5px">
+              <div style="width:29px; height:29px; border-radius:22.37%; background:#0B1A1C; overflow:hidden; display:flex; align-items:center; justify-content:center">
+                <svg viewBox="0 0 100 100" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="3.5" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="6" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="6" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="6" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="6" stroke-linecap="round"></line><circle cx="50" cy="50" r="8" fill="#2DD4BF"></circle></svg>
+              </div>
+              <span style="font-family:'Space Mono',monospace; font-size:8px; color:#5C8484">29px</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Platform shapes -->
+        <div style="width:100%">
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:#5C8484; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:12px">Platform Shape</div>
+          <div style="display:flex; gap:20px; align-items:flex-end">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:6px">
+              <div style="width:64px; height:64px; border-radius:22.37%; background:#0B1A1C; overflow:hidden; display:flex; align-items:center; justify-content:center">
+                <svg viewBox="0 0 100 100" width="46" height="46" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="2" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="3.5" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><circle cx="50" cy="50" r="6" fill="#2DD4BF"></circle></svg>
+              </div>
+              <span style="font-family:'Space Mono',monospace; font-size:8px; color:#5C8484">iOS</span>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:6px">
+              <div style="width:64px; height:64px; border-radius:14px; background:#0B1A1C; overflow:hidden; display:flex; align-items:center; justify-content:center">
+                <svg viewBox="0 0 100 100" width="46" height="46" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="2" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="3.5" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><circle cx="50" cy="50" r="6" fill="#2DD4BF"></circle></svg>
+              </div>
+              <span style="font-family:'Space Mono',monospace; font-size:8px; color:#5C8484">Android</span>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:6px">
+              <div style="width:64px; height:64px; border-radius:50%; background:#0B1A1C; overflow:hidden; display:flex; align-items:center; justify-content:center">
+                <svg viewBox="0 0 100 100" width="50" height="50" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="2" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="3.5" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round"></line><circle cx="50" cy="50" r="6" fill="#2DD4BF"></circle></svg>
+              </div>
+              <span style="font-family:'Space Mono',monospace; font-size:8px; color:#5C8484">Adaptive</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Export: icon.png at 1024×1024</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Place in <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">assets/icon.png</span> and point <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">app.json → expo.icon</span> at it. Expo generates all required sizes automatically. No manual size exports needed for iOS.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Squircle = 22.37% border-radius</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">iOS applies its own squircle mask on top — your PNG should be a flat square. The 22.37% above is a CSS approximation for design previews only. The OS handles rounding at runtime.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Android adaptive icon</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Requires a separate <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">adaptiveIcon.foregroundImage</span> with the compass centred in 66% of canvas, and <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">backgroundColor: '#0B1A1C'</span>. The "Adaptive" circle preview above shows the worst-case circular clip.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 2: SPLASH SCREEN
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Brand</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Splash Screen</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:#0B1A1C; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:#EAF6F4; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:#EAF6F4; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:#EAF6F4; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:#EAF6F4; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:#EAF6F4; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid #EAF6F4; border-radius:3px; padding:1.5px">
+                <div style="background:#EAF6F4; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Splash content area -->
+          <div style="height:700px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 40px; position:relative">
+            <!-- Subtle radial glow -->
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); width:300px; height:300px; background:radial-gradient(circle, rgba(45,212,191,0.07) 0%, transparent 70%)"></div>
+
+            <!-- Compass -->
+            <div style="position:relative; z-index:1; margin-bottom:28px">
+              <svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="1.8" fill="none"></circle>
+                <line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="3" stroke-linecap="round"></line>
+                <line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line>
+                <line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line>
+                <line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"></line>
+                <circle cx="50" cy="50" r="5.5" fill="#2DD4BF"></circle>
+              </svg>
+            </div>
+
+            <!-- Typing coordinates -->
+            <div style="font-family:'Space Mono',monospace; font-size:14px; color:#2DD4BF; letter-spacing:1px; text-align:center; min-height:22px; position:relative; z-index:1">{{coordsText}}</div>
+
+            <!-- Replay button -->
+            <button onClick="{{replayTyping}}" style="position:absolute; bottom:40px; background:rgba(45,212,191,0.1); border:0.5px solid rgba(45,212,191,0.25); border-radius:16px; padding:6px 14px; font-family:'Space Mono',monospace; font-size:10px; color:#5C8484; letter-spacing:1px">↺ REPLAY</button>
+          </div>
+
+          <div style="height:34px; background:#0B1A1C; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:rgba(234,246,244,0.2); border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">expo-splash-screen setup</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5"><span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">resizeMode: "contain"</span>, <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">backgroundColor: "#0B1A1C"</span>. The static PNG is just the compass centred. Hold the splash until fonts + auth state are resolved, then animate out.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Coordinates typing animation</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">After the splash PNG is dismissed, a React Native screen fades in with <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">TypeWriter</span>-style animation on the coords. Use user's last known location — or the default 43° N / 17° E if unavailable. Tap ↺ above to preview.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">No wordmark on splash</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The app name is already on the home screen icon label. A wordmark on the splash is redundant — the compass alone is enough identity. Coordinates as the only text makes it feel like a field instrument powering up.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 3: ACHIEVEMENT BADGES
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Brand</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Achievement Badges</div>
+      </div>
+
+      <div style="background:{{card}}; border-radius:20px; padding:20px; border:0.5px solid {{border}}">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+
+          <!-- Pioneer -->
+          <div style="background:{{bg}}; border-radius:14px; padding:14px; border:0.5px solid {{border}}; display:flex; gap:10px; align-items:flex-start">
+            <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#0a1e20,#142b2e); border:1.5px solid #2DD4BF; display:flex; align-items:center; justify-content:center; flex:none">
+              <svg viewBox="0 0 56 56" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <path d="M28 8 L48 28 L28 48 L8 28 Z" stroke="#2DD4BF" stroke-width="1.8" fill="none" stroke-linejoin="round"></path>
+                <circle cx="28" cy="28" r="3" fill="#2DD4BF"></circle>
+              </svg>
+            </div>
+            <div style="min-width:0">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#2DD4BF; margin-bottom:2px">PIONEER</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; line-height:1.4">First gem dropped</div>
+            </div>
+          </div>
+
+          <!-- Navigator -->
+          <div style="background:{{bg}}; border-radius:14px; padding:14px; border:0.5px solid {{border}}; display:flex; gap:10px; align-items:flex-start">
+            <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#0a1e20,#142b2e); border:1.5px solid #2DD4BF; display:flex; align-items:center; justify-content:center; flex:none">
+              <svg viewBox="0 0 56 56" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="28" cy="28" r="14" stroke="#2DD4BF" stroke-width="1.5" fill="none"></circle>
+                <line x1="28" y1="10" x2="28" y2="16" stroke="#FF9F5A" stroke-width="2.5" stroke-linecap="round"></line>
+                <line x1="28" y1="40" x2="28" y2="46" stroke="#2DD4BF" stroke-width="2" stroke-linecap="round"></line>
+                <line x1="10" y1="28" x2="16" y2="28" stroke="#2DD4BF" stroke-width="2" stroke-linecap="round"></line>
+                <line x1="40" y1="28" x2="46" y2="28" stroke="#2DD4BF" stroke-width="2" stroke-linecap="round"></line>
+                <circle cx="28" cy="28" r="3" fill="#2DD4BF"></circle>
+              </svg>
+            </div>
+            <div style="min-width:0">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#2DD4BF; margin-bottom:2px">NAVIGATOR</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; line-height:1.4">10 check-ins</div>
+            </div>
+          </div>
+
+          <!-- Pathfinder -->
+          <div style="background:{{bg}}; border-radius:14px; padding:14px; border:0.5px solid {{border}}; display:flex; gap:10px; align-items:flex-start">
+            <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#0a1e20,#142b2e); border:1.5px solid #2DD4BF; display:flex; align-items:center; justify-content:center; flex:none">
+              <svg viewBox="0 0 56 56" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="28" cy="28" r="14" stroke="#2DD4BF" stroke-width="1.5" fill="none" opacity="0.5"></circle>
+                <path d="M28 12 L32 26 L28 30 L24 26 Z" fill="#FF9F5A"></path>
+                <path d="M28 44 L32 30 L28 26 L24 30 Z" fill="#2DD4BF" opacity="0.5"></path>
+                <circle cx="28" cy="28" r="2.5" fill="white"></circle>
+              </svg>
+            </div>
+            <div style="min-width:0">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#2DD4BF; margin-bottom:2px">PATHFINDER</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; line-height:1.4">50 check-ins</div>
+            </div>
+          </div>
+
+          <!-- Trailblazer -->
+          <div style="background:{{bg}}; border-radius:14px; padding:14px; border:0.5px solid {{border}}; display:flex; gap:10px; align-items:flex-start">
+            <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#0a1e20,#142b2e); border:1.5px solid #2DD4BF; display:flex; align-items:center; justify-content:center; flex:none">
+              <svg viewBox="0 0 56 56" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 44 L28 16 L48 44" stroke="#2DD4BF" stroke-width="2" fill="none" stroke-linejoin="round"></path>
+                <path d="M18 44 L33 26 L48 44" stroke="#2DD4BF" stroke-width="1.5" fill="none" stroke-linejoin="round" opacity="0.4"></path>
+                <line x1="28" y1="16" x2="28" y2="10" stroke="#FF9F5A" stroke-width="2" stroke-linecap="round"></line>
+              </svg>
+            </div>
+            <div style="min-width:0">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#2DD4BF; margin-bottom:2px">TRAILBLAZER</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; line-height:1.4">25 gems dropped</div>
+            </div>
+          </div>
+
+          <!-- Local Legend -->
+          <div style="background:{{bg}}; border-radius:14px; padding:14px; border:0.5px solid rgba(255,159,90,0.3); display:flex; gap:10px; align-items:flex-start">
+            <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#2a1a08,#1a1006); border:1.5px solid #FF9F5A; display:flex; align-items:center; justify-content:center; flex:none">
+              <svg viewBox="0 0 56 56" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="22" cy="21" r="8" stroke="#FF9F5A" stroke-width="1.8" fill="none"></circle>
+                <line x1="22" y1="29" x2="22" y2="40" stroke="#FF9F5A" stroke-width="2" stroke-linecap="round"></line>
+                <circle cx="36" cy="25" r="6" stroke="#FF9F5A" stroke-width="1.5" fill="none" opacity="0.55"></circle>
+                <line x1="36" y1="31" x2="36" y2="40" stroke="#FF9F5A" stroke-width="1.5" stroke-linecap="round" opacity="0.55"></line>
+                <circle cx="22" cy="21" r="2.5" fill="#FF9F5A"></circle>
+              </svg>
+            </div>
+            <div style="min-width:0">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#FF9F5A; margin-bottom:2px">LOCAL LEGEND</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; line-height:1.4">5 gems in one area</div>
+            </div>
+          </div>
+
+          <!-- Founding Member -->
+          <div style="background:{{bg}}; border-radius:14px; padding:14px; border:0.5px solid rgba(255,159,90,0.3); display:flex; gap:10px; align-items:flex-start">
+            <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#2a1a08,#1a1006); border:1.5px solid #FF9F5A; display:flex; align-items:center; justify-content:center; flex:none">
+              <svg viewBox="0 0 56 56" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <path d="M28 8 L31.5 19 L44 19 L34.5 26 L38 37 L28 30.5 L18 37 L21.5 26 L12 19 L24.5 19 Z" stroke="#FF9F5A" stroke-width="1.8" fill="none" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+            <div style="min-width:0">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#FF9F5A; margin-bottom:2px">FOUNDING</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; line-height:1.4">Early supporter</div>
+            </div>
+          </div>
+
+          <!-- Secret Finder -->
+          <div style="background:{{bg}}; border-radius:14px; padding:14px; border:0.5px solid {{border}}; display:flex; gap:10px; align-items:flex-start">
+            <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#0a1e20,#142b2e); border:1.5px solid #2DD4BF; display:flex; align-items:center; justify-content:center; flex:none">
+              <svg viewBox="0 0 56 56" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 28 Q28 10 50 28 Q28 46 6 28 Z" stroke="#2DD4BF" stroke-width="1.8" fill="none"></path>
+                <circle cx="28" cy="28" r="6" stroke="#2DD4BF" stroke-width="1.8" fill="none"></circle>
+                <circle cx="28" cy="28" r="2.5" fill="#2DD4BF"></circle>
+              </svg>
+            </div>
+            <div style="min-width:0">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#2DD4BF; margin-bottom:2px">SECRET FIND</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; line-height:1.4">Gem with &lt;3 visitors</div>
+            </div>
+          </div>
+
+          <!-- Community Builder -->
+          <div style="background:{{bg}}; border-radius:14px; padding:14px; border:0.5px solid rgba(255,159,90,0.3); display:flex; gap:10px; align-items:flex-start">
+            <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#2a1a08,#1a1006); border:1.5px solid #FF9F5A; display:flex; align-items:center; justify-content:center; flex:none">
+              <svg viewBox="0 0 56 56" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="19" r="7" stroke="#FF9F5A" stroke-width="1.8" fill="none"></circle>
+                <path d="M8 44 Q9 30 20 30 Q31 30 32 44" stroke="#FF9F5A" stroke-width="1.8" fill="none" stroke-linecap="round"></path>
+                <circle cx="36" cy="21" r="5.5" stroke="#FF9F5A" stroke-width="1.5" fill="none" opacity="0.55"></circle>
+                <path d="M27 46 Q28 35 36 35 Q44 35 45 46" stroke="#FF9F5A" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.55"></path>
+              </svg>
+            </div>
+            <div style="min-width:0">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#FF9F5A; margin-bottom:2px">CONNECTOR</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; line-height:1.4">Joined 3 communities</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Locked state note -->
+        <div style="margin-top:14px; padding:10px 14px; background:{{bgTer}}; border-radius:10px; display:flex; align-items:center; gap:8px">
+          <div style="width:32px; height:32px; border-radius:16px; background:{{bg}}; border:1px solid {{border}}; display:flex; align-items:center; justify-content:center; flex:none; opacity:0.45">
+            <svg viewBox="0 0 56 56" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="14" stroke="white" stroke-width="2" fill="none"></circle><circle cx="28" cy="28" r="4" fill="white"></circle></svg>
+          </div>
+          <div>
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1px; text-transform:uppercase; margin-bottom:2px">Locked State</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}">Greyscale filter + 0.4 opacity — same component, one prop</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Teal = skill / coral = identity</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Teal badges (Pioneer, Navigator, Pathfinder, Trailblazer, Secret Find) = exploration activity. Coral badges (Local Legend, Founding, Connector) = social identity and status. Consistent with the app's teal/coral duality throughout.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">One locked-state style for all</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">All 8 badges share a single <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">AchievementBadge</span> component. <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">locked={true}</span> applies <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">grayscale(1)</span> filter + opacity 0.4. No duplicate icon assets needed.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Unlock: hapticSuccess + flash</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Badge unlock triggers <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">hapticSuccess()</span>, a 0.5s full-screen teal flash (opacity 0→0.15→0), then a bottom sheet showing the badge. No pop-up mid-session — queue the sheet to show at session end.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 4: OG / SHARE IMAGE
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:570px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">04 — Brand</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Share / OG Image</div>
+      </div>
+
+      <!-- OG card (1200×630 at ~47.5% = 570×299) -->
+      <div style="width:570px; height:299px; border-radius:14px; overflow:hidden; display:flex; box-shadow:0 24px 60px rgba(0,0,0,0.3); flex:none">
+
+        <!-- Left: photo placeholder -->
+        <div style="width:214px; height:100%; background:linear-gradient(155deg,#0e2840 0%,#1a3a5a 50%,#081420 100%); position:relative; flex:none">
+          <!-- Category badge -->
+          <div style="position:absolute; top:16px; left:14px; background:rgba(45,212,191,0.15); border:1px solid #2DD4BF; border-radius:8px; padding:4px 10px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; color:#2DD4BF">Views</span>
+          </div>
+          <!-- Check-in count -->
+          <div style="position:absolute; bottom:16px; left:14px; display:flex; align-items:center; gap:5px">
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:rgba(234,246,244,0.55)">24 check-ins</span>
+          </div>
+          <!-- Watermark compass -->
+          <div style="position:absolute; bottom:14px; right:14px; opacity:0.1">
+            <svg viewBox="0 0 100 100" width="44" height="44" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="34" stroke="white" stroke-width="2" fill="none"></circle>
+              <line x1="50" y1="17" x2="50" y2="41" stroke="white" stroke-width="3" stroke-linecap="round"></line>
+              <line x1="50" y1="59" x2="50" y2="83" stroke="white" stroke-width="3" stroke-linecap="round"></line>
+              <line x1="17" y1="50" x2="41" y2="50" stroke="white" stroke-width="3" stroke-linecap="round"></line>
+              <line x1="59" y1="50" x2="83" y2="50" stroke="white" stroke-width="3" stroke-linecap="round"></line>
+              <circle cx="50" cy="50" r="5.5" fill="white"></circle>
+            </svg>
+          </div>
+          <!-- Right-edge fade -->
+          <div style="position:absolute; top:0; right:0; bottom:0; width:48px; background:linear-gradient(to right, transparent, #0B1A1C)"></div>
+        </div>
+
+        <!-- Right: content -->
+        <div style="flex:1; background:#0B1A1C; padding:22px 24px; display:flex; flex-direction:column; justify-content:space-between">
+          <!-- App logo row -->
+          <div style="display:flex; align-items:center; gap:8px">
+            <svg viewBox="0 0 100 100" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="3" fill="none"></circle>
+              <line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="5" stroke-linecap="round"></line>
+              <line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line>
+              <line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line>
+              <line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line>
+              <circle cx="50" cy="50" r="7" fill="#2DD4BF"></circle>
+            </svg>
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:#5C8484; letter-spacing:0.5px">Hidden Gems</span>
+          </div>
+
+          <!-- Main gem info -->
+          <div>
+            <div style="background:rgba(45,212,191,0.1); border:0.5px solid rgba(45,212,191,0.3); border-radius:6px; padding:2px 8px; display:inline-flex; margin-bottom:10px">
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:0.5px">VIEWS · VIS ISLAND</span>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:#EAF6F4; line-height:1.2; margin-bottom:8px">Modra Špilja<br>Cave</div>
+            <div style="font-family:'Space Mono',monospace; font-size:11px; color:#2DD4BF; margin-bottom:3px">43.0540° N, 16.1869° E</div>
+            <div style="display:flex; align-items:center; gap:6px">
+              <span style="font-family:'Space Mono',monospace; font-size:11px; color:#5C8484">♥ 41</span>
+              <span style="color:#1C3438">·</span>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:#5C8484">shared by @ana_dalmatian</span>
+            </div>
+          </div>
+
+          <!-- Footer CTA -->
+          <div style="display:flex; align-items:center; justify-content:space-between; padding-top:10px; border-top:0.5px solid #1C3438">
+            <span style="font-family:'Space Mono',monospace; font-size:10px; color:#5C8484; letter-spacing:0.5px">hiddengems.app</span>
+            <div style="background:#2DD4BF; border-radius:8px; padding:5px 12px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:700; color:#0A1F1C">Open in App →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Size label -->
+      <div style="display:flex; align-items:center; justify-content:space-between">
+        <span style="font-family:'Space Mono',monospace; font-size:9px; color:#5B7472; letter-spacing:1.5px">1200 × 630px — og:image, twitter:card, WhatsApp, iMessage</span>
+        <div style="background:#F5F1EB; border-radius:8px; padding:4px 10px">
+          <span style="font-family:'Space Mono',monospace; font-size:9px; color:#5B7472">47.5% preview</span>
+        </div>
+      </div>
+
+      <!-- Fallback variant label -->
+      <div style="background:{{card}}; border-radius:14px; padding:14px 16px; border:0.5px solid {{border}}; display:flex; align-items:center; gap:12px">
+        <div style="width:40px; height:40px; border-radius:8px; background:#0B1A1C; display:flex; align-items:center; justify-content:center; flex:none">
+          <svg viewBox="0 0 100 100" width="26" height="26" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="3" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="5" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><circle cx="50" cy="50" r="7" fill="#2DD4BF"></circle></svg>
+        </div>
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px">Fallback (no photo)</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.4">When a gem has no photo, the left column renders as a dark gradient with the compass watermark only. Same layout, different left panel fill.</div>
+        </div>
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Generated server-side via Satori</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Use <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">@vercel/og</span> (Satori under the hood) at <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">/api/og?gemId=...</span>. Fetches gem data + photo URL, renders to PNG. Space Grotesk + Space Mono both available as <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">fetch()</span> font inputs.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">"Open in App" deep link</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The CTA links to <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">hiddengems://gem/[id]</span> (opens app) with <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">https://hiddengems.app/gem/[id]</span> as fallback (opens web preview with App Store CTA). Universal Links for iOS, App Links for Android.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Also used for push notification icon</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Android requires a monochrome <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">notification-icon.png</span> (white on transparent). Export the compass SVG as a single-colour white SVG → PNG at 96×96px and add to <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">app.json → expo.android.icon</span>.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 2000, &quot;height&quot;: 1100}}">
+
+class Component extends DCLogic {
+  state = {
+    scheme: 'dark',
+    typingProgress: 0,
+    cursorOn: true,
+    typingDone: false,
+  };
+
+  get COORDS() { return '43.0512° N, 17.4291° E'; }
+
+  startTyping() {
+    clearInterval(this._blink);
+    clearInterval(this._type);
+    this.setState({ typingProgress: 0, typingDone: false, cursorOn: true });
+    let i = 0;
+    this._type = setInterval(() => {
+      i++;
+      const done = i >= this.COORDS.length;
+      this.setState({ typingProgress: i, typingDone: done });
+      if (done) {
+        clearInterval(this._type);
+        this._blink = setInterval(() => {
+          this.setState(s => ({ cursorOn: !s.cursorOn }));
+        }, 500);
+      }
+    }, 75);
+  }
+
+  componentDidMount() {
+    setTimeout(() => this.startTyping(), 500);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this._type);
+    clearInterval(this._blink);
+  }
+
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg      = dark ? '#0B1A1C' : '#F7FAF9';
+    const card    = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer   = dark ? '#1C3438' : '#E3F1EF';
+    const border  = dark ? '#1C3438' : '#DCE8E6';
+    const text    = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent  = dark ? '#2DD4BF' : '#0F9488';
+    const coral   = dark ? '#FF9F5A' : '#E8723D';
+
+    const typed  = this.COORDS.slice(0, this.state.typingProgress);
+    const cursor = this.state.typingDone
+      ? (this.state.cursorOn ? '|' : '\u00a0')
+      : '|';
+
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentText: '#0A1F1C', coral, dark,
+
+      toggleScheme: () => this.setState(s => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+
+      coordsText: typed + cursor,
+      replayTyping: () => this.startTyping(),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

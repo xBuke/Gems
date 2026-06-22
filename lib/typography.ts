@@ -1,0 +1,22 @@
+export const typography = {
+  h1: { fontFamily: 'SpaceGrotesk-Bold', fontSize: 38, lineHeight: 46 },
+  h2: { fontFamily: 'SpaceGrotesk-Bold', fontSize: 24, lineHeight: 30 },
+  h3: { fontFamily: 'SpaceGrotesk-Bold', fontSize: 22, lineHeight: 28 },
+  h4: { fontFamily: 'SpaceGrotesk-SemiBold', fontSize: 17, lineHeight: 22 },
+  h5: { fontFamily: 'SpaceGrotesk-SemiBold', fontSize: 16, lineHeight: 22 },
+  body: { fontFamily: 'SpaceGrotesk-Regular', fontSize: 14, lineHeight: 22 },
+  bodyS: { fontFamily: 'SpaceGrotesk-Regular', fontSize: 13, lineHeight: 20 },
+  bodyXS: { fontFamily: 'SpaceGrotesk-Regular', fontSize: 12, lineHeight: 18 },
+  label: { fontFamily: 'SpaceGrotesk-SemiBold', fontSize: 15, lineHeight: 20 },
+  labelS: { fontFamily: 'SpaceGrotesk-SemiBold', fontSize: 13, lineHeight: 18 },
+  monoXL: { fontFamily: 'SpaceMono-Regular', fontSize: 18 },
+  monoL: { fontFamily: 'SpaceMono-Regular', fontSize: 13 },
+  monoM: { fontFamily: 'SpaceMono-Regular', fontSize: 11 },
+  monoS: { fontFamily: 'SpaceMono-Regular', fontSize: 10 },
+  monoXS: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 9,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase' as const,
+  },
+};

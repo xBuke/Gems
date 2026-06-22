@@ -281,8 +281,22 @@ export default function TripPlannerScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
-        <Text style={styles.fieldLabel}>Where are you going?</Text>
+        <Text style={styles.fieldLabel}>WHERE ARE YOU GOING?</Text>
         <View style={styles.inputWrap}>
+          {destName ? (
+            <TouchableOpacity
+              style={[styles.input, styles.inputLocked]}
+              onPress={() => {
+                setDestName(null);
+                setDestLat(null);
+                setDestLng(null);
+                setCityQuery('');
+              }}
+              activeOpacity={0.8}>
+              <Text style={styles.inputLockedIcon}>📍</Text>
+              <Text style={styles.inputLockedText}>{destName}</Text>
+            </TouchableOpacity>
+          ) : (
           <TextInput
             style={styles.input}
             value={cityQuery}
@@ -291,7 +305,8 @@ export default function TripPlannerScreen() {
             placeholderTextColor={theme.textTertiary}
             autoCorrect={false}
           />
-          {showSuggestions && citySuggestions.length > 0 && (
+          )}
+          {showSuggestions && !destName && citySuggestions.length > 0 && (
             <View style={styles.suggestions}>
               <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
                 {citySuggestions.map((city, index) => (
@@ -312,7 +327,7 @@ export default function TripPlannerScreen() {
           )}
         </View>
 
-        <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>Search radius</Text>
+        <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>SEARCH RADIUS</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -340,7 +355,7 @@ export default function TripPlannerScreen() {
           })}
         </ScrollView>
 
-        <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>Interested in</Text>
+        <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>INTERESTED IN</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -392,7 +407,7 @@ export default function TripPlannerScreen() {
             ) : (
               <>
                 <Text style={styles.resultsSummary}>
-                  {results.length} gem{results.length !== 1 ? 's' : ''} found near {destName}
+                  {results.length} GEM{results.length !== 1 ? 'S' : ''} NEAR {(destName ?? '').toUpperCase()}
                 </Text>
 
                 {results.length === 0 ? (
@@ -482,9 +497,11 @@ const createStyles = (theme: Theme) =>
       paddingBottom: 32,
     },
     fieldLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.text,
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      letterSpacing: 1.5,
+      color: theme.textTertiary,
+      textTransform: 'uppercase',
     },
     fieldLabelSpaced: {
       marginTop: 16,
@@ -502,6 +519,25 @@ const createStyles = (theme: Theme) =>
       padding: 14,
       fontSize: 16,
       color: theme.text,
+    },
+    inputLocked: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      height: 48,
+      borderColor: theme.accent,
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+    },
+    inputLockedIcon: {
+      fontSize: 16,
+    },
+    inputLockedText: {
+      flex: 1,
+      fontSize: 15,
+      color: theme.text,
+      fontFamily: 'SpaceGrotesk-Bold',
     },
     suggestions: {
       backgroundColor: theme.card,
@@ -595,9 +631,12 @@ const createStyles = (theme: Theme) =>
       textAlign: 'center',
     },
     resultsSummary: {
-      fontSize: 13,
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      letterSpacing: 1.5,
       color: theme.textSecondary,
       marginBottom: 12,
+      textTransform: 'uppercase',
     },
     emptyState: {
       alignItems: 'center',
@@ -642,7 +681,7 @@ const createStyles = (theme: Theme) =>
       borderBottomLeftRadius: 12,
     },
     listCardImagePlaceholder: {
-      backgroundColor: theme.backgroundTertiary,
+      backgroundColor: theme.bgTertiary,
     },
     listCardContent: {
       flex: 1,
@@ -658,7 +697,7 @@ const createStyles = (theme: Theme) =>
     },
     listCategoryBadge: {
       alignSelf: 'flex-start',
-      backgroundColor: theme.accentSubtle,
+      backgroundColor: theme.accentSub,
       borderWidth: 0.5,
       borderColor: theme.accent,
       paddingVertical: 2,
@@ -668,7 +707,7 @@ const createStyles = (theme: Theme) =>
     listCategoryBadgeText: {
       fontSize: 10,
       fontWeight: '600',
-      color: theme.accent,
+      color: theme.textSecondary,
     },
     listCardTitle: {
       fontSize: 14,

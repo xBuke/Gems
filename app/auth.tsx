@@ -16,9 +16,48 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
+import { SegmentedPill } from '@/components/SegmentedPill';
 import { supabase } from '@/lib/supabase';
 
 type AuthMode = 'login' | 'register';
+
+function CompassLogo({ accent, coral }: { accent: string; coral: string }) {
+  return (
+    <View style={{ alignItems: 'center', marginBottom: 28 }}>
+      <View
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 36,
+          borderWidth: 2,
+          borderColor: accent,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        <View
+          style={{
+            position: 'absolute',
+            width: 2,
+            height: 26,
+            backgroundColor: coral,
+            borderRadius: 1,
+            transform: [{ rotate: '-45deg' }],
+          }}
+        />
+        <Text
+          style={{
+            position: 'absolute',
+            top: 10,
+            fontSize: 9,
+            fontFamily: 'SpaceMono-Bold',
+            color: coral,
+          }}>
+          N
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -170,40 +209,36 @@ export default function AuthScreen() {
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
+            <CompassLogo accent={theme.accent} coral={theme.coral} />
             <Text style={styles.title}>Hidden Gems</Text>
-            <Text style={styles.subtitle}>Discover secret places near you</Text>
+            <Text style={styles.subtitle}>DISCOVER SECRET PLACES NEAR YOU</Text>
 
-            <View style={styles.tabRow}>
-              <TouchableOpacity
-                style={[styles.tab, mode === 'login' ? styles.tabActive : styles.tabInactive]}
-                onPress={() => switchMode('login')}
-                activeOpacity={0.7}>
-                <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>
-                  Login
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tab, mode === 'register' ? styles.tabActive : styles.tabInactive]}
-                onPress={() => switchMode('register')}
-                activeOpacity={0.7}>
-                <Text style={[styles.tabText, mode === 'register' && styles.tabTextActive]}>
-                  Register
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <SegmentedPill
+              tabs={[
+                { key: 'login', label: 'Login' },
+                { key: 'register', label: 'Register' },
+              ]}
+              activeKey={mode}
+              onChange={(key) => switchMode(key as AuthMode)}
+              theme={theme}
+            />
 
             {mode === 'register' && (
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                placeholderTextColor={theme.textSecondary}
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+              <>
+                <Text style={styles.fieldLabel}>USERNAME</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Username"
+                  placeholderTextColor={theme.textSecondary}
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </>
             )}
 
+            <Text style={styles.fieldLabel}>EMAIL</Text>
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -215,6 +250,7 @@ export default function AuthScreen() {
               autoCorrect={false}
             />
 
+            <Text style={styles.fieldLabel}>PASSWORD</Text>
             <TextInput
               style={styles.input}
               placeholder="Password"
@@ -262,27 +298,42 @@ const createStyles = (theme: Theme) =>
       paddingBottom: 32,
     },
     title: {
-      fontSize: 24,
-      fontWeight: '600',
+      fontSize: 30,
+      fontFamily: 'SpaceGrotesk-Bold',
       color: theme.text,
     },
     subtitle: {
-      fontSize: 14,
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      letterSpacing: 1.5,
       color: theme.textSecondary,
-      marginTop: 4,
+      marginTop: 6,
       marginBottom: 32,
+      textTransform: 'uppercase',
+    },
+    fieldLabel: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      letterSpacing: 1.5,
+      color: theme.textTertiary,
+      marginBottom: 6,
+      textTransform: 'uppercase',
     },
     tabRow: {
       flexDirection: 'row',
+      alignSelf: 'center',
+      width: 226,
       backgroundColor: theme.card,
-      borderRadius: 10,
-      padding: 4,
+      borderRadius: 24,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      padding: 3,
       marginBottom: 24,
     },
     tab: {
       flex: 1,
-      padding: 10,
-      borderRadius: 8,
+      paddingVertical: 9,
+      borderRadius: 20,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -293,13 +344,14 @@ const createStyles = (theme: Theme) =>
       backgroundColor: 'transparent',
     },
     tabText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: 'SpaceGrotesk-Bold',
       color: theme.textSecondary,
       textAlign: 'center',
     },
     tabTextActive: {
-      color: theme.background,
-      fontWeight: '600',
+      color: theme.accentText,
+      fontFamily: 'SpaceGrotesk-Bold',
     },
     input: {
       backgroundColor: theme.card,

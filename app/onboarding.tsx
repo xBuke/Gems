@@ -1,5 +1,6 @@
 import { searchCities } from '@/lib/cityAutocomplete'
 import { CATEGORIES } from '@/lib/categories'
+import { formatCoordinates } from '@/lib/coordinates'
 import {
   ONBOARDING_SEEN_KEY,
   savePreferences,
@@ -10,6 +11,7 @@ import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
+import { LinearGradient } from 'expo-linear-gradient'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Location from 'expo-location'
 import { useRouter } from 'expo-router'
@@ -32,42 +34,236 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 const TOTAL_STEPS = 13
-const STORY_STEPS = [
-  { text: "Most places worth seeing aren't on any map." },
-  { text: "The best ones get passed between people who've actually been there." },
+const STORY_STEP_COUNT = 6
+
+type StoryStepDef = {
+  text: string
+  subtitle?: string
+  showProBadge?: boolean
+  gradient: readonly [string, string, string, string]
+  fallbackCoords: readonly [number, number]
+}
+
+const STORY_STEPS: StoryStepDef[] = [
+  {
+    text: "Most places worth seeing aren't on any map.",
+    gradient: ['#162812', '#1e3a1a', '#142210', '#0a180a'],
+    fallbackCoords: [43.0512, 17.4291],
+  },
+  {
+    text: "The best ones get passed between people who've actually been there.",
+    gradient: ['#0e2840', '#1a3a5a', '#122038', '#081420'],
+    fallbackCoords: [45.815, 15.9819],
+  },
   {
     text: 'Some gems you find. Others find you.',
     subtitle: 'Swipe through curated spots picked just for you',
     showProBadge: true,
+    gradient: ['#3a1a0a', '#4a2810', '#2a1a08', '#1a1006'],
+    fallbackCoords: [42.6507, 18.0944],
   },
   {
     text: 'Build your own circle of secrets.',
     subtitle: 'Create communities around what you love — local crews, dog parks, sunset chasers',
     showProBadge: true,
+    gradient: ['#160a2a', '#220e3a', '#180c2e', '#0e0820'],
+    fallbackCoords: [44.1194, 15.2314],
   },
   {
     text: "Going somewhere new? We'll map it out.",
     subtitle: "Tell us where you're headed — we'll surface the gems worth the detour",
     showProBadge: true,
+    gradient: ['#0a1a2a', '#102238', '#0a1828', '#060e18'],
+    fallbackCoords: [46.3057, 16.3366],
   },
-  { text: 'Hidden Gems is where that happens.' },
+  {
+    text: 'Hidden Gems is where that happens.',
+    gradient: ['#1a0e28', '#241438', '#1a102a', '#0e0818'],
+    fallbackCoords: [43.5081, 16.4402],
+  },
 ]
 
+const CATEGORY_GRADIENTS: Record<string, readonly [string, string]> = {
+  nature: ['#162812', '#0a180a'],
+  views: ['#0e2840', '#081420'],
+  sport: ['#1a3a4a', '#0a2030'],
+  social: ['#3a2a18', '#201208'],
+  urban: ['#1a1a3a', '#0a0a20'],
+  culture: ['#3a2010', '#1a1008'],
+  chill: ['#1a3a38', '#0a2028'],
+  couples: ['#3a1a18', '#200a0a'],
+  pets: ['#2a2818', '#181008'],
+  family: ['#1a3a4a', '#0a2030'],
+  hidden: ['#3a2a10', '#1a1808'],
+}
+
+const STORY_OVERLAY_COLORS = [
+  'rgba(0,0,0,0.15)',
+  'transparent',
+  'rgba(0,0,0,0.3)',
+  'rgba(0,0,0,0.88)',
+] as const
+
+function CompassHero({ accent, accentSub, coral, background }: {
+  accent: string
+  accentSub: string
+  coral: string
+  background: string
+}) {
+  return (
+    <View
+      style={{
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+        borderWidth: 2.5,
+        borderColor: accent,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
+        shadowColor: accent,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        backgroundColor: background,
+      }}>
+      <View
+        style={{
+          position: 'absolute',
+          width: 120,
+          height: 120,
+          borderRadius: 60,
+          backgroundColor: accentSub,
+          opacity: 0.5,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: 10,
+          left: '50%',
+          marginLeft: -1.5,
+          width: 3,
+          height: 24,
+          backgroundColor: coral,
+          borderRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 10,
+          left: '50%',
+          marginLeft: -1.5,
+          width: 3,
+          height: 24,
+          backgroundColor: accent,
+          borderRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          right: 10,
+          top: '50%',
+          marginTop: -1.5,
+          height: 3,
+          width: 24,
+          backgroundColor: accent,
+          borderRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          left: 10,
+          top: '50%',
+          marginTop: -1.5,
+          height: 3,
+          width: 24,
+          backgroundColor: accent,
+          borderRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: 5,
+          backgroundColor: accent,
+        }}
+      />
+    </View>
+  )
+}
+
 const TRIAL_FEATURES = [
-  'Unlimited gem drops',
-  'Hidden Gems exclusive category',
-  'Gem Swipe — discover faster',
-  'Create your own communities',
-  'Custom categories for your interests',
-  'Trip Planner for any destination',
-  'Private pins for friends only',
+  'Gem Swipe',
+  'Unlimited drops',
+  'Trip Planner',
+  'Private pins',
+  'Communities',
   'No ads',
-]
+  'Custom categories',
+  'Hidden Gems cat.',
+] as const
+
+function TrialCompass({ accent, coral }: { accent: string; coral: string }) {
+  return (
+    <View
+      style={{
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        borderWidth: 2,
+        borderColor: accent,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: 8,
+          left: '50%',
+          marginLeft: -1,
+          width: 2,
+          height: 16,
+          backgroundColor: coral,
+          borderTopLeftRadius: 1,
+          borderTopRightRadius: 1,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 8,
+          left: '50%',
+          marginLeft: -1,
+          width: 2,
+          height: 16,
+          backgroundColor: accent,
+          borderBottomLeftRadius: 1,
+          borderBottomRightRadius: 1,
+        }}
+      />
+      <View
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 3.5,
+          backgroundColor: accent,
+        }}
+      />
+    </View>
+  )
+}
 
 type Gem = {
   id: string
   image_url: string | null
   category: string
+  latitude?: number
+  longitude?: number
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
@@ -117,6 +313,8 @@ export default function OnboardingScreen() {
   const fadeAnim = useRef(new Animated.Value(1)).current
   const pulseAnim = useRef(new Animated.Value(1)).current
   const cardScale = useRef(new Animated.Value(1)).current
+  const kenBurnsAnim = useRef(new Animated.Value(1)).current
+  const storyTextAnim = useRef(new Animated.Value(0)).current
   const stepRef = useRef(step)
   stepRef.current = step
 
@@ -189,7 +387,7 @@ export default function OnboardingScreen() {
 
       const { data: gems } = await supabase
         .from('gems')
-        .select('id, image_url, category')
+        .select('id, image_url, category, latitude, longitude')
         .eq('is_private', false)
         .order('created_at', { ascending: false })
         .limit(10)
@@ -204,7 +402,7 @@ export default function OnboardingScreen() {
         CATEGORIES.map(async (cat) => {
           const { data: catGems } = await supabase
             .from('gems')
-            .select('id, image_url, category')
+            .select('id, image_url, category, latitude, longitude')
             .eq('is_private', false)
             .eq('category', cat.id)
             .limit(10)
@@ -260,6 +458,27 @@ export default function OnboardingScreen() {
     const timer = setTimeout(() => animateStepChange(11), 1800)
     return () => clearTimeout(timer)
   }, [step, prefsSaved, userId, buildPrefs, animateStepChange])
+
+  useEffect(() => {
+    if (step > 5) return
+    kenBurnsAnim.setValue(1)
+    Animated.timing(kenBurnsAnim, {
+      toValue: 1.08,
+      duration: 12000,
+      useNativeDriver: true,
+    }).start()
+  }, [step, kenBurnsAnim])
+
+  useEffect(() => {
+    if (step > 5) return
+    storyTextAnim.setValue(20)
+    Animated.spring(storyTextAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 60,
+    }).start()
+  }, [step, storyTextAnim])
 
   useEffect(() => {
     if (step !== 10) return
@@ -352,36 +571,89 @@ export default function OnboardingScreen() {
   }
 
   const showSkip = !loading && step < 11
-  const showProgress = !loading && step < 12
+  const showStoryDots = !loading && step <= 5
   const tapToAdvance = !loading && step < 6
+
+  const goToStoryStep = (next: number) => {
+    if (next < 0 || next >= STORY_STEP_COUNT) return
+    animateStepChange(next)
+  }
 
   const renderStoryStep = (index: number) => {
     const story = STORY_STEPS[index]
     const gem =
       trendingGems.length > 0 ? trendingGems[index % trendingGems.length] : undefined
+    const lat = gem?.latitude ?? story.fallbackCoords[0]
+    const lng = gem?.longitude ?? story.fallbackCoords[1]
+    const coordLabel = formatCoordinates(lat, lng)
+
     return (
       <View style={styles.storyContainer}>
-        {gem?.image_url ? (
-          <Image
-            source={{ uri: gem.image_url }}
-            style={styles.storyImage}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
+        <Animated.View
+          style={[styles.storyBackground, { transform: [{ scale: kenBurnsAnim }] }]}>
+          <LinearGradient
+            colors={[...story.gradient]}
+            locations={[0, 0.3, 0.6, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
           />
-        ) : (
-          <View style={[styles.storyImage, styles.storyPlaceholder]} />
-        )}
-        <View style={styles.storyGradient} />
+          {gem?.image_url ? (
+            <Image
+              source={{ uri: gem.image_url }}
+              style={styles.storyImageOverlay}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          ) : null}
+        </Animated.View>
+
+        <LinearGradient
+          colors={[...STORY_OVERLAY_COLORS]}
+          locations={[0, 0.3, 0.55, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+
         {story.showProBadge && (
           <View style={styles.storyProBadge}>
-            <Text style={styles.storyProBadgeText}>💎 PRO</Text>
+            <Text style={styles.storyProBadgeEmoji}>💎</Text>
+            <Text style={styles.storyProBadgeText}>PRO</Text>
           </View>
         )}
-        <View style={styles.storyTextWrap}>
+
+        <TouchableOpacity
+          style={[styles.storyNavButton, styles.storyNavPrev, index === 0 && styles.storyNavDisabled]}
+          onPress={() => goToStoryStep(index - 1)}
+          activeOpacity={0.8}
+          disabled={index === 0}>
+          <Ionicons
+            name="chevron-back"
+            size={18}
+            color={index === 0 ? 'rgba(234,246,244,0.3)' : '#EAF6F4'}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.storyNavButton, styles.storyNavNext]}
+          onPress={() => goToStoryStep(index + 1)}
+          activeOpacity={0.8}
+          disabled={index >= STORY_STEP_COUNT - 1}>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={index >= STORY_STEP_COUNT - 1 ? 'rgba(234,246,244,0.3)' : '#EAF6F4'}
+          />
+        </TouchableOpacity>
+
+        <Animated.View
+          style={[
+            styles.storyTextWrap,
+            { transform: [{ translateY: storyTextAnim }], opacity: fadeAnim },
+          ]}>
+          <Text style={styles.storyCoordWatermark}>{coordLabel}</Text>
           <Text style={styles.storyText}>{story.text}</Text>
-          {story.subtitle && <Text style={styles.storySubtitle}>{story.subtitle}</Text>}
-        </View>
+          {story.subtitle ? <Text style={styles.storySubtitle}>{story.subtitle}</Text> : null}
+        </Animated.View>
       </View>
     )
   }
@@ -389,6 +661,8 @@ export default function OnboardingScreen() {
   const renderCategoryCard = (cat: (typeof CATEGORIES)[number]) => {
     const gem = categoryGems[cat.id]
     const selected = selectedCategories.includes(cat.id)
+    const gradient = CATEGORY_GRADIENTS[cat.id] ?? [cat.color, '#0a0a0a']
+
     return (
       <TouchableOpacity
         key={cat.id}
@@ -404,9 +678,17 @@ export default function OnboardingScreen() {
             cachePolicy="memory-disk"
           />
         ) : (
-          <View style={[styles.categoryCardImage, { backgroundColor: cat.color + '33' }]} />
+          <LinearGradient
+            colors={[gradient[0], gradient[1]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
         )}
-        <View style={styles.categoryCardGradient} />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.72)']}
+          style={styles.categoryCardGradient}
+        />
         <View style={styles.categoryCardLabel}>
           <Ionicons name={cat.icon as keyof typeof Ionicons.glyphMap} size={16} color="#FFFFFF" />
           <Text style={styles.categoryCardName}>{cat.name}</Text>
@@ -495,7 +777,14 @@ export default function OnboardingScreen() {
     if (step === 6) {
       return (
         <View style={styles.prefsContainer}>
-          <Text style={styles.prefsTitle}>What calls to you?</Text>
+          <View style={styles.prefsTitleRow}>
+            <Text style={styles.prefsTitle}>What calls to you?</Text>
+            {selectedCategories.length > 0 && (
+              <View style={styles.prefsCountBadge}>
+                <Text style={styles.prefsCountText}>{selectedCategories.length}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.prefsSubtitle}>Pick as many as you like</Text>
           <ScrollView
             style={styles.categoryScroll}
@@ -511,7 +800,11 @@ export default function OnboardingScreen() {
             disabled={selectedCategories.length === 0}
             onPress={() => animateStepChange(7)}
             activeOpacity={0.8}>
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={styles.continueButtonText}>
+              {selectedCategories.length > 0
+                ? `Continue (${selectedCategories.length})`
+                : 'Continue'}
+            </Text>
           </TouchableOpacity>
         </View>
       )
@@ -616,34 +909,77 @@ export default function OnboardingScreen() {
 
     if (step === 11) {
       return (
-        <ScrollView contentContainerStyle={styles.trialContent} showsVerticalScrollIndicator={false}>
-          <Ionicons name="diamond" size={56} color={theme.coral} />
-          <Text style={styles.trialTitle}>Try Premium free for 3 days</Text>
-          <Text style={styles.trialSubtitle}>Then 5.99€/month. Cancel anytime.</Text>
-          <View style={styles.featuresList}>
-            {TRIAL_FEATURES.map((feature) => (
-              <View key={feature} style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
-                <Text style={styles.featureText}>{feature}</Text>
-              </View>
-            ))}
-          </View>
-          <TouchableOpacity style={styles.trialButton} onPress={startTrial} activeOpacity={0.8}>
-            <Text style={styles.trialButtonText}>Start free trial</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => animateStepChange(12)} activeOpacity={0.7}>
-            <Text style={styles.maybeLater}>Maybe later</Text>
-          </TouchableOpacity>
-        </ScrollView>
+        <View style={styles.trialScreen}>
+          <LinearGradient
+            colors={['#0B2E2B', '#142B2E', '#1C3438']}
+            locations={[0, 0.4, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.trialHero}>
+            <View style={styles.trialHeroGlow} />
+            <TrialCompass accent={theme.accent} coral={theme.coral} />
+            <View style={styles.trialFreeBadge}>
+              <Text style={styles.trialFreeBadgeText}>3 DAYS FREE</Text>
+            </View>
+          </LinearGradient>
+
+          <ScrollView
+            contentContainerStyle={styles.trialBody}
+            showsVerticalScrollIndicator={false}>
+            <Text style={styles.trialTitle}>Try Hidden Gems Premium</Text>
+            <Text style={styles.trialPricing}>
+              €0 today · €5.99/month after · cancel anytime
+            </Text>
+
+            <View style={styles.trialFeatureGrid}>
+              {TRIAL_FEATURES.map((feature) => (
+                <View key={feature} style={styles.trialFeatureItem}>
+                  <View style={styles.trialFeatureCheck}>
+                    <Text style={[styles.trialFeatureCheckMark, { color: theme.textSecondary }]}>
+                      ✓
+                    </Text>
+                  </View>
+                  <Text style={styles.trialFeatureText}>{feature}</Text>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.trialButton} onPress={startTrial} activeOpacity={0.8}>
+              <Text style={styles.trialButtonText}>Start Free Trial</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => animateStepChange(12)} activeOpacity={0.7}>
+              <Text style={styles.maybeLater}>Maybe later</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
       )
     }
 
     return (
       <View style={styles.centered}>
-        <Ionicons name="checkmark-circle" size={72} color={theme.accent} />
-        <Text style={styles.finalTitle}>You&apos;re all set</Text>
-        <TouchableOpacity style={styles.trialButton} onPress={finishOnboarding} activeOpacity={0.8}>
-          <Text style={styles.trialButtonText}>Start exploring</Text>
+        <CompassHero
+          accent={theme.accent}
+          accentSub={theme.accentSub}
+          coral={theme.coral}
+          background={theme.background}
+        />
+        <Text style={styles.welcomeLabel}>WELCOME, EXPLORER</Text>
+        <Text style={styles.finalHeadline}>Your adventure starts here.</Text>
+        {(homeLat != null && homeLng != null) || (homeTown.trim().length > 0) ? (
+          <Text style={styles.welcomeCoords}>
+            {homeLat != null && homeLng != null
+              ? formatCoordinates(homeLat, homeLng)
+              : homeTown.trim().toUpperCase()}
+          </Text>
+        ) : null}
+        <Text style={styles.finalSubtitle}>
+          Your feed is ready. Start discovering the places most people will never find.
+        </Text>
+        <TouchableOpacity
+          style={styles.finalButton}
+          onPress={finishOnboarding}
+          activeOpacity={0.8}>
+          <Text style={styles.trialButtonText}>Start Exploring →</Text>
         </TouchableOpacity>
       </View>
     )
@@ -657,14 +993,14 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {showProgress && (
-        <View style={styles.progressBar}>
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+      {showStoryDots && (
+        <View style={styles.storyDots}>
+          {Array.from({ length: STORY_STEP_COUNT }).map((_, i) => (
             <View
               key={i}
               style={[
-                styles.progressSegment,
-                { backgroundColor: i <= step ? theme.accent : theme.border },
+                styles.storyDot,
+                { backgroundColor: i <= step ? '#EAF6F4' : 'rgba(234,246,244,0.3)' },
               ]}
             />
           ))}
@@ -673,7 +1009,7 @@ export default function OnboardingScreen() {
 
       {showSkip && (
         <TouchableOpacity style={styles.skipButton} onPress={completeWithDefaults} activeOpacity={0.7}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={[styles.skipText, step <= 5 && styles.skipTextOnStory]}>Skip</Text>
         </TouchableOpacity>
       )}
 
@@ -694,23 +1030,24 @@ const createStyles = (theme: Theme) =>
       flex: 1,
       backgroundColor: theme.background,
     },
-    progressBar: {
+    storyDots: {
       position: 'absolute',
-      top: 50,
-      left: 16,
-      right: 16,
-      height: 3,
+      top: 56,
+      left: 0,
+      right: 0,
       flexDirection: 'row',
-      gap: 4,
+      justifyContent: 'center',
+      gap: 6,
       zIndex: 10,
     },
-    progressSegment: {
-      flex: 1,
-      borderRadius: 2,
+    storyDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
     },
     skipButton: {
       position: 'absolute',
-      top: 46,
+      top: 50,
       right: 16,
       zIndex: 10,
       padding: 4,
@@ -718,6 +1055,9 @@ const createStyles = (theme: Theme) =>
     skipText: {
       color: theme.textSecondary,
       fontSize: 13,
+    },
+    skipTextOnStory: {
+      color: 'rgba(255,255,255,0.55)',
     },
     pressable: {
       flex: 1,
@@ -733,61 +1073,112 @@ const createStyles = (theme: Theme) =>
     },
     storyContainer: {
       flex: 1,
+      backgroundColor: '#0B1A1C',
     },
-    storyImage: {
+    storyBackground: {
       ...StyleSheet.absoluteFillObject,
-      width: '100%',
-      height: '100%',
+      overflow: 'hidden',
     },
-    storyPlaceholder: {
-      backgroundColor: theme.backgroundTertiary,
-    },
-    storyGradient: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 220,
-      backgroundColor: 'rgba(0,0,0,0.55)',
+    storyImageOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.35,
     },
     storyProBadge: {
       position: 'absolute',
-      top: 72,
-      right: 16,
-      backgroundColor: 'rgba(255,255,255,0.15)',
+      top: 88,
+      left: 20,
+      backgroundColor: 'rgba(255,255,255,0.1)',
       borderWidth: 1,
       borderColor: theme.coral,
       borderRadius: 12,
       paddingHorizontal: 10,
       paddingVertical: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      zIndex: 5,
+    },
+    storyProBadgeEmoji: {
+      fontSize: 11,
     },
     storyProBadgeText: {
       color: theme.coral,
       fontSize: 10,
       fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    storyNavButton: {
+      position: 'absolute',
+      bottom: 120,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 6,
+    },
+    storyNavPrev: {
+      left: 16,
+    },
+    storyNavNext: {
+      right: 16,
+    },
+    storyNavDisabled: {
+      opacity: 0.3,
     },
     storyTextWrap: {
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
-      padding: 24,
+      paddingHorizontal: 24,
+      paddingBottom: 54,
+      zIndex: 5,
+    },
+    storyCoordWatermark: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      color: 'rgba(255,255,255,0.38)',
+      letterSpacing: 0.5,
+      marginBottom: 10,
     },
     storyText: {
       fontFamily: 'SpaceGrotesk-Bold',
       fontSize: 26,
-      color: '#FFFFFF',
+      color: '#EAF6F4',
       lineHeight: 34,
     },
     storySubtitle: {
       fontSize: 13,
-      color: 'rgba(255,255,255,0.75)',
-      marginTop: 8,
-      lineHeight: 18,
+      color: 'rgba(255,255,255,0.72)',
+      marginTop: 10,
+      lineHeight: 20,
     },
     prefsContainer: {
       flex: 1,
       paddingTop: 72,
+    },
+    prefsTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      paddingHorizontal: 24,
+    },
+    prefsCountBadge: {
+      backgroundColor: theme.accentSub,
+      borderWidth: 1,
+      borderColor: theme.accent,
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    prefsCountText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
+      fontWeight: '700',
+      color: theme.textSecondary,
     },
     categoryScroll: {
       flex: 1,
@@ -833,8 +1224,7 @@ const createStyles = (theme: Theme) =>
       bottom: 0,
       left: 0,
       right: 0,
-      height: 72,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      height: 64,
     },
     categoryCardLabel: {
       position: 'absolute',
@@ -1008,7 +1398,7 @@ const createStyles = (theme: Theme) =>
       marginTop: 16,
     },
     chip: {
-      backgroundColor: theme.accentSubtle,
+      backgroundColor: theme.accentSub,
       borderRadius: 20,
       paddingHorizontal: 12,
       paddingVertical: 6,
@@ -1020,50 +1410,96 @@ const createStyles = (theme: Theme) =>
       color: theme.accent,
       fontWeight: '600',
     },
-    trialContent: {
-      flexGrow: 1,
+    trialScreen: {
+      flex: 1,
+    },
+    trialHero: {
+      height: 140,
       alignItems: 'center',
-      paddingTop: 72,
-      paddingHorizontal: 16,
+      justifyContent: 'center',
+      gap: 10,
+      overflow: 'hidden',
+    },
+    trialHeroGlow: {
+      position: 'absolute',
+      top: -20,
+      width: 200,
+      height: 200,
+      borderRadius: 100,
+      backgroundColor: 'rgba(45,212,191,0.18)',
+    },
+    trialFreeBadge: {
+      backgroundColor: theme.coral,
+      borderRadius: 20,
+      paddingHorizontal: 14,
+      paddingVertical: 5,
+      zIndex: 1,
+    },
+    trialFreeBadgeText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.accentText,
+      letterSpacing: 1,
+    },
+    trialBody: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
       paddingBottom: 32,
     },
     trialTitle: {
       fontFamily: 'SpaceGrotesk-Bold',
-      fontSize: 24,
+      fontSize: 22,
       color: theme.text,
       textAlign: 'center',
-      marginTop: 16,
+      marginBottom: 5,
     },
-    trialSubtitle: {
-      fontSize: 13,
+    trialPricing: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
       color: theme.textSecondary,
       textAlign: 'center',
-      marginTop: 8,
+      marginBottom: 18,
     },
-    featuresList: {
-      alignSelf: 'stretch',
-      marginTop: 28,
-      paddingHorizontal: 8,
+    trialFeatureGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      rowGap: 8,
+      marginBottom: 20,
     },
-    featureRow: {
+    trialFeatureItem: {
+      width: '48%',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      marginBottom: 16,
+      gap: 7,
     },
-    featureText: {
-      fontSize: 15,
-      color: theme.text,
+    trialFeatureCheck: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: theme.accentSub,
+      borderWidth: 1,
+      borderColor: theme.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    trialFeatureCheckMark: {
+      fontSize: 10,
+      fontWeight: '700',
+      lineHeight: 12,
+    },
+    trialFeatureText: {
       flex: 1,
+      fontSize: 13,
+      color: theme.text,
     },
     trialButton: {
-      alignSelf: 'stretch',
       backgroundColor: theme.accent,
       borderRadius: 12,
       padding: 16,
-      marginTop: 24,
-      marginHorizontal: 16,
       alignItems: 'center',
+      marginBottom: 12,
     },
     trialButtonText: {
       color: theme.accentText,
@@ -1076,11 +1512,47 @@ const createStyles = (theme: Theme) =>
       textAlign: 'center',
       marginTop: 16,
     },
-    finalTitle: {
+    welcomeLabel: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      color: theme.textSecondary,
+      letterSpacing: 2,
+      textTransform: 'uppercase',
+      marginBottom: 10,
+    },
+    finalHeadline: {
       fontFamily: 'SpaceGrotesk-Bold',
-      fontSize: 22,
+      fontSize: 28,
       color: theme.text,
-      marginTop: 16,
+      textAlign: 'center',
+      lineHeight: 34,
       marginBottom: 8,
+    },
+    welcomeCoords: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
+    finalSubtitle: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      lineHeight: 20,
+      marginBottom: 36,
+      maxWidth: 280,
+    },
+    finalButton: {
+      alignSelf: 'stretch',
+      backgroundColor: theme.accent,
+      borderRadius: 14,
+      padding: 18,
+      marginHorizontal: 16,
+      alignItems: 'center',
+      shadowColor: theme.accent,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 24,
+      elevation: 6,
     },
   })

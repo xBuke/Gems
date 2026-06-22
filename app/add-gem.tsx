@@ -13,6 +13,7 @@ import { checkIsLocalPick } from '@/lib/localBadge';
 import { canAddGem, canUseCategory } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticError, hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
@@ -419,6 +420,9 @@ export default function AddGemScreen() {
 
   const showForm = hasMapLocation || locationChoice === 'here';
 
+  const addGemStep = !showForm ? 1 : selectedMainCategory || selectedCustomCategory ? 3 : 2;
+  const addGemStepLabels = ['LOCATION', 'DETAILS', 'CATEGORY'] as const;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -428,6 +432,10 @@ export default function AddGemScreen() {
         <Text style={styles.headerTitle}>Drop a Gem</Text>
         <View style={styles.headerSpacer} />
       </View>
+
+      <Text style={styles.stepIndicator}>
+        STEP {addGemStep} OF 3 — {addGemStepLabels[addGemStep - 1]}
+      </Text>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -447,15 +455,28 @@ export default function AddGemScreen() {
         {!hasMapLocation && (
           <View style={styles.locationRow}>
             <TouchableOpacity
-              style={[styles.locationCard, locationChoice === 'here' && styles.locationCardSelected]}
+              style={[
+                styles.locationCard,
+                locationChoice === 'here' && styles.locationCardSelected,
+                locationChoice === 'here' && locationDetected && styles.locationCardSelectedFill,
+              ]}
               onPress={handleSelectHere}
               activeOpacity={0.8}>
               <Ionicons name="locate" size={22} color={theme.accent} style={styles.locationCardIcon} />
               <Text style={styles.locationCardTitle}>I'm here now</Text>
               <Text style={styles.locationCardSubtitle}>Use my GPS</Text>
+              {locationChoice === 'here' && locationDetected && latitude != null && longitude != null && (
+                <Text style={styles.locationCardCoords}>
+                  {formatCoordinates(latitude, longitude)}
+                </Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.locationCard, locationChoice === 'else' && styles.locationCardSelected]}
+              style={[
+                styles.locationCard,
+                locationChoice === 'else' && styles.locationCardSelected,
+                hasMapLocation && styles.locationCardSelectedFill,
+              ]}
               onPress={handleSelectElse}
               activeOpacity={0.8}>
               <Ionicons
@@ -466,6 +487,11 @@ export default function AddGemScreen() {
               />
               <Text style={styles.locationCardTitle}>Pick on map</Text>
               <Text style={styles.locationCardSubtitle}>Choose location</Text>
+              {hasMapLocation && latitude != null && longitude != null && (
+                <Text style={styles.locationCardCoords}>
+                  {formatCoordinates(latitude, longitude)}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -501,7 +527,7 @@ export default function AddGemScreen() {
             </TouchableOpacity>
 
             <View style={styles.formSection}>
-              <Text style={styles.fieldLabel}>Gem name</Text>
+              <Text style={styles.fieldLabel}>GEM NAME</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Give your gem a name..."
@@ -511,7 +537,7 @@ export default function AddGemScreen() {
                 maxLength={60}
               />
 
-              <Text style={styles.fieldLabel}>What makes this place special?</Text>
+              <Text style={styles.fieldLabel}>WHAT MAKES IT SPECIAL?</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Share what makes this spot worth visiting..."
@@ -523,7 +549,7 @@ export default function AddGemScreen() {
                 maxLength={500}
               />
 
-              <Text style={styles.fieldLabel}>Category</Text>
+              <Text style={styles.fieldLabel}>CATEGORY</Text>
               <View style={styles.categoryGrid}>
                 {CATEGORIES.map((category) => {
                   const isSelected = selectedMainCategory?.id === category.id;
@@ -722,6 +748,15 @@ const createStyles = (theme: Theme) =>
   headerSpacer: {
     width: 22,
   },
+  stepIndicator: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
   scrollView: {
     flex: 1,
   },
@@ -744,21 +779,24 @@ const createStyles = (theme: Theme) =>
     color: '#FFFFFF',
   },
   locationRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     marginHorizontal: 16,
     marginBottom: 16,
     gap: 10,
   },
   locationCard: {
-    flex: 1,
     backgroundColor: theme.card,
     borderWidth: 0.5,
     borderColor: theme.border,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 14,
   },
   locationCardSelected: {
     borderColor: theme.accent,
+    borderWidth: 1.5,
+  },
+  locationCardSelectedFill: {
+    backgroundColor: theme.accentSub,
   },
   locationCardIcon: {
     marginBottom: 6,
@@ -772,6 +810,12 @@ const createStyles = (theme: Theme) =>
   locationCardSubtitle: {
     fontSize: 11,
     color: theme.textTertiary,
+  },
+  locationCardCoords: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 9,
+    color: theme.textSecondary,
+    marginTop: 6,
   },
   imagePicker: {
     height: 220,
@@ -819,12 +863,12 @@ const createStyles = (theme: Theme) =>
     marginHorizontal: 16,
   },
   fieldLabel: {
-    color: theme.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'SpaceMono-Regular',
+    color: theme.textTertiary,
+    fontSize: 10,
+    letterSpacing: 1.5,
     marginBottom: 6,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   input: {
     backgroundColor: theme.card,
@@ -860,7 +904,7 @@ const createStyles = (theme: Theme) =>
     position: 'relative',
   },
   categoryItemSelected: {
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderColor: theme.accent,
   },
   categoryName: {
@@ -902,7 +946,7 @@ const createStyles = (theme: Theme) =>
     paddingHorizontal: 14,
   },
   subcategoryPillSelected: {
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderColor: theme.accent,
   },
   subcategoryPillText: {
@@ -929,7 +973,7 @@ const createStyles = (theme: Theme) =>
     paddingHorizontal: 12,
   },
   tagPillSelected: {
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderColor: theme.accent,
   },
   tagPillText: {
@@ -956,7 +1000,7 @@ const createStyles = (theme: Theme) =>
     paddingHorizontal: 12,
   },
   bestTimePillSelected: {
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderColor: theme.accent,
   },
   bestTimePillText: {

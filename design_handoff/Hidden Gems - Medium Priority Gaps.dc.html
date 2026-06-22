@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing:border-box; margin:0; padding:0; } button { cursor:pointer; }
+  @keyframes shimmer { from { background-position:-800px 0; } to { background-position:800px 0; } }
+  @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  </style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Medium Priority Gaps</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">Map clusters, moderation,<br>deep links + more</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:560px">Map pin clustering, block/mute states, community moderation tools, pagination load-more, and the deferred deep link first-open flow.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px">{{schemeLabel}}</button>
+  </div>
+
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══ COL 1: MAP PIN CLUSTERING ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Map</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Map Pin Clustering</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; background:#1A2E30; position:relative; overflow:hidden">
+            <!-- Map grid lines -->
+            <div style="position:absolute; inset:0; opacity:0.08">
+              <div style="position:absolute; top:0; left:33%; bottom:0; width:0.5px; background:#2DD4BF"></div>
+              <div style="position:absolute; top:0; left:66%; bottom:0; width:0.5px; background:#2DD4BF"></div>
+              <div style="position:absolute; top:25%; left:0; right:0; height:0.5px; background:#2DD4BF"></div>
+              <div style="position:absolute; top:50%; left:0; right:0; height:0.5px; background:#2DD4BF"></div>
+              <div style="position:absolute; top:75%; left:0; right:0; height:0.5px; background:#2DD4BF"></div>
+            </div>
+
+            <!-- Terrain blobs -->
+            <div style="position:absolute; top:80px; left:30px; width:180px; height:130px; border-radius:50%; background:rgba(22,40,18,0.5)"></div>
+            <div style="position:absolute; top:200px; right:20px; width:150px; height:110px; border-radius:50%; background:rgba(22,40,18,0.4)"></div>
+            <div style="position:absolute; bottom:120px; left:60px; width:200px; height:120px; border-radius:50%; background:rgba(22,40,18,0.35)"></div>
+
+            <!-- ── CLUSTER PINS ── -->
+            <!-- Large cluster: 12 gems -->
+            <div onClick="{{expandCluster}}" style="position:absolute; top:120px; left:80px; cursor:pointer">
+              <div style="width:52px; height:52px; border-radius:26px; background:{{accent}}; border:3px solid {{bg}}; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(45,212,191,0.4)">
+                <span style="font-family:'Space Mono',monospace; font-size:14px; font-weight:700; color:#0A1F1C">12</span>
+              </div>
+              <!-- Ring -->
+              <div style="position:absolute; inset:-6px; border-radius:50%; border:1.5px solid rgba(45,212,191,0.3)"></div>
+            </div>
+
+            <!-- Medium cluster: 5 gems -->
+            <div style="position:absolute; top:240px; right:60px; cursor:pointer">
+              <div style="width:42px; height:42px; border-radius:21px; background:{{accent}}; border:2.5px solid {{bg}}; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(45,212,191,0.3); opacity:0.9">
+                <span style="font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:#0A1F1C">5</span>
+              </div>
+              <div style="position:absolute; inset:-5px; border-radius:50%; border:1px solid rgba(45,212,191,0.25)"></div>
+            </div>
+
+            <!-- Small cluster: 3 gems -->
+            <div style="position:absolute; bottom:240px; left:140px; cursor:pointer">
+              <div style="width:36px; height:36px; border-radius:18px; background:{{accentSub}}; border:2px solid {{accent}}; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(45,212,191,0.2)">
+                <span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:{{accent}}">3</span>
+              </div>
+            </div>
+
+            <!-- Single pin (not clustered) -->
+            <div style="position:absolute; top:300px; left:55px">
+              <div style="width:32px; height:32px; border-radius:16px 16px 4px 16px; background:{{coral}}; border:2px solid {{bg}}; transform:rotate(45deg); box-shadow:0 4px 10px rgba(255,159,90,0.4)"></div>
+            </div>
+
+            <!-- Another single pin -->
+            <div style="position:absolute; bottom:300px; right:90px">
+              <div style="width:32px; height:32px; border-radius:16px 16px 4px 16px; background:{{coral}}; border:2px solid {{bg}}; transform:rotate(45deg); box-shadow:0 4px 10px rgba(255,159,90,0.35); opacity:0.75"></div>
+            </div>
+
+            <!-- Cluster expanded mini-panel -->
+            <sc-if value="{{clusterOpen}}" hint-placeholder-val="{{false}}">
+              <div style="position:absolute; top:160px; left:20px; right:20px; background:{{card}}; border-radius:16px; padding:12px; border:0.5px solid {{border}}; box-shadow:0 12px 32px rgba(0,0,0,0.4); z-index:5">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px">
+                  <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase">12 gems here</div>
+                  <button onClick="{{closeCluster}}" style="background:none; border:none; color:{{textTer}}; font-size:16px; line-height:1">×</button>
+                </div>
+                <div style="display:flex; gap:6px; overflow:hidden">
+                  <div style="width:72px; height:72px; border-radius:10px; background:linear-gradient(155deg,#0e2840,#081420); flex:none; position:relative">
+                    <div style="position:absolute; bottom:4px; left:4px; right:4px; font-family:'Space Grotesk',sans-serif; font-size:8px; font-weight:600; color:#EAF6F4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Modra Špilja</div>
+                  </div>
+                  <div style="width:72px; height:72px; border-radius:10px; background:linear-gradient(155deg,#162812,#0a180a); flex:none; position:relative">
+                    <div style="position:absolute; bottom:4px; left:4px; right:4px; font-family:'Space Grotesk',sans-serif; font-size:8px; font-weight:600; color:#EAF6F4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Jezera View</div>
+                  </div>
+                  <div style="width:72px; height:72px; border-radius:10px; background:linear-gradient(155deg,#2a1a0a,#1a0e06); flex:none; position:relative">
+                    <div style="position:absolute; bottom:4px; left:4px; right:4px; font-family:'Space Grotesk',sans-serif; font-size:8px; font-weight:600; color:#EAF6F4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Brela Rock</div>
+                  </div>
+                  <div style="width:72px; height:72px; border-radius:10px; background:{{bgTer}}; flex:none; display:flex; align-items:center; justify-content:center; border:0.5px solid {{border}}">
+                    <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">+9</span>
+                  </div>
+                </div>
+                <div style="margin-top:8px; background:{{accent}}; border-radius:8px; padding:8px; text-align:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#0A1F1C">Zoom in to separate pins</span>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- Map controls -->
+            <div style="position:absolute; right:16px; bottom:80px; display:flex; flex-direction:column; gap:8px">
+              <div style="width:40px; height:40px; border-radius:10px; background:{{card}}; border:0.5px solid {{border}}; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+                <span style="font-family:'Space Mono',monospace; font-size:18px; color:{{textSec}}; line-height:1">+</span>
+              </div>
+              <div style="width:40px; height:40px; border-radius:10px; background:{{card}}; border:0.5px solid {{border}}; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+                <span style="font-family:'Space Mono',monospace; font-size:18px; color:{{textSec}}; line-height:1">−</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">3 cluster sizes, same component</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">12+ gems = 52px teal filled. 4–11 = 42px slightly smaller. 2–3 = 36px teal-outline. Single gem = coral diamond pin. All use the same <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">MapPin</span> component with a <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">count</span> prop. Tap the 12-cluster above to preview.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Tap cluster → thumbnail strip + zoom CTA</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Tapping a cluster shows a floating card with up to 3 gem thumbnails + a "+N" tile. "Zoom in to separate pins" is the only action — it increments the map zoom level so pins split apart. Uses <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">react-native-maps</span> clustering props.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Outer ring = proximity halo</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Large + medium clusters get a 30% opacity ring at 1.3× radius — signals "there are more gems just outside this dot." No ring on small clusters to avoid visual noise at a crowded zoom level.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 2: BLOCK + MUTE ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Social</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Block + Mute States</div>
+      </div>
+
+      <!-- Block via ··· menu -->
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <!-- Profile (other user) with ··· sheet open -->
+          <div style="height:700px; overflow:hidden; position:relative">
+            <!-- Dimmed profile behind sheet -->
+            <div style="opacity:0.35; padding:0 16px; pointer-events:none">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0 10px">
+                <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg)"></div>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; color:{{text}}">@troublemaker99</span>
+                <div style="width:26px; height:26px; border-radius:13px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center">
+                  <span style="color:{{textSec}}; font-size:13px; letter-spacing:1px; margin-top:-4px">···</span>
+                </div>
+              </div>
+              <div style="height:80px; background:linear-gradient(140deg,#2a1a0a,#1a0e06); border-radius:12px; margin-bottom:50px"></div>
+            </div>
+            <!-- Action sheet -->
+            <div style="position:absolute; bottom:34px; left:0; right:0; background:{{card}}; border-radius:20px 20px 0 0; padding:14px 20px 24px; border-top:0.5px solid {{border}}">
+              <div style="width:36px; height:4px; background:{{border}}; border-radius:2px; margin:0 auto 16px"></div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{text}}; margin-bottom:4px">@troublemaker99</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; margin-bottom:16px">Choose an action</div>
+              <div style="display:flex; flex-direction:column; gap:2px">
+                <div style="display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:0.5px solid {{border}}">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9C3 5.7 5.7 3 9 3C12.3 3 15 5.7 15 9" stroke="{{textSec}}" stroke-width="1.5" fill="none"></path><path d="M9 15C12.3 15 15 12.3 15 9" stroke="{{textSec}}" stroke-width="1.5" fill="none"></path><line x1="3" y1="3" x2="15" y2="15" stroke="{{textSec}}" stroke-width="1.5" stroke-linecap="round"></line></svg>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Mute @troublemaker99</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:0.5px solid {{border}}">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#F87171" stroke-width="1.5"></circle><line x1="6" y1="6" x2="12" y2="12" stroke="#F87171" stroke-width="1.5" stroke-linecap="round"></line><line x1="12" y1="6" x2="6" y2="12" stroke="#F87171" stroke-width="1.5" stroke-linecap="round"></line></svg>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#F87171">Block @troublemaker99</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:0.5px solid {{border}}">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 4V10M9 12V13" stroke="{{textSec}}" stroke-width="1.8" stroke-linecap="round"></path><circle cx="9" cy="9" r="7" stroke="{{textSec}}" stroke-width="1.5"></circle></svg>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Report</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; padding:13px 0">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v12M3 9h12" stroke="{{textSec}}" stroke-width="1.5" stroke-linecap="round" transform="rotate(45, 9, 9)"></path></svg>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Cancel</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Blocked state card -->
+      <div style="background:{{card}}; border-radius:20px; padding:16px; border:0.5px solid {{border}}; display:flex; flex-direction:column; gap:12px">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">What blocked users see</div>
+        <!-- Blocked profile view -->
+        <div style="background:{{bg}}; border-radius:12px; padding:16px; border:0.5px solid {{border}}; display:flex; flex-direction:column; align-items:center; gap:8px">
+          <div style="width:60px; height:60px; border-radius:30px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; border:1.5px solid {{border}}">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="{{textTer}}" stroke-width="1.5"></circle><line x1="8" y1="8" x2="16" y2="16" stroke="{{textTer}}" stroke-width="1.5" stroke-linecap="round"></line><line x1="16" y1="8" x2="8" y2="16" stroke="{{textTer}}" stroke-width="1.5" stroke-linecap="round"></line></svg>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">@buke</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; text-align:center; line-height:1.5">This account is not available</div>
+          <div style="background:{{bgTer}}; border-radius:8px; padding:8px 14px; margin-top:4px">
+            <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">Gems hidden · DMs disabled · No follow</span>
+          </div>
+        </div>
+        <!-- Muted state in feed -->
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-top:4px">Muted user in Discover feed</div>
+        <div style="background:{{bg}}; border-radius:12px; padding:12px; border:0.5px dashed {{border}}; display:flex; align-items:center; gap:10px">
+          <div style="width:40px; height:40px; border-radius:8px; background:{{bgTer}}; flex:none; opacity:0.4"></div>
+          <div style="flex:1">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textTer}}; margin-bottom:2px">Hidden gem by @muted_user</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}">Muted · <span style="color:{{textSec}}">Unmute</span></div>
+          </div>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}; line-height:1.5">Muted users' content stays in the feed but is collapsed to a single dimmed row — the user can choose to expand it. Block removes entirely. Both are reversible from Settings → Blocked/Muted accounts.</div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Block vs Mute hierarchy</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Mute = soft, reversible, invisible to the other person — their content collapses. Block = hard, bidirectional — both accounts can't see each other at all. Blocked profile shows a generic "not available" screen, not the real username.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Muted = collapsed, not removed</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">A muted user's gem appears as a single dimmed row with "Unmute" — the user is in control. This mirrors Mastodon/X's approach. Never silently hide content — users should always know they can unmute.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 3: COMMUNITY MODERATION ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Community</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Community Moderation</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden">
+            <!-- Community header -->
+            <div style="height:80px; background:linear-gradient(140deg,#0e2840,#1a3a5a); position:relative; display:flex; align-items:flex-end; padding:10px 16px">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; width:100%">
+                <div><div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:#EAF6F4">Dalmatian Coast Explorers</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:rgba(45,212,191,0.7)">847 members</div></div>
+                <div style="background:rgba(45,212,191,0.2); border:1px solid #2DD4BF; border-radius:8px; padding:4px 10px; display:flex; align-items:center; gap:5px">
+                  <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 2L9 6H13L10 9L11 13L7 10.5L3 13L4 9L1 6H5L7 2Z" stroke="#2DD4BF" stroke-width="1.5" fill="none"></path></svg>
+                  <span style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF">CREATOR</span>
+                </div>
+              </div>
+            </div>
+            <!-- Mod tools tab -->
+            <div style="display:flex; margin:10px 16px 12px; background:{{bgTer}}; border-radius:12px; padding:3px; gap:3px">
+              <div style="flex:1; border-radius:10px; padding:8px 0; text-align:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Feed</span></div>
+              <div style="flex:1; border-radius:10px; padding:8px 0; text-align:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Chat</span></div>
+              <div style="flex:1; background:{{accent}}; border-radius:10px; padding:8px 0; text-align:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:#0A1F1C">Manage</span></div>
+            </div>
+            <!-- Manage sections -->
+            <div style="display:flex; flex-direction:column; gap:1px; overflow:hidden">
+              <!-- Pending requests section -->
+              <div style="padding:7px 16px; background:{{bgTer}}; display:flex; align-items:center; justify-content:space-between">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Join requests</span>
+                <div style="background:{{accent}}; border-radius:8px; min-width:18px; height:18px; padding:0 4px; display:flex; align-items:center; justify-content:center"><span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#0A1F1C">3</span></div>
+              </div>
+              <div style="display:flex; align-items:center; padding:10px 16px; gap:10px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div style="width:38px; height:38px; border-radius:19px; background:linear-gradient(145deg,#3a1a30,#1e0e1a); flex:none; display:flex; align-items:center; justify-content:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#EAF6F4">P</span></div>
+                <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">@petra_vis</div><div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}">Requested 2h ago · 18 gems</div></div>
+                <div style="display:flex; gap:6px">
+                  <div style="background:{{accent}}; border-radius:8px; padding:6px 12px"><span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; color:#0A1F1C">Approve</span></div>
+                  <div style="background:{{bgTer}}; border-radius:8px; padding:6px 10px; border:0.5px solid {{border}}"><span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">Deny</span></div>
+                </div>
+              </div>
+              <!-- Pinned post section -->
+              <div style="padding:7px 16px; background:{{bgTer}}; margin-top:2px">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Pinned post</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:10px 16px; gap:10px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div style="width:8px; height:8px; border-radius:4px; background:#FFD700; flex:none; margin-top:1px"></div>
+                <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Welcome! Drop your first gem →</div><div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}">Pinned by you</div></div>
+                <div style="background:{{bgTer}}; border-radius:8px; padding:5px 10px; border:0.5px solid {{border}}"><span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">Unpin</span></div>
+              </div>
+              <!-- Members section -->
+              <div style="padding:7px 16px; background:{{bgTer}}; margin-top:2px; display:flex; justify-content:space-between; align-items:center">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Members (847)</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{accent}}">View all</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:10px 16px; gap:10px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div style="width:38px; height:38px; border-radius:19px; background:linear-gradient(145deg,#0e3a52,#091c2a); flex:none; display:flex; align-items:center; justify-content:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#EAF6F4">S</span></div>
+                <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">@sea_walker</div><div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}">Joined 3 months ago</div></div>
+                <div style="background:{{bgTer}}; border-radius:8px; padding:5px 10px; border:0.5px solid {{border}}"><span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">···</span></div>
+              </div>
+              <div style="display:flex; align-items:center; padding:10px 16px; gap:10px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div style="width:38px; height:38px; border-radius:19px; background:{{coral}}; flex:none; display:flex; align-items:center; justify-content:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#fff">A</span></div>
+                <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">@ana_dalmatian</div><div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}">Joined 2 weeks ago</div></div>
+                <div style="background:{{bgTer}}; border-radius:8px; padding:5px 10px; border:0.5px solid {{border}}"><span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">···</span></div>
+              </div>
+              <!-- Danger zone -->
+              <div style="padding:7px 16px; background:{{bgTer}}; margin-top:2px">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Community</span>
+              </div>
+              <div style="padding:11px 16px; background:{{card}}; border-bottom:0.5px solid {{border}}; display:flex; align-items:center; justify-content:space-between">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Edit community info</span>
+                <span style="color:{{textTer}}; font-size:14px">›</span>
+              </div>
+              <div style="padding:11px 16px; background:{{card}}; display:flex; align-items:center; justify-content:space-between">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:#F87171">Delete community</span>
+                <span style="color:#F87171; font-size:14px">›</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Manage tab — creator only</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Regular members see Feed + Chat + About. Creators also see a "Manage" tab with join requests, pinned posts, member list + actions, and community settings. The "CREATOR" badge appears on their community card too.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Member ··· menu: promote / remove</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The ··· on each member row opens an action sheet: "Promote to moderator", "Remove from community", "Block user." Moderators can approve/deny requests and remove members but cannot delete the community.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 4: LOAD-MORE + PAGINATION ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">04 — System</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Load-More + Pagination</div>
+      </div>
+
+      <div style="background:{{card}}; border-radius:20px; padding:20px; border:0.5px solid {{border}}; display:flex; flex-direction:column; gap:16px">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">3 loading states — one component</div>
+
+        <!-- State 1: Loading more (infinite scroll) -->
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">Infinite scroll — fetching next page</div>
+          <div style="background:{{bg}}; border-radius:12px; overflow:hidden; border:0.5px solid {{border}}">
+            <!-- Last real item -->
+            <div style="display:flex; height:80px; border-bottom:0.5px solid {{border}}">
+              <div style="width:80px; background:linear-gradient(155deg,#3a1a30,#1e0e1a); flex:none"></div>
+              <div style="padding:10px 12px; flex:1; display:flex; flex-direction:column; justify-content:space-between">
+                <div><div style="height:10px; width:50px; background:{{bgTer}}; border-radius:5px; margin-bottom:6px"></div><div style="height:14px; width:75%; background:{{bgTer}}; border-radius:7px"></div></div>
+                <div style="height:10px; width:45%; background:{{bgTer}}; border-radius:5px"></div>
+              </div>
+            </div>
+            <!-- Loading more indicator -->
+            <div style="height:52px; display:flex; align-items:center; justify-content:center; gap:10px">
+              <div style="width:16px; height:16px; border-radius:8px; border:2px solid {{accent}}; border-top-color:transparent; animation:spin 0.8s linear infinite"></div>
+              <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">Loading more gems…</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 2: End of list -->
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">End of list reached</div>
+          <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}; display:flex; align-items:center; justify-content:center; gap:10px">
+            <div style="flex:1; height:0.5px; background:{{border}}"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; white-space:nowrap">You've seen all 47 gems</span>
+            <div style="flex:1; height:0.5px; background:{{border}}"></div>
+          </div>
+        </div>
+
+        <!-- State 3: Load more error -->
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">Load more failed</div>
+          <div style="background:{{bg}}; border-radius:12px; padding:12px 14px; border:0.5px solid #F87171; display:flex; align-items:center; gap:10px">
+            <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#F87171" stroke-width="1.5"></circle><path d="M7 4V8M7 10V10.5" stroke="#F87171" stroke-width="1.5" stroke-linecap="round"></path></svg>
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; flex:1">Couldn't load more</span>
+            <div style="background:{{bgTer}}; border-radius:8px; padding:5px 10px; border:0.5px solid {{border}}">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Retry</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 4: Pull to refresh -->
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">Pull to refresh indicator</div>
+          <div style="background:{{bg}}; border-radius:12px; overflow:hidden; border:0.5px solid {{border}}">
+            <div style="height:38px; display:flex; align-items:center; justify-content:center; gap:8px; border-bottom:0.5px solid {{border}}">
+              <div style="width:14px; height:14px; border-radius:7px; border:2px solid {{accent}}; border-top-color:transparent; animation:spin 0.8s linear infinite"></div>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">Refreshing…</span>
+            </div>
+            <div style="display:flex; height:60px; opacity:0.4">
+              <div style="width:60px; background:{{shimBg}}; background-size:800px 100%; animation:shimmer 1.6s infinite linear; flex:none"></div>
+              <div style="padding:8px 12px; flex:1; display:flex; flex-direction:column; gap:7px">
+                <div style="height:10px; width:60%; background:{{shimBg}}; background-size:800px 100%; animation:shimmer 1.6s infinite linear; border-radius:5px"></div>
+                <div style="height:13px; width:80%; background:{{shimBg}}; background-size:800px 100%; animation:shimmer 1.6s infinite linear; border-radius:6px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Token spec -->
+        <div style="border-top:0.5px solid {{border}}; padding-top:12px; display:flex; flex-direction:column; gap:6px">
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px">Implementation</div>
+          <div style="padding:6px 10px; background:{{bg}}; border-radius:8px; border:0.5px solid {{border}}; display:flex; justify-content:space-between">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">FlatList onEndReachedThreshold</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}">0.3</span>
+          </div>
+          <div style="padding:6px 10px; background:{{bg}}; border-radius:8px; border:0.5px solid {{border}}; display:flex; justify-content:space-between">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">ListFooterComponent</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}">LoadMore</span>
+          </div>
+          <div style="padding:6px 10px; background:{{bg}}; border-radius:8px; border:0.5px solid {{border}}; display:flex; justify-content:space-between">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">refreshControl</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}">RefreshControl tintColor=accent</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">4 states — one component</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5"><span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">LoadMore</span> component takes a <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">status</span> prop: "loading" / "end" / "error" / "idle". Renders the right state. Used as <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">ListFooterComponent</span> on every FlatList in the app — Discover, Notifications, Search results, Profile gems.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">"You've seen all N gems" — not a blank end</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The end-of-list state uses a divider line + SpaceMono copy that tells the user the exact count. Never just a blank gap — that makes users think the app is broken or still loading.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 5: DEFERRED DEEP LINK ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">05 — Onboarding</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Deferred Deep Link</div>
+      </div>
+
+      <!-- Step 1: Web landing with install CTA -->
+      <div style="background:{{card}}; border-radius:20px; padding:16px; border:0.5px solid {{border}}">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px">Step 1 — Web: user doesn't have the app</div>
+        <div style="background:#0B1A1C; border-radius:12px; overflow:hidden">
+          <div style="background:#1C3438; padding:6px 12px; display:flex; align-items:center; gap:6px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171"></div>
+            <div style="width:8px; height:8px; border-radius:4px; background:#FBBF24"></div>
+            <div style="width:8px; height:8px; border-radius:4px; background:#22C55E"></div>
+            <div style="flex:1; background:#0B1A1C; border-radius:4px; padding:2px 8px; margin-left:4px">
+              <span style="font-family:'Space Mono',monospace; font-size:9px; color:#5C8484">hiddengems.app/gem/modra-spilja</span>
+            </div>
+          </div>
+          <div style="padding:14px">
+            <div style="height:60px; background:linear-gradient(155deg,#0e2840,#081420); border-radius:8px; margin-bottom:10px"></div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:#EAF6F4; margin-bottom:4px">Modra Špilja Cave</div>
+            <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; margin-bottom:14px">♥ 41 · Vis Island, Croatia</div>
+            <!-- Smart app banner -->
+            <div style="background:rgba(45,212,191,0.1); border:1px solid rgba(45,212,191,0.3); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:10px">
+              <svg viewBox="0 0 100 100" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="3" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="5" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><circle cx="50" cy="50" r="7" fill="#2DD4BF"></circle></svg>
+              <div style="flex:1">
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#EAF6F4">Hidden Gems</div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:rgba(45,212,191,0.7)">Free · App Store</div>
+              </div>
+              <div style="background:#2DD4BF; border-radius:8px; padding:6px 12px; flex:none">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#0A1F1C">Get</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}; margin-top:8px; line-height:1.5">"Get" stores the gem ID in a deferred deep link payload (Branch.io or Firebase Dynamic Links). After install + first launch, the app reads this payload and navigates to the gem.</div>
+      </div>
+
+      <!-- Step 2: First launch after install — special onboarding -->
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <!-- First launch with deep link context -->
+          <div style="height:620px; display:flex; flex-direction:column; padding:16px 24px 0">
+            <!-- Context banner -->
+            <div style="background:{{accentSub}}; border:1px solid {{accent}}; border-radius:12px; padding:10px 14px; display:flex; gap:10px; align-items:flex-start; margin-bottom:20px">
+              <svg viewBox="0 0 56 56" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M28 6C20.3 6 14 12.3 14 20C14 32 28 50 28 50C28 50 42 32 42 20C42 12.3 35.7 6 28 6Z" stroke="{{accent}}" stroke-width="2" fill="none"></path><circle cx="28" cy="20" r="5.5" stroke="{{accent}}" stroke-width="2" fill="none"></circle></svg>
+              <div style="flex:1">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1px; margin-bottom:3px">BROUGHT YOU HERE</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">Modra Špilja Cave</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">You'll see this gem after signing up</div>
+              </div>
+            </div>
+            <!-- Abbreviated sign-up -->
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}; margin-bottom:6px">Create your account</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; margin-bottom:22px">Takes 30 seconds — then we'll take you to the gem</div>
+            <!-- SSO first (faster for new user from link) -->
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px">
+              <div style="background:{{card}}; border:1px solid {{border}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center; gap:10px">
+                <span style="font-size:18px">🍎</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Continue with Apple</span>
+              </div>
+              <div style="background:{{card}}; border:1px solid {{border}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center; gap:10px">
+                <div style="width:18px; height:18px; border-radius:9px; background:#DB4437; display:flex; align-items:center; justify-content:center"><span style="font-size:10px; font-weight:700; color:#fff">G</span></div>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Continue with Google</span>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px">
+              <div style="flex:1; height:0.5px; background:{{border}}"></div>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">OR</span>
+              <div style="flex:1; height:0.5px; background:{{border}}"></div>
+            </div>
+            <div style="background:{{bgTer}}; border:1.5px solid {{border}}; border-radius:12px; height:46px; display:flex; align-items:center; padding:0 14px; margin-bottom:14px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}; flex:1">Email address</span>
+            </div>
+            <div style="background:{{accent}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#0A1F1C">Sign up + see gem →</span>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Context banner anchors motivation</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The teal "BROUGHT YOU HERE" banner with the gem name and pin icon reminds the user why they installed the app. The CTA becomes "Sign up + see gem →" — the gem is the reward, sign-up is the gate. Dramatically increases conversion vs generic sign-up.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SSO first for link-installed users</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Normal sign-up shows email form first. Deep-link installs show SSO first — these users are high-intent and want the fastest path to the gem. Apple/Google SSO = one tap to account creation. Email still available below the divider.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Post sign-up → gem detail directly</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">After account creation, skip the normal onboarding flow and navigate directly to the gem detail. Store the onboarding state as "completed from deep link" — the category picker and follow suggestions are shown at next app open, not immediately.</div></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2200,&quot;height&quot;:1200}}">
+
+class Component extends DCLogic {
+  state = {
+    scheme: 'dark',
+    clusterOpen: false,
+  };
+
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg      = dark ? '#0B1A1C' : '#F7FAF9';
+    const card    = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer   = dark ? '#1C3438' : '#E3F1EF';
+    const border  = dark ? '#1C3438' : '#DCE8E6';
+    const text    = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent  = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub = dark ? '#1C3438' : '#E3F1EF';
+    const coral   = dark ? '#FF9F5A' : '#E8723D';
+    const homeInd = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+    const shimBg  = dark
+      ? 'linear-gradient(90deg,#142B2E 0%,#1e3e42 50%,#142B2E 100%)'
+      : 'linear-gradient(90deg,#dce8e6 0%,#edf6f4 50%,#dce8e6 100%)';
+
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, coral, homeInd, shimBg,
+
+      clusterOpen:   this.state.clusterOpen,
+      expandCluster: () => this.setState({ clusterOpen: true }),
+      closeCluster:  () => this.setState({ clusterOpen: false }),
+
+      toggleScheme: () => this.setState(s => ({
+        scheme: s.scheme === 'dark' ? 'light' : 'dark'
+      })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing:border-box; margin:0; padding:0; } button { cursor:pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Auth + Permission Flows</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">Sign-up, forgot<br>password + permissions</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:560px">Sign-up multi-step flow, forgot password recovery, and the three pre-permission explain screens that gate location, camera and notifications.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px">{{schemeLabel}}</button>
+  </div>
+
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══ COL 1: SIGN-UP STEP 1 ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Auth</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Sign Up — Credentials</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; padding:8px 24px 0; display:flex; flex-direction:column; gap:0">
+            <!-- Logo -->
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:20px">
+              <svg viewBox="0 0 100 100" width="26" height="26" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="{{accent}}" stroke-width="2.5" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="4" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><circle cx="50" cy="50" r="7" fill="{{accent}}"></circle></svg>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{text}}">Hidden Gems</span>
+            </div>
+            <!-- Step indicator -->
+            <div style="display:flex; gap:5px; margin-bottom:18px">
+              <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+              <div style="height:3px; flex:1; background:{{border}}; border-radius:2px"></div>
+              <div style="height:3px; flex:1; background:{{border}}; border-radius:2px"></div>
+            </div>
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:6px">Step 1 of 3</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:{{text}}; margin-bottom:4px">Create account</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; margin-bottom:22px">Already have one? <span style="color:{{accent}}">Sign in →</span></div>
+            <!-- Fields -->
+            <div style="display:flex; flex-direction:column; gap:13px; margin-bottom:16px">
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Full name</div>
+                <div style="background:{{card}}; border:1.5px solid {{border}}; border-radius:10px; height:44px; display:flex; align-items:center; padding:0 14px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Ana Matić</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Email</div>
+                <div style="background:{{card}}; border:1.5px solid {{accent}}; border-radius:10px; height:44px; display:flex; align-items:center; padding:0 14px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}; flex:1">ana@example.com</span>
+                  <span style="display:inline-block; width:2px; height:16px; background:{{accent}}; border-radius:1px"></span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Password</div>
+                <div style="background:{{card}}; border:1.5px solid {{border}}; border-radius:10px; height:44px; display:flex; align-items:center; padding:0 14px; gap:8px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}; flex:1; letter-spacing:4px">••••••••</span>
+                  <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">Show</span>
+                </div>
+                <!-- Password strength -->
+                <div style="margin-top:6px; display:flex; gap:4px; align-items:center">
+                  <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+                  <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+                  <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+                  <div style="height:3px; flex:1; background:{{border}}; border-radius:2px"></div>
+                  <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; margin-left:6px">Strong</span>
+                </div>
+              </div>
+            </div>
+            <!-- CTA -->
+            <div style="background:{{accent}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center; margin-bottom:14px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#0A1F1C">Continue →</span>
+            </div>
+            <!-- Divider -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px">
+              <div style="flex:1; height:0.5px; background:{{border}}"></div>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">OR</span>
+              <div style="flex:1; height:0.5px; background:{{border}}"></div>
+            </div>
+            <!-- Apple / Google -->
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <div style="background:{{card}}; border:1px solid {{border}}; border-radius:12px; height:46px; display:flex; align-items:center; justify-content:center; gap:10px">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M15.5 9.1c0-3.6-2.9-6.1-6.5-6.1S2.5 5.5 2.5 9.1c0 3 2.1 5.6 5 6.1v-4.3H5.8V9.1h1.7V7.7c0-1.7 1-2.6 2.5-2.6.7 0 1.5.1 1.5.1v1.6h-.8c-.8 0-1 .5-1 1v1.3h1.8l-.3 1.8H9.7V15c2.9-.5 5-2.9 5-5.9z" fill="{{textSec}}"></path></svg>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Continue with Apple</span>
+              </div>
+              <div style="background:{{card}}; border:1px solid {{border}}; border-radius:12px; height:46px; display:flex; align-items:center; justify-content:center; gap:10px">
+                <div style="width:16px; height:16px; border-radius:8px; background:#DB4437; display:flex; align-items:center; justify-content:center"><span style="font-size:10px; font-weight:700; color:#fff">G</span></div>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Continue with Google</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">3-step progress bar</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Thin 3-segment bar fills step by step — sets expectation without overwhelming. Active segment = accent, pending = border. Never show a spinner on this screen.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Password strength indicator</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">4-segment bar + label (Weak / Fair / Strong / Very strong). Fills as user types, uses zxcvbn score. No tooltip — inline below the field.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SSO above email/password on sign-up</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">On sign-in, SSO is secondary. On sign-up, we show email/password first (keeps control) with SSO options below the divider — fewer steps for the user who wants to own their credentials.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 2: SIGN-UP STEP 2 — USERNAME ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Auth</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Sign Up — Username</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; padding:8px 24px 0; display:flex; flex-direction:column">
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:20px">
+              <svg viewBox="0 0 100 100" width="26" height="26" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="{{accent}}" stroke-width="2.5" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="4" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><circle cx="50" cy="50" r="7" fill="{{accent}}"></circle></svg>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{text}}">Hidden Gems</span>
+            </div>
+            <div style="display:flex; gap:5px; margin-bottom:18px">
+              <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+              <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+              <div style="height:3px; flex:1; background:{{border}}; border-radius:2px"></div>
+            </div>
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:6px">Step 2 of 3</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:{{text}}; margin-bottom:4px">Pick your handle</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; margin-bottom:24px">This is how other explorers will find you</div>
+            <!-- Username field -->
+            <div style="margin-bottom:8px">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Username</div>
+              <div style="background:{{card}}; border:1.5px solid {{accent}}; border-radius:10px; height:50px; display:flex; align-items:center; padding:0 14px; gap:6px">
+                <span style="font-family:'Space Mono',monospace; font-size:16px; color:{{textTer}}">@</span>
+                <span style="font-family:'Space Mono',monospace; font-size:16px; color:{{text}}; flex:1">ana_dalmatian</span>
+                <div style="width:22px; height:22px; border-radius:11px; background:rgba(45,212,191,0.15); display:flex; align-items:center; justify-content:center">
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2 7L6 11L12 3" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </div>
+              </div>
+              <!-- Available indicator -->
+              <div style="display:flex; align-items:center; gap:5px; margin-top:6px; padding-left:4px">
+                <div style="width:5px; height:5px; border-radius:50%; background:{{accent}}; flex:none"></div>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">@ana_dalmatian is available</span>
+              </div>
+            </div>
+            <!-- Suggestions -->
+            <div style="margin-bottom:22px">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">Suggestions</div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px">
+                <div style="background:{{bgTer}}; border:0.5px solid {{border}}; border-radius:20px; padding:6px 12px"><span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textSec}}">@ana_explorer</span></div>
+                <div style="background:{{bgTer}}; border:0.5px solid {{border}}; border-radius:20px; padding:6px 12px"><span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textSec}}">@matic_hg</span></div>
+                <div style="background:{{bgTer}}; border:0.5px solid {{border}}; border-radius:20px; padding:6px 12px"><span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textSec}}">@ana.m</span></div>
+              </div>
+            </div>
+            <!-- Rules -->
+            <div style="background:{{bgTer}}; border-radius:10px; padding:10px 14px; margin-bottom:22px; display:flex; flex-direction:column; gap:5px">
+              <div style="display:flex; align-items:center; gap:7px"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 7L6 11L12 3" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">4–20 characters</span></div>
+              <div style="display:flex; align-items:center; gap:7px"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 7L6 11L12 3" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">Letters, numbers, underscores</span></div>
+              <div style="display:flex; align-items:center; gap:7px"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 7L6 11L12 3" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">Can be changed later</span></div>
+            </div>
+            <div style="background:{{accent}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#0A1F1C">Continue →</span>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Real-time availability check</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Debounced 400ms after keystroke — green dot + SpaceMono "available" label inline. Red dot + "taken" if not. The teal checkmark in the field confirms valid + available simultaneously.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Server-generated suggestions</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">3 username suggestions derived from full name — available ones only, so tapping always works. Tapping a suggestion fills the field and re-runs validation instantly.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 3: SIGN-UP STEP 3 — PROFILE PHOTO ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Auth</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Sign Up — Profile Photo</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; padding:8px 24px 0; display:flex; flex-direction:column; align-items:center">
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:20px; align-self:flex-start">
+              <svg viewBox="0 0 100 100" width="26" height="26" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="{{accent}}" stroke-width="2.5" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="4" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="{{accent}}" stroke-width="4" stroke-linecap="round"></line><circle cx="50" cy="50" r="7" fill="{{accent}}"></circle></svg>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{text}}">Hidden Gems</span>
+            </div>
+            <div style="display:flex; gap:5px; margin-bottom:18px; align-self:stretch">
+              <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+              <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+              <div style="height:3px; flex:1; background:{{accent}}; border-radius:2px"></div>
+            </div>
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; align-self:flex-start">Step 3 of 3</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:{{text}}; margin-bottom:4px; align-self:flex-start">Add a photo</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; margin-bottom:28px; align-self:flex-start">Helps other explorers recognise you</div>
+            <!-- Avatar picker -->
+            <div style="position:relative; margin-bottom:28px">
+              <div style="width:120px; height:120px; border-radius:60px; background:{{coral}}; display:flex; align-items:center; justify-content:center; border:3px solid {{bg}}; box-shadow:0 0 0 2px {{accent}}">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:48px; font-weight:700; color:#fff">A</span>
+              </div>
+              <div style="position:absolute; bottom:4px; right:4px; width:32px; height:32px; border-radius:16px; background:{{accent}}; border:2px solid {{bg}}; display:flex; align-items:center; justify-content:center">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="12" height="9" rx="2" stroke="#0A1F1C" stroke-width="1.5"></rect><circle cx="7" cy="8.5" r="2" stroke="#0A1F1C" stroke-width="1.5"></circle><path d="M4 4V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="#0A1F1C" stroke-width="1.5"></path></svg>
+              </div>
+            </div>
+            <!-- Options -->
+            <div style="width:100%; display:flex; flex-direction:column; gap:8px; margin-bottom:20px">
+              <div style="background:{{accent}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center; gap:10px">
+                <svg width="18" height="18" viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="12" height="9" rx="2" stroke="#0A1F1C" stroke-width="1.5"></rect><circle cx="7" cy="8.5" r="2" stroke="#0A1F1C" stroke-width="1.5"></circle><path d="M4 4V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="#0A1F1C" stroke-width="1.5"></path></svg>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:#0A1F1C">Take a photo</span>
+              </div>
+              <div style="background:{{card}}; border:1px solid {{border}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center; gap:10px">
+                <svg width="18" height="18" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="2" stroke="{{textSec}}" stroke-width="1.5"></rect><path d="M1 5H13" stroke="{{textSec}}" stroke-width="1"></path><rect x="3" y="7" width="3" height="3" rx="1" fill="{{textSec}}"></rect></svg>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Choose from library</span>
+              </div>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; margin-bottom:16px">or</div>
+            <div style="background:transparent; border:none; padding:4px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}">Skip for now →</span>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Initial avatar = first letter + coral</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Before photo upload, the avatar defaults to the user's first initial on a coral background — same pattern used everywhere in the app. No grey silhouette. If the user skips, this persists as their default.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Skip is always available</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Never block onboarding on a profile photo. "Skip for now" completes registration and proceeds to the app. Camera permission is requested only when "Take a photo" is tapped — not upfront.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 4: FORGOT PASSWORD ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">04 — Auth</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Forgot Password</div>
+      </div>
+      <!-- State A: email input -->
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; padding:8px 24px 0; display:flex; flex-direction:column">
+            <!-- Back -->
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:28px">
+              <div style="width:7px; height:7px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:2px"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Sign in</span>
+            </div>
+            <!-- Illustration -->
+            <div style="width:72px; height:72px; border-radius:36px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; margin-bottom:20px">
+              <svg viewBox="0 0 56 56" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="16" width="40" height="28" rx="4" stroke="{{accent}}" stroke-width="2" fill="none"></rect>
+                <path d="M8 22L28 34L48 22" stroke="{{accent}}" stroke-width="2" stroke-linecap="round"></path>
+              </svg>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:{{text}}; margin-bottom:6px">Reset password</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.6; margin-bottom:28px">Enter the email linked to your account and we'll send a reset link.</div>
+            <div>
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Email address</div>
+              <div style="background:{{card}}; border:1.5px solid {{accent}}; border-radius:10px; height:48px; display:flex; align-items:center; padding:0 14px; gap:8px; margin-bottom:20px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}; flex:1">ana@example.com</span>
+                <span style="display:inline-block; width:2px; height:16px; background:{{accent}}; border-radius:1px"></span>
+              </div>
+            </div>
+            <div style="background:{{accent}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center; margin-bottom:14px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#0A1F1C">Send reset link</span>
+            </div>
+            <!-- Security note -->
+            <div style="background:{{bgTer}}; border-radius:10px; padding:10px 14px; display:flex; gap:8px; align-items:flex-start">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="margin-top:1px; flex:none"><circle cx="7" cy="7" r="6" stroke="{{textTer}}" stroke-width="1.5"></circle><path d="M7 4.5V7.5M7 9V10" stroke="{{textTer}}" stroke-width="1.5" stroke-linecap="round"></path></svg>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textTer}}; line-height:1.5">We won't reveal whether an account exists — you'll get an email if the address is registered.</span>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <!-- State B: check inbox -->
+      <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; text-align:center; margin-top:4px">↓ After submit</div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:400px; overflow:hidden; padding:0 24px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0">
+            <div style="width:80px; height:80px; border-radius:40px; background:{{accentSub}}; border:2px solid {{accent}}; display:flex; align-items:center; justify-content:center; margin-bottom:20px">
+              <svg viewBox="0 0 56 56" width="44" height="44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="16" width="40" height="28" rx="4" stroke="{{accent}}" stroke-width="2" fill="none"></rect>
+                <path d="M8 22L28 34L48 22" stroke="{{accent}}" stroke-width="2" stroke-linecap="round"></path>
+                <circle cx="42" cy="14" r="7" fill="{{accent}}"></circle>
+                <path d="M38.5 14L41 16.5L45.5 11.5" stroke="#0A1F1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; text-align:center">Email sent</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}; margin-bottom:8px; text-align:center">Check your inbox</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.6; text-align:center; margin-bottom:22px">Reset link sent to <span style="color:{{accent}}">ana@example.com</span> — valid for 30 minutes.</div>
+            <div style="background:{{accent}}; border-radius:12px; height:48px; display:flex; align-items:center; justify-content:center; width:100%; margin-bottom:12px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:#0A1F1C">Open email app</span>
+            </div>
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Didn't receive it? <span style="color:{{accent}}">Resend in 0:58</span></span>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Never reveal account existence</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The security note explicitly states we won't confirm whether an email is registered — prevents account enumeration. Same success screen shown whether or not the email exists.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Countdown resend timer</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"Resend in 0:58" counts down — prevents spam. Link after 60s becomes active teal. "Open email app" deep-links to the default mail app via mailto: — one tap from screen to inbox.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 5: PRE-PERMISSION SCREENS ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">05 — Permissions</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Pre-Permission Screens</div>
+      </div>
+      <!-- Location -->
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:430px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 28px">
+            <div style="width:88px; height:88px; border-radius:44px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; margin-bottom:20px; box-shadow:0 0 0 12px {{accentSub}}">
+              <svg viewBox="0 0 56 56" width="52" height="52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M28 6C20.3 6 14 12.3 14 20C14 32 28 50 28 50C28 50 42 32 42 20C42 12.3 35.7 6 28 6Z" stroke="{{accent}}" stroke-width="2" fill="none"></path>
+                <circle cx="28" cy="20" r="5.5" stroke="{{accent}}" stroke-width="2" fill="none"></circle>
+              </svg>
+            </div>
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; text-align:center">Location access</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}; text-align:center; margin-bottom:10px; line-height:1.25">Find gems near you</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; text-align:center; line-height:1.6; margin-bottom:24px">Hidden Gems uses your location to show nearby discoveries and let others check in. Your exact location is never shared publicly.</div>
+            <div style="background:{{accent}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center; width:100%; margin-bottom:10px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#0A1F1C">Allow Location</span>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}">Not now</div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Camera + Notifications compact side by side as a spec reference -->
+      <div style="display:flex; gap:12px">
+        <!-- Camera mini -->
+        <div style="flex:1; background:{{card}}; border-radius:16px; padding:14px; border:0.5px solid {{border}}; display:flex; flex-direction:column; align-items:center; gap:10px">
+          <div style="width:52px; height:52px; border-radius:26px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 8px {{accentSub}}">
+            <svg viewBox="0 0 56 56" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="16" width="44" height="30" rx="5" stroke="{{coral}}" stroke-width="2" fill="none"></rect><circle cx="28" cy="31" r="8" stroke="{{coral}}" stroke-width="2" fill="none"></circle><path d="M20 16V13a2 2 0 012-2h12a2 2 0 012 2v3" stroke="{{coral}}" stroke-width="2"></path></svg>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{text}}; text-align:center">Camera</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; text-align:center; line-height:1.5">Requested only when "Add Photo" is tapped — not at install. Same layout as location screen, coral accent.</div>
+          <div style="background:{{coral}}; border-radius:8px; padding:7px 14px; width:100%; text-align:center">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#fff">Allow Camera</span>
+          </div>
+        </div>
+        <!-- Notifications mini -->
+        <div style="flex:1; background:{{card}}; border-radius:16px; padding:14px; border:0.5px solid {{border}}; display:flex; flex-direction:column; align-items:center; gap:10px">
+          <div style="width:52px; height:52px; border-radius:26px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 8px {{accentSub}}">
+            <svg viewBox="0 0 56 56" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M28 6C28 6 14 12 14 26V38H42V26C42 12 28 6 28 6Z" stroke="{{accent}}" stroke-width="2" fill="none"></path><path d="M24 38C24 40.2 25.8 42 28 42C30.2 42 32 40.2 32 38" stroke="{{accent}}" stroke-width="2"></path><circle cx="40" cy="12" r="5" fill="{{coral}}"></circle></svg>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{text}}; text-align:center">Notifications</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; text-align:center; line-height:1.5">Requested after first gem saved — highest intent moment. Never at launch.</div>
+          <div style="background:{{accent}}; border-radius:8px; padding:7px 14px; width:100%; text-align:center">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#0A1F1C">Allow</span>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Ask late, not at launch</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Location: asked on first Discover load. Camera: asked on first photo tap. Notifications: asked after first gem saved. Never stack multiple requests — each is shown only at the moment it adds clear value.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">In-app explain before OS dialog</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">This screen always appears first. "Allow" triggers the OS system dialog. If the user denies the OS dialog, show a follow-up screen linking to Settings. The OS dialog can only be shown once — this screen primes acceptance.</div></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2200,&quot;height&quot;:1100}}">
+
+class Component extends DCLogic {
+  state = { scheme: 'dark' };
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg      = dark ? '#0B1A1C' : '#F7FAF9';
+    const card    = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer   = dark ? '#1C3438' : '#E3F1EF';
+    const border  = dark ? '#1C3438' : '#DCE8E6';
+    const text    = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent  = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub = dark ? '#1C3438' : '#E3F1EF';
+    const coral   = dark ? '#FF9F5A' : '#E8723D';
+    const homeInd = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, coral, homeInd,
+      toggleScheme: () => this.setState(s => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

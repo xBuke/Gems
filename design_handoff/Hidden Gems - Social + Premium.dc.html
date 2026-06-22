@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; } button { cursor: pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <!-- HEADER -->
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Social + Premium</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">Swipe, Chat<br>+ Communities</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:520px">Premium features and social screens — the parts that make this app more than a map. Each refined to lean into the explorer identity.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px">{{schemeLabel}}</button>
+  </div>
+
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══ COL 1: GEM SWIPE ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Premium</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Gem Swipe</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:785px; position:relative; overflow:hidden">
+
+            <!-- Status bar -->
+            <div style="position:absolute; top:0; left:0; right:0; height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px; z-index:5">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+              <div style="display:flex; align-items:center; gap:5px">
+                <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                  <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                  <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                  <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                  <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+                </div>
+                <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                  <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Header -->
+            <div style="position:absolute; top:59px; left:0; right:0; height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; z-index:5">
+              <div style="width:40px; height:40px; border-radius:20px; display:flex; align-items:center; justify-content:center">
+                <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:3px"></div>
+              </div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:{{text}}">Gem Swipe</span>
+              <div style="width:40px; height:40px; border-radius:20px; display:flex; align-items:center; justify-content:center">
+                <div style="display:flex; flex-direction:column; gap:3px; align-items:center">
+                  <div style="width:14px; height:1.5px; background:{{text}}; border-radius:1px"></div>
+                  <div style="width:10px; height:1.5px; background:{{text}}; border-radius:1px"></div>
+                  <div style="width:14px; height:1.5px; background:{{text}}; border-radius:1px"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card stack container -->
+            <div style="position:absolute; top:111px; left:16px; right:16px; height:488px">
+              <!-- Next card (behind) -->
+              <div style="position:absolute; inset:0; border-radius:22px; overflow:hidden; transform:scale(0.95) translateY(12px); opacity:0.5">
+                <div style="position:absolute; inset:0; background:linear-gradient(155deg,#1a3a5a 0%,#0e2235 100%)"></div>
+              </div>
+              <!-- Main card -->
+              <div style="position:absolute; inset:0; border-radius:22px; overflow:hidden; transform:{{cardTransform}}; transition:transform 0.3s ease; box-shadow:0 16px 48px rgba(0,0,0,0.4)">
+                <!-- Image placeholder -->
+                <div style="position:absolute; inset:0; background:linear-gradient(155deg,#1e5a40 0%,#2d7555 30%,#1a4a38 60%,#0e2820 100%)"></div>
+                <!-- Gradient overlay -->
+                <div style="position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,0.85) 100%)"></div>
+                <!-- Category badge -->
+                <div style="position:absolute; top:16px; left:16px; background:#1D9E75; border-radius:20px; padding:6px 12px; display:flex; align-items:center; gap:5px">
+                  <span style="font-size:12px">🌿</span>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#fff">Nature</span>
+                </div>
+                <!-- Verified coral badge -->
+                <div style="position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:15px; background:{{coral}}; display:flex; align-items:center; justify-content:center">
+                  <span style="font-size:14px; color:#fff">🧭</span>
+                </div>
+                <!-- SAVE stamp -->
+                <div style="position:absolute; top:52px; left:20px; border:3px solid {{accent}}; border-radius:8px; padding:6px 12px; transform:rotate(-20deg); opacity:{{saveStampOpacity}}; transition:opacity 0.2s ease">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{accent}}; letter-spacing:2px">SAVE</span>
+                </div>
+                <!-- SKIP stamp -->
+                <div style="position:absolute; top:52px; right:20px; border:3px solid #FF4444; border-radius:8px; padding:6px 12px; transform:rotate(20deg); opacity:{{skipStampOpacity}}; transition:opacity 0.2s ease">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:#FF4444; letter-spacing:2px">SKIP</span>
+                </div>
+                <!-- Bottom info -->
+                <div style="position:absolute; bottom:20px; left:20px; right:20px">
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:#EAF6F4; margin-bottom:6px">Jezera Viewpoint</div>
+                  <!-- IMPROVED: SpaceMono with coordinates -->
+                  <div style="font-family:'Space Mono',monospace; font-size:11px; color:rgba(234,246,244,0.75)">@buke · 43.0512° N, 17.4291° E · 4.2 km</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- IMPROVED: Deck counter in SpaceMono -->
+            <div style="position:absolute; bottom:110px; left:0; right:0; text-align:center; z-index:5">
+              <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">12 gems remaining</span>
+            </div>
+
+            <!-- Action buttons -->
+            <div style="position:absolute; bottom:48px; left:0; right:0; display:flex; justify-content:center; align-items:center; gap:28px; z-index:5">
+              <!-- Skip -->
+              <button onClick="{{doSkip}}" style="width:60px; height:60px; border-radius:30px; background:{{card}}; border:2px solid #FF4444; display:flex; align-items:center; justify-content:center">
+                <span style="font-size:22px; color:#FF4444; font-weight:700; line-height:1">✕</span>
+              </button>
+              <!-- IMPROVED: View detail (center, smaller) -->
+              <button style="width:46px; height:46px; border-radius:23px; background:{{card}}; border:1.5px solid {{border}}; display:flex; align-items:center; justify-content:center">
+                <span style="font-size:16px">💎</span>
+              </button>
+              <!-- Save -->
+              <button onClick="{{doSave}}" style="width:60px; height:60px; border-radius:30px; background:{{card}}; border:2px solid {{accent}}; display:flex; align-items:center; justify-content:center">
+                <span style="font-size:22px; color:{{accent}}">♥</span>
+              </button>
+            </div>
+
+            <!-- Home indicator -->
+            <div style="position:absolute; bottom:8px; left:0; right:0; height:26px; display:flex; align-items:center; justify-content:center; z-index:5">
+              <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono coordinates in card</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Meta line shows <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">@buke · 43.0512° N, 17.4291° E · 4.2 km</span>. Currently only username + distance. Coordinates are the app's signature detail — they belong on every gem surface.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Deck counter</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"12 gems remaining" in SpaceMono above buttons. Users have no sense of deck depth — they don't know if they're about to run out. Tap ♥ or ✕ to see the stamps animate.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Three-button bar with view detail</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Added a smaller 💎 centre button to open the gem's full detail page. Currently the only way to see more about a card is to save it first — this adds a low-commitment "peek" action.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 2: CHAT ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Social</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">1:1 Chat</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden; display:flex; flex-direction:column">
+            <!-- Header -->
+            <div style="display:flex; align-items:center; padding:6px 16px 10px; border-bottom:0.5px solid {{border}}; gap:0">
+              <div style="width:40px; flex:none">
+                <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px"></div>
+              </div>
+              <!-- IMPROVED: Avatar with coral ring -->
+              <div style="flex:1; display:flex; align-items:center; justify-content:center; gap:9px">
+                <div style="width:34px; height:34px; border-radius:17px; background:{{accent}}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 2px {{bg}}, 0 0 0 3.5px {{coral}}">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:{{accentText}}">A</span>
+                </div>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; color:{{text}}">ana_travels</span>
+              </div>
+              <div style="width:40px; flex:none; display:flex; justify-content:flex-end">
+                <span style="color:{{textSec}}; font-size:18px">⋯</span>
+              </div>
+            </div>
+
+            <!-- Messages area -->
+            <div style="flex:1; overflow:hidden; padding:12px 16px; display:flex; flex-direction:column; gap:12px; justify-content:flex-end">
+              <!-- IMPROVED: SpaceMono date separator -->
+              <div style="display:flex; align-items:center; justify-content:center">
+                <div style="background:{{card}}; border-radius:10px; padding:4px 10px">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; letter-spacing:1px">TODAY</span>
+                </div>
+              </div>
+              <!-- Their message -->
+              <div style="display:flex; justify-content:flex-start">
+                <div style="background:{{card}}; border-radius:18px 18px 18px 4px; padding:10px 14px; max-width:280px; border:0.5px solid {{border}}">
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; line-height:1.4">Hey! I saw your gem near Jezera 👀</div>
+                  <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; margin-top:3px">9:32</div>
+                </div>
+              </div>
+              <!-- Mine -->
+              <div style="display:flex; justify-content:flex-end">
+                <div style="background:{{accent}}; border-radius:18px 18px 4px 18px; padding:10px 14px; max-width:280px">
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{accentText}}; line-height:1.4">Yeah, the viewpoint is incredible at sunrise 🌅</div>
+                  <div style="font-family:'Space Mono',monospace; font-size:10px; color:rgba(10,31,28,0.6); margin-top:3px; text-align:right">9:33</div>
+                </div>
+              </div>
+              <!-- Their message -->
+              <div style="display:flex; justify-content:flex-start">
+                <div style="background:{{card}}; border-radius:18px 18px 18px 4px; padding:10px 14px; max-width:280px; border:0.5px solid {{border}}">
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; line-height:1.4">Do you have the exact coordinates?</div>
+                  <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; margin-top:3px">9:34</div>
+                </div>
+              </div>
+              <!-- Mine — SpaceMono coords bubble -->
+              <div style="display:flex; justify-content:flex-end">
+                <div style="background:{{accent}}; border-radius:18px 18px 4px 18px; padding:10px 14px; max-width:280px">
+                  <div style="font-family:'Space Mono',monospace; font-size:13px; color:{{accentText}}; line-height:1.5; letter-spacing:0.3px">43.0512° N, 17.4291° E</div>
+                  <div style="font-family:'Space Mono',monospace; font-size:10px; color:rgba(10,31,28,0.6); margin-top:3px; text-align:right">9:34</div>
+                </div>
+              </div>
+              <!-- Their message -->
+              <div style="display:flex; justify-content:flex-start">
+                <div style="background:{{card}}; border-radius:18px 18px 18px 4px; padding:10px 14px; max-width:280px; border:0.5px solid {{border}}">
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; line-height:1.4">Saved! Going next weekend 🙏</div>
+                  <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; margin-top:3px">9:35</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Input area -->
+            <div style="padding:8px 12px 10px; border-top:0.5px solid {{border}}; display:flex; align-items:center; gap:8px">
+              <!-- IMPROVED: Gem share button -->
+              <div style="width:38px; height:38px; border-radius:19px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; flex:none">
+                <span style="font-size:17px">📍</span>
+              </div>
+              <div style="flex:1; background:{{card}}; border:0.5px solid {{border}}; border-radius:22px; padding:9px 16px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{textTer}}">Message...</span>
+              </div>
+              <div style="width:38px; height:38px; border-radius:19px; background:{{accent}}; display:flex; align-items:center; justify-content:center; flex:none">
+                <span style="font-size:16px; color:{{accentText}}>➤</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Coral avatar ring</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Header avatar gets a coral ring: <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">box-shadow: 0 0 0 2px bg, 0 0 0 3.5px coral</span>. Matches the Profile avatar ring — consistent social identity pattern across the app.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">📍 Gem share button in input</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">A pin button next to the input opens a gem picker to share directly in chat. Coordinates shared in SpaceMono look great as bubbles — see the 43.0512° bubble above.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono date separator + coord bubbles</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"TODAY" in SpaceMono 10px monospace vs current system 12px sans. When a user sends coordinates in a message, rendering them in SpaceMono teal inside the teal bubble looks intentional, not accidental.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 3: COMMUNITIES ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Social</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Communities</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden">
+            <!-- Header -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 16px 12px">
+              <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:{{text}}">Communities</span>
+              <!-- IMPROVED: Create shows premium label even for free -->
+              <div style="display:flex; align-items:center; gap:5px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{accent}}">+ Create</span>
+                <span style="font-size:11px">💎</span>
+              </div>
+            </div>
+
+            <!-- IMPROVED: Compact pill tab (not full-width card) -->
+            <div style="padding:0 16px 14px; display:flex; justify-content:center">
+              <div style="background:{{card}}; border-radius:24px; padding:3px; display:flex; border:0.5px solid {{border}}; width:250px">
+                <button onClick="{{setDiscoverTab}}" style="flex:1; padding:9px 0; border-radius:20px; border:none; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; background:{{discoverTabBg}}; color:{{discoverTabColor}}">Discover</button>
+                <button onClick="{{setMineTab}}" style="flex:1; padding:9px 0; border-radius:20px; border:none; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; background:{{mineTabBg}}; color:{{mineTabColor}}">Mine ({{mineCount}})</button>
+              </div>
+            </div>
+
+            <!-- Discover tab content -->
+            <sc-if value="{{isDiscoverTab}}" hint-placeholder-val="{{true}}">
+              <div style="padding:0 16px; display:flex; flex-direction:column; gap:10px">
+                <!-- Community card 1 -->
+                <div style="background:{{card}}; border-radius:16px; padding:14px; border:0.5px solid {{border}}">
+                  <div style="display:flex; gap:12px; margin-bottom:10px">
+                    <div style="width:44px; height:44px; border-radius:22px; background:#2D5016; display:flex; align-items:center; justify-content:center; flex:none; font-size:20px">🏔</div>
+                    <div style="flex:1">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{text}}; margin-bottom:3px">Dalmatia Hikers</div>
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.4">Secret trails and coastal paths across the Dalmatian hinterland</div>
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; justify-content:space-between">
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <div style="display:flex; align-items:center; gap:4px">
+                        <span style="font-size:13px; color:{{textSec}}">👥</span>
+                        <span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textSec}}">148</span>
+                      </div>
+                      <div style="background:{{accentSub}}; border-radius:10px; padding:3px 8px; display:flex; align-items:center; gap:3px">
+                        <span style="font-size:11px; color:{{accent}}">📍</span>
+                        <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{accent}}">Dalmatia</span>
+                      </div>
+                    </div>
+                    <button onClick="{{toggleComm1}}" style="background:{{comm1JoinBg}}; border:{{comm1JoinBorder}}; border-radius:8px; padding:7px 16px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{comm1JoinColor}}; cursor:pointer">{{comm1JoinLabel}}</button>
+                  </div>
+                </div>
+
+                <!-- Community card 2 -->
+                <div style="background:{{card}}; border-radius:16px; padding:14px; border:0.5px solid {{border}}">
+                  <div style="display:flex; gap:12px; margin-bottom:10px">
+                    <div style="width:44px; height:44px; border-radius:22px; background:#0e2840; display:flex; align-items:center; justify-content:center; flex:none; font-size:20px">🌊</div>
+                    <div style="flex:1">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{text}}; margin-bottom:3px">Island Explorers</div>
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.4">Hidden coves and abandoned lighthouses across Croatian islands</div>
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; justify-content:space-between">
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <div style="display:flex; align-items:center; gap:4px">
+                        <span style="font-size:13px; color:{{textSec}}">👥</span>
+                        <span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textSec}}">62</span>
+                      </div>
+                      <div style="background:{{accentSub}}; border-radius:10px; padding:3px 8px; display:flex; align-items:center; gap:3px">
+                        <span style="font-size:11px; color:{{accent}}">📍</span>
+                        <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{accent}}">Islands</span>
+                      </div>
+                    </div>
+                    <button style="background:{{card}}; border:1px solid {{accent}}; border-radius:8px; padding:7px 16px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{accent}}; cursor:pointer">Join</button>
+                  </div>
+                </div>
+
+                <!-- Community card 3 -->
+                <div style="background:{{card}}; border-radius:16px; padding:14px; border:0.5px solid {{border}}">
+                  <div style="display:flex; gap:12px; margin-bottom:10px">
+                    <div style="width:44px; height:44px; border-radius:22px; background:#1a1a3a; display:flex; align-items:center; justify-content:center; flex:none; font-size:20px">🎨</div>
+                    <div style="flex:1">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{text}}; margin-bottom:3px">Urban Shots</div>
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.4">Street art, brutalist architecture and hidden urban gems</div>
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; justify-content:space-between">
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <div style="display:flex; align-items:center; gap:4px">
+                        <span style="font-size:13px; color:{{textSec}}">👥</span>
+                        <span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textSec}}">203</span>
+                      </div>
+                      <div style="background:{{accentSub}}; border-radius:10px; padding:3px 8px; display:flex; align-items:center; gap:3px">
+                        <span style="font-size:11px; color:{{accent}}">📍</span>
+                        <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{accent}}">Zagreb</span>
+                      </div>
+                    </div>
+                    <button style="background:{{card}}; border:1px solid {{accent}}; border-radius:8px; padding:7px 16px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{accent}}; cursor:pointer">Join</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- Mine tab content -->
+            <sc-if value="{{isMineTab}}" hint-placeholder-val="{{false}}">
+              <sc-if value="{{comm1Joined}}" hint-placeholder-val="{{false}}">
+                <div style="padding:0 16px">
+                  <div style="background:{{card}}; border-radius:16px; padding:14px; border:0.5px solid {{border}}">
+                    <div style="display:flex; gap:12px; margin-bottom:8px">
+                      <div style="width:44px; height:44px; border-radius:22px; background:#2D5016; display:flex; align-items:center; justify-content:center; flex:none; font-size:20px">🏔</div>
+                      <div style="flex:1">
+                        <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{text}}; margin-bottom:3px">Dalmatia Hikers</div>
+                        <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Member since today</div>
+                      </div>
+                    </div>
+                    <div style="background:{{accentSub}}; border-radius:10px; padding:6px 12px; text-align:center">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{accent}}">Open Community →</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{mineEmpty}}" hint-placeholder-val="{{true}}">
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 32px; gap:12px">
+                  <span style="font-size:40px; opacity:0.5">👥</span>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; color:{{text}}; text-align:center">No communities yet</div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; text-align:center; line-height:1.5">Join one from the Discover tab — or create your own with Premium.</div>
+                  <div style="background:{{accent}}; border-radius:10px; padding:10px 20px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:{{accentText}}">Browse Communities</span>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-if>
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Compact pill tab — same pattern as Discover</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Current tab is a full-width card, same issue as Discover's For You/Following. 250px centered pill is consistent, less dominant. Tap Discover/Mine above to toggle.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Create shows premium badge always</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Currently shows a 🔒 icon for free users — unscanning. "+ Create 💎" surfaces the feature as aspirational rather than locked. Tap Join on Dalmatia Hikers and check the Mine tab.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Member count already SpaceMono ✓</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Member counts already use <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">SpaceMono-Regular</span> in the existing code — this is the right call. Keep it. Same convention as coordinates and stat numbers throughout the app.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1400, &quot;height&quot;: 1100}}">
+class Component extends DCLogic {
+  state = {
+    scheme: 'dark',
+    swipe: 'neutral',
+    commTab: 'discover',
+    comm1Joined: false,
+  };
+
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg = dark ? '#0B1A1C' : '#F7FAF9';
+    const card = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer = dark ? '#1C3438' : '#E3F1EF';
+    const border = dark ? '#1C3438' : '#DCE8E6';
+    const text = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub = dark ? '#1C3438' : '#E3F1EF';
+    const coral = dark ? '#FF9F5A' : '#E8723D';
+    const coralSub = dark ? 'rgba(255,159,90,0.15)' : 'rgba(232,114,61,0.12)';
+    const homeInd = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+
+    const sw = this.state.swipe;
+    const ct = this.state.commTab;
+    const joined = this.state.comm1Joined;
+
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, accentText: '#0A1F1C', coral, coralSub, homeInd, dark,
+      toggleScheme: () => this.setState(s => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+
+      // Swipe card
+      cardTransform: sw === 'save' ? 'rotate(10deg) translateX(70px)' : sw === 'skip' ? 'rotate(-10deg) translateX(-70px)' : 'rotate(-2deg)',
+      saveStampOpacity: sw === 'save' ? 1 : 0,
+      skipStampOpacity: sw === 'skip' ? 1 : 0,
+      doSave: () => this.setState(s => ({ swipe: s.swipe === 'save' ? 'neutral' : 'save' })),
+      doSkip: () => this.setState(s => ({ swipe: s.swipe === 'skip' ? 'neutral' : 'skip' })),
+
+      // Communities tabs
+      isDiscoverTab: ct === 'discover',
+      isMineTab: ct === 'mine',
+      setDiscoverTab: () => this.setState({ commTab: 'discover' }),
+      setMineTab: () => this.setState({ commTab: 'mine' }),
+      discoverTabBg: ct === 'discover' ? accent : 'transparent',
+      discoverTabColor: ct === 'discover' ? '#0A1F1C' : textSec,
+      mineTabBg: ct === 'mine' ? accent : 'transparent',
+      mineTabColor: ct === 'mine' ? '#0A1F1C' : textSec,
+      mineCount: joined ? 1 : 0,
+
+      // Community join
+      comm1Joined: joined,
+      mineEmpty: !joined,
+      toggleComm1: () => this.setState(s => ({ comm1Joined: !s.comm1Joined })),
+      comm1JoinBg: joined ? 'transparent' : accent,
+      comm1JoinColor: joined ? accent : '#0A1F1C',
+      comm1JoinBorder: joined ? `1px solid ${accent}` : 'none',
+      comm1JoinLabel: joined ? 'Joined ✓' : 'Join',
+    };
+  }
+}
+</script>
+</body>
+</html>

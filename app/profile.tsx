@@ -8,6 +8,7 @@ import {
   ACHIEVEMENTS,
   checkAndUnlockAchievements,
   getExplorerLevel,
+  getExplorerLevelIndex,
   getMasteryTier,
   getNextLevel,
   getNextMasteryTier,
@@ -1013,7 +1014,9 @@ export default function ProfileScreen() {
   const showVisitedSection = isOwnProfile || visitedGemsPublic;
   const streakPoints = profile?.streak_points ?? 0;
   const explorerLevel = getExplorerLevel(streakPoints);
+  const explorerLevelIndex = getExplorerLevelIndex(streakPoints);
   const nextLevel = getNextLevel(streakPoints);
+  const xpToNextLevel = nextLevel ? nextLevel.minPoints - streakPoints : 0;
   const unlockedCount = unlockedAchievementTypes.length;
   const categoriesWithVisits = CATEGORIES.filter((cat) => (categoryCounts[cat.id] ?? 0) > 0);
   const visibleCategories = showAllCategories ? CATEGORIES : categoriesWithVisits;
@@ -1245,55 +1248,45 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
               disabled={uploadingAvatar}
               style={styles.avatarWrap}>
-              {profile?.avatar_url ? (
-                <Image
-                  source={{ uri: profile.avatar_url }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                  transition={200}
-                  cachePolicy="memory-disk"
-                />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarInitials}>{initials}</Text>
-                </View>
-              )}
+              <View style={styles.avatarRing}>
+                {profile?.avatar_url ? (
+                  <Image
+                    source={{ uri: profile.avatar_url }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarInitials}>{initials}</Text>
+                  </View>
+                )}
+              </View>
               <View style={[styles.avatarCameraBadge, { backgroundColor: theme.accent }]}>
                 <Ionicons name="camera" size={12} color={theme.background} />
               </View>
             </TouchableOpacity>
           ) : (
             <View style={styles.avatarWrap}>
-              {profile?.avatar_url ? (
-                <Image
-                  source={{ uri: profile.avatar_url }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                  transition={200}
-                  cachePolicy="memory-disk"
-                />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarInitials}>{initials}</Text>
-                </View>
-              )}
+              <View style={styles.avatarRing}>
+                {profile?.avatar_url ? (
+                  <Image
+                    source={{ uri: profile.avatar_url }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarInitials}>{initials}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           )}
           <Text style={styles.username}>{username}</Text>
-          <View style={styles.levelBadge}>
-            <Ionicons
-              name={explorerLevel.icon as keyof typeof Ionicons.glyphMap}
-              size={14}
-              color={theme.accent}
-            />
-            <Text style={styles.levelBadgeText}>{explorerLevel.name}</Text>
-          </View>
-          {nextLevel && (
-            <Text style={styles.levelProgressText}>
-              {streakPoints} / {nextLevel.minPoints} points to {nextLevel.name}
-            </Text>
-          )}
-          <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
           {(profile?.current_streak ?? 0) > 0 && (
             <View style={styles.streakBadge}>
               <Ionicons name="flame" size={16} color={theme.coral} />
@@ -1302,6 +1295,33 @@ export default function ProfileScreen() {
               </Text>
             </View>
           )}
+          <View style={styles.explorerLevelCard}>
+            <Text style={styles.explorerLevelLabel}>EXPLORER LEVEL</Text>
+            <View style={styles.explorerLevelHeader}>
+              <Text style={styles.explorerLevelName}>{explorerLevel.name}</Text>
+              <View style={styles.explorerLevelBadge}>
+                <Text style={styles.explorerLevelBadgeText}>Lv. {explorerLevelIndex}</Text>
+              </View>
+            </View>
+            {nextLevel && (
+              <>
+                <View style={styles.explorerProgressTrack}>
+                  <View
+                    style={[
+                      styles.explorerProgressFill,
+                      {
+                        width: `${Math.min(100, (streakPoints / nextLevel.minPoints) * 100)}%`,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.explorerProgressLabel}>
+                  {streakPoints} XP · {xpToNextLevel} to {nextLevel.name}
+                </Text>
+              </>
+            )}
+          </View>
+          <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
         </View>
 
         <View style={styles.statsRow}>
@@ -1459,6 +1479,42 @@ export default function ProfileScreen() {
                   </View>
                 );
               })}
+          </View>
+        )}
+
+        {isOwnProfile && (
+          <View style={styles.achievementsPreview}>
+            <View style={styles.achievementsPreviewHeader}>
+              <Text style={styles.achievementsPreviewTitle}>Achievements</Text>
+              <Text style={styles.achievementsPreviewCount}>
+                {unlockedCount} / {ACHIEVEMENTS.length}
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.achievementsPreviewRow}>
+              {ACHIEVEMENTS.map((achievement) => {
+                const isUnlocked = unlockedAchievementTypes.includes(achievement.type);
+                return (
+                  <View key={achievement.type} style={styles.achievementPreviewItem}>
+                    <View
+                      style={[
+                        styles.achievementPreviewCircle,
+                        isUnlocked
+                          ? styles.achievementIconCircleUnlocked
+                          : styles.achievementIconCircleLocked,
+                      ]}>
+                      <Ionicons
+                        name={achievement.icon as keyof typeof Ionicons.glyphMap}
+                        size={16}
+                        color={isUnlocked ? theme.accent : theme.textTertiary}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
           </View>
         )}
 
@@ -1864,22 +1920,25 @@ const createStyles = (theme: Theme) =>
   avatarWrap: {
     position: 'relative',
   },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: theme.accent,
+  avatarRing: {
+    padding: 3,
+    borderRadius: 39,
     borderWidth: 3,
-    borderColor: theme.accentSubtle,
+    borderColor: theme.coral,
+    backgroundColor: theme.background,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarImage: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    borderWidth: 3,
-    borderColor: theme.accentSubtle,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   avatarCameraBadge: {
     position: 'absolute',
@@ -1892,13 +1951,13 @@ const createStyles = (theme: Theme) =>
     justifyContent: 'center',
   },
   avatarInitials: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: theme.text,
+    fontSize: 26,
+    fontFamily: 'SpaceGrotesk-Bold',
+    color: theme.accentText,
   },
   username: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 17,
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
     marginTop: 12,
   },
@@ -1911,7 +1970,7 @@ const createStyles = (theme: Theme) =>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderWidth: 0.5,
     borderColor: theme.accent,
     borderRadius: 14,
@@ -1929,15 +1988,108 @@ const createStyles = (theme: Theme) =>
     color: theme.textTertiary,
     marginTop: 4,
   },
+  explorerLevelCard: {
+    alignSelf: 'stretch',
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    borderRadius: 14,
+    padding: 12,
+    paddingHorizontal: 15,
+    marginTop: 10,
+  },
+  explorerLevelLabel: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 9,
+    color: theme.textSecondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  explorerLevelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  explorerLevelName: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk-Bold',
+    color: theme.text,
+  },
+  explorerLevelBadge: {
+    backgroundColor: theme.accentSub,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  explorerLevelBadgeText: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 13,
+    color: theme.accent,
+  },
+  explorerProgressTrack: {
+    height: 6,
+    backgroundColor: theme.bgTertiary,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  explorerProgressFill: {
+    height: '100%',
+    backgroundColor: theme.accent,
+    borderRadius: 3,
+  },
+  explorerProgressLabel: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 10,
+    color: theme.textSecondary,
+    marginTop: 6,
+  },
+  achievementsPreview: {
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
+  achievementsPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  achievementsPreviewTitle: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk-Bold',
+    color: theme.text,
+  },
+  achievementsPreviewCount: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 11,
+    color: theme.textSecondary,
+  },
+  achievementsPreviewRow: {
+    gap: 10,
+    paddingRight: 4,
+  },
+  achievementPreviewItem: {
+    alignItems: 'center',
+  },
+  achievementPreviewCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: theme.coral + '15',
-    borderRadius: 14,
+    backgroundColor: theme.coralSubtle,
+    borderWidth: 1,
+    borderColor: theme.coral,
+    borderRadius: 20,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 12,
+    paddingVertical: 5,
+    marginTop: 8,
   },
   streakBadgeText: {
     fontFamily: 'SpaceMono-Regular',
@@ -1958,15 +2110,14 @@ const createStyles = (theme: Theme) =>
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 22,
-    fontFamily: 'SpaceMono-Regular',
-    fontWeight: '700',
+    fontSize: 28,
+    fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
   },
   statLabel: {
     fontSize: 12,
-    color: theme.textTertiary,
-    marginTop: 2,
+    color: theme.textSecondary,
+    marginTop: 3,
   },
   statDivider: {
     width: 0.5,
@@ -2217,7 +2368,7 @@ const createStyles = (theme: Theme) =>
   },
   categoryBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderWidth: 0.5,
     borderColor: theme.accent,
     borderRadius: 20,
@@ -2227,7 +2378,7 @@ const createStyles = (theme: Theme) =>
   categoryBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: theme.accent,
+    color: theme.textSecondary,
   },
   gemTitle: {
     fontSize: 12,
@@ -2357,7 +2508,7 @@ const createStyles = (theme: Theme) =>
   },
   horizontalCategoryBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderWidth: 0.5,
     borderColor: theme.accent,
     borderRadius: 20,
@@ -2367,7 +2518,7 @@ const createStyles = (theme: Theme) =>
   horizontalCategoryBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: theme.accent,
+    color: theme.textSecondary,
   },
   horizontalGemTitle: {
     fontSize: 13,
@@ -2395,7 +2546,7 @@ const createStyles = (theme: Theme) =>
     position: 'relative',
   },
   achievementIconCircleUnlocked: {
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderWidth: 0.5,
     borderColor: theme.accent,
   },
@@ -2403,7 +2554,7 @@ const createStyles = (theme: Theme) =>
     backgroundColor: theme.card,
     borderWidth: 0.5,
     borderColor: theme.border,
-    opacity: 0.6,
+    opacity: 0.35,
   },
   achievementLockOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -2477,7 +2628,7 @@ const createStyles = (theme: Theme) =>
   },
   masteryProgressTrack: {
     height: 4,
-    backgroundColor: theme.backgroundTertiary,
+    backgroundColor: theme.bgTertiary,
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -2626,7 +2777,7 @@ const createStyles = (theme: Theme) =>
   },
   explorationProgressTrack: {
     height: 8,
-    backgroundColor: theme.backgroundTertiary,
+    backgroundColor: theme.bgTertiary,
     borderRadius: 4,
     overflow: 'hidden',
   },

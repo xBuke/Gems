@@ -809,17 +809,17 @@ const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
     },
     chipTextAccent: {
-      color: theme.accent,
+      color: theme.textSecondary,
       maxWidth: 120,
     },
     categoryChip: {
-      backgroundColor: theme.accentSubtle,
+      backgroundColor: theme.accentSub,
       borderColor: theme.accent,
     },
     categoryChipText: {
       fontSize: 11,
       fontWeight: '600',
-      color: theme.accent,
+      color: theme.textSecondary,
     },
     membershipButton: {
       alignSelf: 'flex-start',
@@ -933,7 +933,7 @@ const createStyles = (theme: Theme) =>
     },
     listCategoryBadge: {
       alignSelf: 'flex-start',
-      backgroundColor: theme.accentSubtle,
+      backgroundColor: theme.accentSub,
       borderWidth: 0.5,
       borderColor: theme.accent,
       paddingVertical: 2,
@@ -944,7 +944,7 @@ const createStyles = (theme: Theme) =>
     listCategoryBadgeText: {
       fontSize: 10,
       fontWeight: '600',
-      color: theme.accent,
+      color: theme.textSecondary,
     },
     listCardTitle: {
       fontSize: 14,

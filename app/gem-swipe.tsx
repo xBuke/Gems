@@ -1,4 +1,5 @@
 import { CATEGORIES } from '@/lib/categories';
+import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import {
   applyCommunityGemFilter,
@@ -188,7 +189,7 @@ function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef, pr
             cachePolicy="memory-disk"
           />
         ) : (
-          <View style={[cardStyles.cardImage, { backgroundColor: theme.backgroundTertiary }]} />
+          <View style={[cardStyles.cardImage, { backgroundColor: theme.bgTertiary }]} />
         )}
 
         <View style={cardStyles.gradient} />
@@ -210,6 +211,8 @@ function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef, pr
           <Text style={cardStyles.cardTitle}>{gem.title}</Text>
           <Text style={cardStyles.cardMeta}>
             @{username}
+            {' · '}
+            {formatCoordinates(gem.latitude, gem.longitude)}
             {distanceMeters != null ? ` · ${formatDistanceKm(distanceMeters)}` : ''}
           </Text>
         </View>
@@ -591,7 +594,7 @@ export default function GemSwipeScreen() {
                     cachePolicy="memory-disk"
                   />
                 ) : (
-                  <View style={[cardStyles.cardImage, { backgroundColor: theme.backgroundTertiary }]} />
+                  <View style={[cardStyles.cardImage, { backgroundColor: theme.bgTertiary }]} />
                 )}
               </View>
             )}
@@ -609,12 +612,22 @@ export default function GemSwipeScreen() {
             )}
           </View>
 
+          <Text style={styles.deckCounter}>
+            {deck.length} gem{deck.length !== 1 ? 's' : ''} remaining
+          </Text>
+
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: theme.card, borderColor: theme.danger }]}
               onPress={() => handleButtonPress('skip')}
               activeOpacity={0.8}>
               <Ionicons name="close" size={28} color={theme.danger} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButtonSmall, { backgroundColor: theme.card, borderColor: theme.border }]}
+              onPress={() => currentGem && router.push('/gem/' + currentGem.id)}
+              activeOpacity={0.8}>
+              <Ionicons name="diamond" size={20} color={theme.coral} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: theme.card, borderColor: theme.accent }]}
@@ -707,19 +720,35 @@ const createStyles = (theme: Theme) =>
       transform: [{ scale: 0.95 }],
       opacity: 0.5,
     },
+    deckCounter: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
+      color: theme.textTertiary,
+      textAlign: 'center',
+      marginBottom: 4,
+      letterSpacing: 0.5,
+    },
     actionButtons: {
       flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      gap: 40,
+      gap: 28,
       paddingBottom: 32,
-      paddingTop: 16,
+      paddingTop: 8,
     },
     actionButton: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
       borderWidth: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionButtonSmall: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      borderWidth: 1.5,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -776,7 +805,7 @@ const createStyles = (theme: Theme) =>
       marginBottom: 4,
     },
     filterOptionActive: {
-      backgroundColor: theme.accentSubtle,
+      backgroundColor: theme.accentSub,
     },
     filterOptionLeft: {
       flexDirection: 'row',

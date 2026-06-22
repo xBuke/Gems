@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing:border-box; margin:0; padding:0; } button { cursor:pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <!-- HEADER -->
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Final Spec</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">Tab bar, contrast<br>+ platform gaps</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:560px">The last three gaps before Cursor handoff — tab bar formal spec, light mode contrast audit, and the full iOS + Android platform gap annotated reference.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px">{{schemeLabel}}</button>
+  </div>
+
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══════════════════════════════════════
+         COL 1: TAB BAR SPEC
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Component</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Tab Bar</div>
+      </div>
+
+      <!-- Phone showing tab bar states -->
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Screen content (placeholder) -->
+          <div style="height:560px; display:flex; align-items:center; justify-content:center; padding:20px">
+            <div style="text-align:center">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">Active screen</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}">{{activeTabLabel}}</div>
+            </div>
+          </div>
+
+          <!-- TAB BAR -->
+          <div style="border-top:0.5px solid {{border}}; background:{{bg}}; padding:8px 0 0">
+            <div style="display:flex; align-items:flex-start; justify-content:space-around; padding:0 8px">
+
+              <!-- Discover tab -->
+              <button onClick="{{setDiscover}}" style="background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 12px 4px; min-width:0; position:relative">
+                <div style="width:44px; height:32px; border-radius:16px; background:{{discoverBg}}; display:flex; align-items:center; justify-content:center; transition:background 0.2s">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="7" stroke="{{discoverColor}}" stroke-width="1.6" fill="none"></circle>
+                    <line x1="10" y1="3.5" x2="10" y2="6.5" stroke="{{discoverColor}}" stroke-width="1.8" stroke-linecap="round"></line>
+                    <line x1="10" y1="13.5" x2="10" y2="16.5" stroke="{{discoverColor}}" stroke-width="1.8" stroke-linecap="round"></line>
+                    <line x1="3.5" y1="10" x2="6.5" y2="10" stroke="{{discoverColor}}" stroke-width="1.8" stroke-linecap="round"></line>
+                    <line x1="13.5" y1="10" x2="16.5" y2="10" stroke="{{discoverColor}}" stroke-width="1.8" stroke-linecap="round"></line>
+                    <circle cx="10" cy="10" r="2" fill="{{discoverColor}}"></circle>
+                  </svg>
+                </div>
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{discoverColor}}; letter-spacing:0.5px">Discover</span>
+              </button>
+
+              <!-- Map tab -->
+              <button onClick="{{setMap}}" style="background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 12px 4px; min-width:0; position:relative">
+                <div style="width:44px; height:32px; border-radius:16px; background:{{mapBg}}; display:flex; align-items:center; justify-content:center">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 2C7.2 2 5 4.2 5 7C5 11 10 18 10 18C10 18 15 11 15 7C15 4.2 12.8 2 10 2Z" stroke="{{mapColor}}" stroke-width="1.6" fill="none"></path>
+                    <circle cx="10" cy="7" r="2" fill="{{mapColor}}"></circle>
+                  </svg>
+                </div>
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{mapColor}}; letter-spacing:0.5px">Map</span>
+              </button>
+
+              <!-- Add Gem — centre FAB -->
+              <button onClick="{{setAdd}}" style="background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 6px 4px; min-width:0; position:relative; margin-top:-14px">
+                <div style="width:52px; height:52px; border-radius:26px; background:{{addBg}}; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px {{addShadow}}; border:{{addBorder}}">
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <path d="M11 4V18M4 11H18" stroke="{{addIcon}}" stroke-width="2.2" stroke-linecap="round"></path>
+                  </svg>
+                </div>
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{addLabel}}; letter-spacing:0.5px">Add</span>
+              </button>
+
+              <!-- Swipe tab + badge -->
+              <button onClick="{{setSwipe}}" style="background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 12px 4px; min-width:0; position:relative">
+                <div style="position:relative; width:44px; height:32px">
+                  <div style="width:44px; height:32px; border-radius:16px; background:{{swipeBg}}; display:flex; align-items:center; justify-content:center">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M4 7L10 3L16 7" stroke="{{swipeColor}}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+                      <path d="M4 13L10 17L16 13" stroke="{{swipeColor}}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+                    </svg>
+                  </div>
+                  <!-- Badge dot -->
+                  <div style="position:absolute; top:2px; right:2px; width:14px; height:14px; border-radius:7px; background:#F87171; border:2px solid {{bg}}; display:flex; align-items:center; justify-content:center">
+                    <span style="font-family:'Space Mono',monospace; font-size:8px; font-weight:700; color:#fff">3</span>
+                  </div>
+                </div>
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{swipeColor}}; letter-spacing:0.5px">Swipe</span>
+              </button>
+
+              <!-- Profile tab -->
+              <button onClick="{{setProfile}}" style="background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 12px 4px; min-width:0">
+                <div style="width:44px; height:32px; border-radius:16px; background:{{profileBg}}; display:flex; align-items:center; justify-content:center">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="7" r="3.5" stroke="{{profileColor}}" stroke-width="1.6" fill="none"></circle>
+                    <path d="M3.5 18C3.5 14.5 6.5 12 10 12C13.5 12 16.5 14.5 16.5 18" stroke="{{profileColor}}" stroke-width="1.6" stroke-linecap="round" fill="none"></path>
+                  </svg>
+                </div>
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{profileColor}}; letter-spacing:0.5px">Profile</span>
+              </button>
+
+            </div>
+            <!-- Home indicator -->
+            <div style="height:26px; display:flex; align-items:center; justify-content:center; margin-top:4px">
+              <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spec table -->
+      <div style="background:{{card}}; border-radius:20px; padding:20px; border:0.5px solid {{border}}; display:flex; flex-direction:column; gap:12px">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Token Reference</div>
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Active icon + label</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}">theme.accent</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Active pill background</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}">theme.accentSub</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Inactive icon + label</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">theme.textTertiary</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">FAB (Add) bg</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{coral}}">theme.coral</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Badge dot</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:#F87171">#F87171 (fixed)</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Active pill size</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">44 × 32px · r:16</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">FAB size</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">52 × 52px · r:26</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">FAB offset (floats up)</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">marginTop: -14</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Label font</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">SpaceMono 9px</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:7px 10px; background:{{bg}}; border-radius:8px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Tab bar bg</span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">theme.background</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Active = pill + accent, not underline</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Active tab gets a 44×32 pill in <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">accentSub</span> behind the icon. No underline bar — it looks too "browser tab." Inactive tabs show only the icon at 50% opacity. Tap each tab above to switch.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Add FAB floats above the bar</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The coral Add button is 52px, set to <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">marginTop:-14</span> so it floats 14pt above the bar line. No active state — it always opens the Add Gem modal regardless of current tab. Never highlighted as "active."</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Badge: count dot, not text-only</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Badge sits top-right of the pill, 14px circle, #F87171 (semantic red, stays same in dark/light). Shows count for unread notifications on Profile, new matches on Swipe. Clears on tab visit. Max "99+" for large counts.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 2: LIGHT MODE CONTRAST AUDIT
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:420px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Audit</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Light Mode Contrast</div>
+      </div>
+
+      <div style="background:#F7FAF9; border-radius:20px; padding:20px; border:0.5px solid #DCE8E6; display:flex; flex-direction:column; gap:14px">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#8FA3A1; letter-spacing:1.5px; text-transform:uppercase">WCAG AA Audit · Light Mode (#F7FAF9 background)</div>
+
+        <!-- Row: accent on bg -->
+        <div style="background:#fff; border-radius:12px; padding:14px; border:0.5px solid #DCE8E6">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px">
+            <div style="display:flex; align-items:center; gap:10px">
+              <div style="width:32px; height:32px; border-radius:8px; background:#F7FAF9; border:1px solid #DCE8E6; display:flex; align-items:center; justify-content:center">
+                <div style="width:20px; height:3px; background:#0F9488; border-radius:2px"></div>
+              </div>
+              <div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#0B1A1C">theme.accent on bg</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:#8FA3A1">#0F9488 on #F7FAF9</div>
+              </div>
+            </div>
+            <div style="background:#22C55E; border-radius:8px; padding:3px 10px">
+              <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#fff">4.6:1 ✓</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px">
+            <div style="background:#E3F1EF; border-radius:6px; padding:3px 8px"><span style="font-family:'Space Mono',monospace; font-size:10px; color:#8FA3A1">Normal text ✓ AA</span></div>
+            <div style="background:#E3F1EF; border-radius:6px; padding:3px 8px"><span style="font-family:'Space Mono',monospace; font-size:10px; color:#8FA3A1">Large text ✓ AAA</span></div>
+          </div>
+        </div>
+
+        <!-- Row: accent 9px SpaceMono FAIL -->
+        <div style="background:#fff; border-radius:12px; padding:14px; border:1.5px solid #F87171">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px">
+            <div style="display:flex; align-items:center; gap:10px">
+              <div style="width:32px; height:32px; border-radius:8px; background:#F7FAF9; border:1px solid #DCE8E6; display:flex; align-items:center; justify-content:center">
+                <span style="font-family:'Space Mono',monospace; font-size:7px; color:#0F9488; letter-spacing:1px">LABEL</span>
+              </div>
+              <div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#0B1A1C">accent 9px SpaceMono on bg</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:#8FA3A1">#0F9488 on #F7FAF9 at 9px</div>
+              </div>
+            </div>
+            <div style="background:#F87171; border-radius:8px; padding:3px 10px">
+              <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#fff">3.8:1 ✗</span>
+            </div>
+          </div>
+          <div style="background:rgba(248,113,113,0.08); border-radius:8px; padding:8px 10px; margin-bottom:8px">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#0B1A1C; margin-bottom:3px; font-weight:600">Fix: swap to textSecondary</div>
+            <div style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">Use <span style="background:rgba(0,0,0,0.07); padding:0 3px; border-radius:3px">theme.textSecondary (#5B7472)</span> for all SpaceMono sub-labels ≤ 11px. Reserve accent colour for labels ≥ 12px or when bold.</div>
+          </div>
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:#8FA3A1">Affected: category overlines on gem cards, section separators, coord labels in light mode</div>
+        </div>
+
+        <!-- Row: textSecondary on bg -->
+        <div style="background:#fff; border-radius:12px; padding:14px; border:0.5px solid #DCE8E6">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+            <div style="display:flex; align-items:center; gap:10px">
+              <div style="width:32px; height:32px; border-radius:8px; background:#F7FAF9; border:1px solid #DCE8E6; display:flex; align-items:center; justify-content:center">
+                <span style="font-family:'Space Mono',monospace; font-size:7px; color:#5B7472; letter-spacing:1px">LABEL</span>
+              </div>
+              <div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#0B1A1C">textSecondary 9px on bg</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:#8FA3A1">#5B7472 on #F7FAF9</div>
+              </div>
+            </div>
+            <div style="background:#22C55E; border-radius:8px; padding:3px 10px">
+              <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#fff">5.1:1 ✓</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px">
+            <div style="background:#E3F1EF; border-radius:6px; padding:3px 8px"><span style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">Normal text ✓ AA</span></div>
+            <div style="background:#E3F1EF; border-radius:6px; padding:3px 8px"><span style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">9px bold ✓ AA</span></div>
+          </div>
+        </div>
+
+        <!-- Row: textTertiary (informational only) -->
+        <div style="background:#fff; border-radius:12px; padding:14px; border:0.5px solid #FBBF24">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+            <div style="display:flex; align-items:center; gap:10px">
+              <div style="width:32px; height:32px; border-radius:8px; background:#F7FAF9; border:1px solid #DCE8E6; display:flex; align-items:center; justify-content:center">
+                <span style="font-family:'Space Mono',monospace; font-size:7px; color:#8FA3A1; letter-spacing:1px">HINT</span>
+              </div>
+              <div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#0B1A1C">textTertiary 9px on bg</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:#8FA3A1">#8FA3A1 on #F7FAF9</div>
+              </div>
+            </div>
+            <div style="background:#FBBF24; border-radius:8px; padding:3px 10px">
+              <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#1A1A1A">2.9:1 ⚠</span>
+            </div>
+          </div>
+          <div style="background:rgba(251,191,36,0.08); border-radius:8px; padding:8px 10px">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#0B1A1C; margin-bottom:3px; font-weight:600">Acceptable — decorative only</div>
+            <div style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">textTertiary is used only for timestamps, dividers, placeholder text — never for meaningful content alone. Pair with a visible icon or container. Do not use for standalone error/status text.</div>
+          </div>
+        </div>
+
+        <!-- Row: text on card -->
+        <div style="background:#fff; border-radius:12px; padding:14px; border:0.5px solid #DCE8E6">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+            <div style="display:flex; align-items:center; gap:10px">
+              <div style="width:32px; height:32px; border-radius:8px; background:#ffffff; border:1px solid #DCE8E6; display:flex; align-items:center; justify-content:center">
+                <div style="width:20px; height:3px; background:#0B1A1C; border-radius:2px"></div>
+              </div>
+              <div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#0B1A1C">primary text on card</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:#8FA3A1">#0B1A1C on #FFFFFF</div>
+              </div>
+            </div>
+            <div style="background:#22C55E; border-radius:8px; padding:3px 10px">
+              <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#fff">19:1 ✓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Touch target audit -->
+        <div style="border-top:0.5px solid #DCE8E6; padding-top:14px">
+          <div style="font-family:'Space Mono',monospace; font-size:9px; color:#8FA3A1; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px">Touch Target Audit</div>
+          <div style="display:flex; flex-direction:column; gap:6px">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; background:#F7FAF9; border-radius:8px; border:0.5px solid #DCE8E6">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#0B1A1C">Tab bar items</span>
+              <div style="display:flex; align-items:center; gap:6px">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">44×44 ✓</span>
+                <div style="width:8px; height:8px; border-radius:4px; background:#22C55E"></div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; background:#F7FAF9; border-radius:8px; border:0.5px solid #DCE8E6">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#0B1A1C">Map back button</span>
+              <div style="display:flex; align-items:center; gap:6px">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">44×44 ✓</span>
+                <div style="width:8px; height:8px; border-radius:4px; background:#22C55E"></div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; background:#F7FAF9; border-radius:8px; border:0.5px solid #F87171">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#0B1A1C">Notification unread dot</span>
+              <div style="display:flex; align-items:center; gap:6px">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; color:#F87171">6×6 ✗ — no tap</span>
+                <div style="width:8px; height:8px; border-radius:4px; background:#F87171"></div>
+              </div>
+            </div>
+            <div style="background:rgba(248,113,113,0.07); border-radius:8px; padding:8px 10px; border-left:2px solid #F87171">
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#0B1A1C; margin-bottom:2px; font-weight:600">Fix: unread dot is decorative</div>
+              <div style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">The 6×6 dot is not a tap target — the entire notification row (min 44px height) is. Confirm the row wraps a touchable and the dot is just a visual indicator inside it.</div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; background:#F7FAF9; border-radius:8px; border:0.5px solid #FBBF24">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#0B1A1C">Comment ❤ / Reply</span>
+              <div style="display:flex; align-items:center; gap:6px">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; color:#FBBF24">~30px ⚠</span>
+                <div style="width:8px; height:8px; border-radius:4px; background:#FBBF24"></div>
+              </div>
+            </div>
+            <div style="background:rgba(251,191,36,0.07); border-radius:8px; padding:8px 10px; border-left:2px solid #FBBF24">
+              <div style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">Add <span style="background:rgba(0,0,0,0.07); padding:0 3px; border-radius:3px">hitSlop={{"{top:8,bottom:8,left:12,right:12}"}}</span> to bring each to effective 44px without changing visual size.</div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; background:#F7FAF9; border-radius:8px; border:0.5px solid #DCE8E6">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#0B1A1C">Gem Swipe action buttons</span>
+              <div style="display:flex; align-items:center; gap:6px">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; color:#5B7472">52/64px ✓</span>
+                <div style="width:8px; height:8px; border-radius:4px; background:#22C55E"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">One failing colour — one fix</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Only one colour fails WCAG AA in light mode: accent (#0F9488) at 9px body text (3.8:1, needs 4.5:1). Fix: swap all SpaceMono sub-labels ≤ 11px to textSecondary (#5B7472, 5.1:1). Accent stays for interactive labels ≥ 12px.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Two touch target warnings — both trivial</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Unread dot is decorative (row is the target). Comment actions need <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">hitSlop</span> added. Both are two-line fixes in Cursor with no visual change.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 3: PLATFORM GAPS — iOS
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:420px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Platform</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">iOS Platform Gaps</div>
+      </div>
+
+      <div style="background:{{card}}; border-radius:20px; padding:20px; border:0.5px solid {{border}}; display:flex; flex-direction:column; gap:14px">
+
+        <!-- Dynamic Island -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Dynamic Island padding</span>
+            <div style="background:rgba(248,113,113,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#F87171">HIGH</span></div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.6; margin-bottom:8px">iPhone 14 Pro+ has a 59pt top inset vs 47pt on standard iPhones. Map floating controls (location button, zoom) need to respect this — currently they may sit 12pt too high.</div>
+          <div style="background:{{bgTer}}; border-radius:8px; padding:10px 12px; font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}">
+            useSafeAreaInsets().top<br>
+            <span style="color:{{textSec}}">// Never hardcode top: 47 — always use insets</span>
+          </div>
+        </div>
+
+        <!-- Status bar style -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Status bar style</span>
+            <div style="background:rgba(248,113,113,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#F87171">HIGH</span></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-family:'Space Mono',monospace; font-size:11px">
+            <div style="display:flex; justify-content:space-between; padding:6px 10px; background:{{bgTer}}; border-radius:6px">
+              <span style="color:{{textSec}}">Dark screens (map, gem detail)</span>
+              <span style="color:#EAF6F4">style="light"</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:6px 10px; background:{{bgTer}}; border-radius:6px">
+              <span style="color:{{textSec}}">Light mode all screens</span>
+              <span style="color:#0B1A1C">style="dark"</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:6px 10px; background:{{bgTer}}; border-radius:6px">
+              <span style="color:{{textSec}}">Paywall / onboarding</span>
+              <span style="color:#EAF6F4">style="light"</span>
+            </div>
+          </div>
+          <div style="margin-top:8px; background:{{bgTer}}; border-radius:8px; padding:8px 10px">
+            <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">Use </span><span style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">{"<StatusBar style={route.params.barStyle ?? 'auto'} />"}</span>
+          </div>
+        </div>
+
+        <!-- Bottom sheet rubber-banding -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Bottom sheet iOS</span>
+            <div style="background:rgba(248,113,113,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#F87171">HIGH</span></div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.5; margin-bottom:8px">Map's @gorhom/bottom-sheet rubber-bands on iOS without these props:</div>
+          <div style="background:{{bgTer}}; border-radius:8px; padding:10px 12px; font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}; line-height:1.8">
+            overScrollMode="never"<br>
+            <span style="color:{{textSec}}">handleComponent={"{CustomHandle}"}</span><br>
+            <span style="color:{{textSec}}">activeOffsetY={"{[-1,1]}"}</span>
+          </div>
+        </div>
+
+        <!-- Keyboard avoiding -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Keyboard avoiding</span>
+            <div style="background:rgba(248,113,113,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#F87171">HIGH</span></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:5px; font-family:'Space Mono',monospace; font-size:11px">
+            <div style="padding:6px 10px; background:{{bgTer}}; border-radius:6px; display:flex; justify-content:space-between">
+              <span style="color:{{textSec}}">Auth, Add Gem, Trip Planner</span>
+              <span style="color:{{accent}}">behavior="padding"</span>
+            </div>
+            <div style="padding:6px 10px; background:{{bgTer}}; border-radius:6px; display:flex; justify-content:space-between">
+              <span style="color:{{textSec}}">Chat, Comments</span>
+              <span style="color:{{accent}}">behavior="padding"</span>
+            </div>
+            <div style="padding:6px 10px; background:{{bgTer}}; border-radius:6px; display:flex; justify-content:space-between">
+              <span style="color:{{textSec}}">keyboardVerticalOffset</span>
+              <span style="color:{{accent}}">= header height</span>
+            </div>
+          </div>
+          <div style="margin-top:8px; font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">SE (667pt): verify chat + comments don't clip. Auth layout tested in col 2 of keyboard spec ✓</div>
+        </div>
+
+        <!-- Home indicator -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#FBBF24; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Home indicator clearance</span>
+            <div style="background:rgba(251,191,36,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#FBBF24">MED</span></div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.5; margin-bottom:8px">Map location FAB and Gem Swipe action bar need bottom padding to clear the home indicator on notchless iPhones.</div>
+          <div style="background:{{bgTer}}; border-radius:8px; padding:8px 10px; font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}">
+            paddingBottom: useSafeAreaInsets().bottom + 16
+          </div>
+        </div>
+
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">4 high-priority iOS items</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Dynamic Island insets, status bar style, bottom sheet overscroll, keyboard avoiding — all 4 are one-liner fixes in the right place. Highest risk if missed: status bar shows wrong colour on dark gem detail screens.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Always useSafeAreaInsets()</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">No hardcoded pixel values for top/bottom insets anywhere in the codebase. Use the hook from <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">react-native-safe-area-context</span> — it covers Dynamic Island, notch, and home indicator automatically.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 4: PLATFORM GAPS — ANDROID
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:420px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">04 — Platform</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Android Platform Gaps</div>
+      </div>
+
+      <div style="background:{{card}}; border-radius:20px; padding:20px; border:0.5px solid {{border}}; display:flex; flex-direction:column; gap:14px">
+
+        <!-- Status bar color -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Status bar background</span>
+            <div style="background:rgba(248,113,113,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#F87171">HIGH</span></div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.5; margin-bottom:8px">Android status bar background defaults to black — doesn't inherit the screen colour. Must be set explicitly per screen.</div>
+          <div style="background:{{bgTer}}; border-radius:8px; padding:10px 12px; font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}; line-height:1.8">
+            &lt;StatusBar<br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;backgroundColor={theme.background}</span><br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;barStyle="light-content"</span><br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;translucent={false} /&gt;</span>
+          </div>
+          <div style="margin-top:8px; font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">Set in <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">app/_layout.tsx</span> globally, override per-screen where the bg differs (map = #0B1A1C, auth = same).</div>
+        </div>
+
+        <!-- Nav bar color -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">System nav bar (Android 10+)</span>
+            <div style="background:rgba(248,113,113,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#F87171">HIGH</span></div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.5; margin-bottom:8px">Gesture navigation bar at bottom defaults to white — jarring against the dark tab bar. Use expo-navigation-bar to match.</div>
+          <div style="background:{{bgTer}}; border-radius:8px; padding:10px 12px; font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}; line-height:1.8">
+            import * as NavigationBar<br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;from 'expo-navigation-bar';</span><br><br>
+            NavigationBar.setBackgroundColorAsync(<br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;theme.background</span><br>
+            );
+          </div>
+        </div>
+
+        <!-- Back gesture -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Back gesture on modals</span>
+            <div style="background:rgba(248,113,113,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#F87171">HIGH</span></div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.5; margin-bottom:8px">Android hardware back on modals crashes or does nothing without onRequestClose. Required for: Add Gem, Paywall, Achievement sheet, Filter sheet.</div>
+          <div style="background:{{bgTer}}; border-radius:8px; padding:10px 12px; font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}; line-height:1.8">
+            &lt;Modal<br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;onRequestClose={handleClose}</span><br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;// Add Gem: confirm dialog if dirty</span><br>
+            <span style="color:{{textSec}}">&gt;</span></span>
+          </div>
+        </div>
+
+        <!-- Elevation vs shadow -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#FBBF24; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Elevation vs shadow</span>
+            <div style="background:rgba(251,191,36,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#FBBF24">MED</span></div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.5; margin-bottom:8px">iOS shadow props (shadowOpacity, shadowRadius etc.) are invisible on Android. Cards need elevation too.</div>
+          <div style="display:flex; flex-direction:column; gap:6px">
+            <div style="display:flex; gap:8px; align-items:center">
+              <div style="flex:1; background:{{bgTer}}; border-radius:8px; padding:8px 10px">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; margin-bottom:4px">iOS only</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}; line-height:1.6">shadowOpacity: 0.08<br>shadowRadius: 8<br>shadowOffset: {"{0,4}"}</div>
+              </div>
+              <span style="color:{{textTer}}">+</span>
+              <div style="flex:1; background:{{bgTer}}; border-radius:8px; padding:8px 10px">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; margin-bottom:4px">Android add</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}; line-height:1.6">elevation: 2</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ripple -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#FBBF24; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Ripple press feedback</span>
+            <div style="background:rgba(251,191,36,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#FBBF24">MED</span></div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; line-height:1.5; margin-bottom:8px">TouchableOpacity shows no feedback on Android. Use Pressable with android_ripple on all primary CTAs and list rows.</div>
+          <div style="background:{{bgTer}}; border-radius:8px; padding:10px 12px; font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}; line-height:1.8">
+            &lt;Pressable<br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;android_ripple={{'{'}}</span><br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;&nbsp;&nbsp;color: theme.accentSub,</span><br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;&nbsp;&nbsp;borderless: false {'}}'}</span><br>
+            <span style="color:{{textSec}}">&nbsp;&nbsp;onPress={handler}&gt;</span></span>
+          </div>
+        </div>
+
+        <!-- Haptics on Android -->
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#FBBF24; flex:none"></div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:{{text}}; text-transform:uppercase; letter-spacing:1px">Missing haptics (both platforms)</span>
+            <div style="background:rgba(251,191,36,0.1); border-radius:6px; padding:1px 7px; margin-left:auto"><span style="font-family:'Space Mono',monospace; font-size:9px; color:#FBBF24">MED</span></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:5px">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:{{bgTer}}; border-radius:6px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Follow request accept</span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">hapticSuccess()</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:{{bgTer}}; border-radius:6px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Community join</span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">hapticSuccess()</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:{{bgTer}}; border-radius:6px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Trial start</span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">hapticSuccess()</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:{{bgTer}}; border-radius:6px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Check-in confirmed</span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">hapticSuccess()</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:{{bgTer}}; border-radius:6px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Toast dismiss swipe</span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">hapticMedium()</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">3 high-priority Android fixes</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Status bar bg, nav bar colour, and modal onRequestClose. All three are one-liners. Without them the app looks unfinished on Android and fails Play Store review guidelines for back-gesture handling.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Elevation + ripple: do both</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Add <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">elevation:2</span> to every card that has iOS shadow props. Replace TouchableOpacity with Pressable + android_ripple on all list rows and primary CTAs — swap in one component so the change is global.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">5 missing haptics — 5 lines of code</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Follow accept, community join, trial start, check-in, toast dismiss — all need hapticSuccess/Medium added. Each is one line in the relevant onPress handler. Zero design changes needed.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1760, &quot;height&quot;: 1100}}">
+
+class Component extends DCLogic {
+  state = {
+    scheme: 'dark',
+    activeTab: 'discover',
+  };
+
+  renderVals() {
+    const dark    = this.state.scheme === 'dark';
+    const bg      = dark ? '#0B1A1C' : '#F7FAF9';
+    const card    = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer   = dark ? '#1C3438' : '#E3F1EF';
+    const border  = dark ? '#1C3438' : '#DCE8E6';
+    const text    = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent  = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub = dark ? '#1C3438' : '#E3F1EF';
+    const coral   = dark ? '#FF9F5A' : '#E8723D';
+    const homeInd = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+
+    const tab = this.state.activeTab;
+
+    const tabActive   = (t) => t === tab;
+    const tabColor    = (t) => tabActive(t) ? accent : textTer;
+    const tabBg       = (t) => tabActive(t) ? accentSub : 'transparent';
+    const tabLabels   = { discover:'Discover', map:'Map', swipe:'Swipe', profile:'Profile' };
+
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, coral, homeInd, dark,
+
+      // active tab label shown in screen
+      activeTabLabel: tabLabels[tab] || 'Discover',
+
+      // Discover
+      discoverColor: tabColor('discover'),
+      discoverBg:    tabBg('discover'),
+      setDiscover:   () => this.setState({ activeTab: 'discover' }),
+
+      // Map
+      mapColor: tabColor('map'),
+      mapBg:    tabBg('map'),
+      setMap:   () => this.setState({ activeTab: 'map' }),
+
+      // Add FAB — always coral, never "active"
+      addBg:     coral,
+      addIcon:   '#fff',
+      addLabel:  textTer,
+      addShadow: dark ? 'rgba(255,159,90,0.35)' : 'rgba(232,114,61,0.3)',
+      addBorder: 'none',
+      setAdd:    () => this.setState({ activeTab: 'discover' }),
+
+      // Swipe
+      swipeColor: tabColor('swipe'),
+      swipeBg:    tabBg('swipe'),
+      setSwipe:   () => this.setState({ activeTab: 'swipe' }),
+
+      // Profile
+      profileColor: tabColor('profile'),
+      profileBg:    tabBg('profile'),
+      setProfile:   () => this.setState({ activeTab: 'profile' }),
+
+      toggleScheme: () => this.setState(s => ({
+        scheme: s.scheme === 'dark' ? 'light' : 'dark'
+      })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

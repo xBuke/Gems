@@ -1,3 +1,4 @@
+import { formatCoordinates } from '@/lib/coordinates';
 import { blockUser } from '@/lib/safety';
 import { hapticLight } from '@/lib/haptics';
 import { useTheme } from '@/lib/ThemeContext';
@@ -15,7 +16,9 @@ import {
   Dimensions,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -47,6 +50,19 @@ type ChatItem =
   | { type: 'message'; id: string; data: Message }
   | { type: 'date'; id: string; label: string };
 
+type ShareableGem = {
+  id: string;
+  title: string;
+  latitude: number;
+  longitude: number;
+  image_url: string | null;
+  category: string;
+};
+
+const COORD_LINE_REGEX = /^\d+\.\d{4}° [NS], \d+\.\d{4}° [EW]$/;
+
+const isCoordLine = (line: string) => COORD_LINE_REGEX.test(line.trim());
+
 const formatTime = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -58,13 +74,15 @@ const formatDateLabel = (dateString: string) => {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  if (date.toDateString() === today.toDateString()) return 'Today';
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  if (date.toDateString() === today.toDateString()) return 'TODAY';
+  if (date.toDateString() === yesterday.toDateString()) return 'YESTERDAY';
+  return date
+    .toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    .toUpperCase();
 };
 
 const buildChatItems = (messages: Message[]): ChatItem[] => {
@@ -100,6 +118,9 @@ export default function ChatScreen() {
   const [reportVisible, setReportVisible] = useState(false);
   const [otherAvatarUrl, setOtherAvatarUrl] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState(true);
+  const [gemPickerVisible, setGemPickerVisible] = useState(false);
+  const [myGems, setMyGems] = useState<ShareableGem[]>([]);
+  const [gemsLoading, setGemsLoading] = useState(false);
   const listRef = useRef<FlatList>(null);
 
   const chatItems = useMemo(() => buildChatItems(messages), [messages]);
@@ -200,46 +221,79 @@ export default function ChatScreen() {
     }
   }, [messages.length, scrollToBottom]);
 
+  const sendMessage = useCallback(
+    async (textToSend: string) => {
+      if (!textToSend.trim() || !myId || !userId || sending) return false;
+
+      setSending(true);
+
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: myId,
+          receiver_id: userId,
+          content: textToSend.trim(),
+        })
+        .select('*, sender:profiles!messages_sender_id_fkey(username)')
+        .single();
+
+      setSending(false);
+
+      if (error) {
+        console.log('Send message error:', error);
+        Alert.alert('Message not sent', 'Please check your connection and try again.');
+        return false;
+      }
+
+      if (data) {
+        hapticLight();
+        setMessages((prev) => [...prev, data as Message]);
+
+        await supabase.from('notifications').insert({
+          user_id: userId,
+          sender_id: myId,
+          type: 'message',
+          gem_id: null,
+          read: false,
+        });
+      }
+
+      return true;
+    },
+    [myId, sending, userId],
+  );
+
   const handleSend = async () => {
     if (!inputText.trim()) return;
-    if (!myId || !userId || sending) return;
-
     const textToSend = inputText.trim();
     setInputText('');
+    const sent = await sendMessage(textToSend);
+    if (!sent) setInputText(textToSend);
+  };
 
-    setSending(true);
+  const loadMyGems = useCallback(async () => {
+    if (!myId) return;
+    setGemsLoading(true);
+    const { data } = await supabase
+      .from('gems')
+      .select('id, title, latitude, longitude, image_url, category')
+      .eq('user_id', myId)
+      .order('created_at', { ascending: false });
+    setMyGems((data as ShareableGem[] | null) ?? []);
+    setGemsLoading(false);
+  }, [myId]);
 
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        sender_id: myId,
-        receiver_id: userId,
-        content: textToSend,
-      })
-      .select('*, sender:profiles!messages_sender_id_fkey(username)')
-      .single();
+  const openGemPicker = async () => {
+    hapticLight();
+    setGemPickerVisible(true);
+    await loadMyGems();
+  };
 
-    setSending(false);
-
-    if (error) {
-      console.log('Send message error:', error);
-      Alert.alert('Message not sent', 'Please check your connection and try again.');
-      setInputText(textToSend);
-      return;
-    }
-
-    if (data) {
-      hapticLight();
-      setMessages((prev) => [...prev, data as Message]);
-
-      await supabase.from('notifications').insert({
-        user_id: userId,
-        sender_id: myId,
-        type: 'message',
-        gem_id: null,
-        read: false,
-      });
-    }
+  const handleShareGem = async (gem: ShareableGem) => {
+    setGemPickerVisible(false);
+    const coords = formatCoordinates(gem.latitude, gem.longitude);
+    const content = `${gem.title}\n${coords}`;
+    await sendMessage(content);
   };
 
   const goToProfile = () => {
@@ -311,6 +365,40 @@ export default function ChatScreen() {
   const initial = displayName.charAt(0).toUpperCase();
   const canSend = inputText.trim().length > 0 && !sending;
 
+  const renderMessageContent = useCallback(
+    (content: string, isMine: boolean) => {
+      const lines = content.split('\n');
+
+      return lines.map((line, index) => {
+        const isLast = index === lines.length - 1;
+
+        if (isCoordLine(line)) {
+          return (
+            <Text
+              key={`${index}-${line}`}
+              style={[
+                styles.coordText,
+                isMine ? styles.coordTextMine : styles.coordTextTheirs,
+                index > 0 && styles.coordTextSpaced,
+              ]}>
+              {line.trim()}
+            </Text>
+          );
+        }
+
+        return (
+          <Text
+            key={`${index}-${line}`}
+            style={[styles.bubbleText, isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}>
+            {line}
+            {!isLast ? '\n' : ''}
+          </Text>
+        );
+      });
+    },
+    [styles],
+  );
+
   const renderMessage = useCallback(
     (item: Message) => {
       const isMine = item.sender_id === myId;
@@ -319,10 +407,7 @@ export default function ChatScreen() {
         <View style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowTheirs]}>
           <View style={styles.messageBlock}>
             <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
-              <Text
-                style={[styles.bubbleText, isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}>
-                {item.content}
-              </Text>
+              {renderMessageContent(item.content, isMine)}
             </View>
             <Text style={[styles.timestamp, isMine && styles.timestampMine]}>
               {formatTime(item.created_at)}
@@ -331,7 +416,7 @@ export default function ChatScreen() {
         </View>
       );
     },
-    [myId, styles],
+    [myId, renderMessageContent, styles],
   );
 
   const renderItem = useCallback(
@@ -358,18 +443,20 @@ export default function ChatScreen() {
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerCenter} onPress={goToProfile} activeOpacity={0.7}>
-          <View style={styles.headerAvatar}>
-            {otherAvatarUrl ? (
-              <Image
-                source={{ uri: otherAvatarUrl }}
-                style={styles.headerAvatarImage}
-                contentFit="cover"
-                transition={200}
-                cachePolicy="memory-disk"
-              />
-            ) : (
-              <Text style={styles.headerAvatarText}>{initial}</Text>
-            )}
+          <View style={styles.headerAvatarRing}>
+            <View style={styles.headerAvatar}>
+              {otherAvatarUrl ? (
+                <Image
+                  source={{ uri: otherAvatarUrl }}
+                  style={styles.headerAvatarImage}
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <Text style={styles.headerAvatarText}>{initial}</Text>
+              )}
+            </View>
           </View>
           <Text style={styles.headerUsername}>{displayName}</Text>
         </TouchableOpacity>
@@ -401,6 +488,13 @@ export default function ChatScreen() {
 
         <SafeAreaView edges={['bottom']} style={styles.inputArea}>
           <View style={styles.inputRow}>
+            <TouchableOpacity
+              style={styles.gemShareButton}
+              onPress={openGemPicker}
+              activeOpacity={0.8}
+              accessibilityLabel="Share a gem">
+              <Text style={styles.gemShareEmoji}>📍</Text>
+            </TouchableOpacity>
             <TextInput
               style={styles.input}
               placeholder="Message..."
@@ -430,6 +524,69 @@ export default function ChatScreen() {
           reporterId={myId}
         />
       )}
+
+      <Modal
+        visible={gemPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setGemPickerVisible(false)}>
+        <Pressable style={styles.gemPickerOverlay} onPress={() => setGemPickerVisible(false)}>
+          <Pressable style={styles.gemPickerSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.gemPickerHandle} />
+            <Text style={styles.gemPickerTitle}>Share a gem</Text>
+            <Text style={styles.gemPickerSubtitle}>Pick one of your gems to send coordinates</Text>
+
+            {gemsLoading ? (
+              <ActivityIndicator size="small" color={theme.accent} style={styles.gemPickerLoader} />
+            ) : myGems.length === 0 ? (
+              <Text style={styles.gemPickerEmpty}>You haven&apos;t added any gems yet.</Text>
+            ) : (
+              <FlatList
+                data={myGems}
+                keyExtractor={(item) => item.id}
+                style={styles.gemPickerList}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.gemPickerRow}
+                    onPress={() => handleShareGem(item)}
+                    activeOpacity={0.7}>
+                    {item.image_url ? (
+                      <Image
+                        source={{ uri: item.image_url }}
+                        style={styles.gemPickerThumb}
+                        contentFit="cover"
+                        transition={200}
+                        cachePolicy="memory-disk"
+                      />
+                    ) : (
+                      <View style={[styles.gemPickerThumb, styles.gemPickerThumbPlaceholder]}>
+                        <Ionicons name="diamond-outline" size={18} color={theme.textTertiary} />
+                      </View>
+                    )}
+                    <View style={styles.gemPickerMeta}>
+                      <Text style={styles.gemPickerName} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.gemPickerCoords} numberOfLines={1}>
+                        {formatCoordinates(item.latitude, item.longitude)}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+
+            <TouchableOpacity
+              style={styles.gemPickerCancel}
+              onPress={() => setGemPickerVisible(false)}
+              activeOpacity={0.7}>
+              <Text style={styles.gemPickerCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -466,24 +623,31 @@ const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       gap: 8,
     },
+    headerAvatarRing: {
+      borderRadius: 22.5,
+      borderWidth: 3.5,
+      borderColor: theme.coral,
+      padding: 2,
+      backgroundColor: theme.background,
+    },
     headerAvatar: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       backgroundColor: theme.accent,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
     },
     headerAvatarImage: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
     },
     headerAvatarText: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: theme.accentText,
     },
     headerUsername: {
       fontSize: 16,
@@ -535,10 +699,26 @@ const createStyles = (theme: Theme) =>
     bubbleTextTheirs: {
       color: theme.text,
     },
-    timestamp: {
-      fontSize: 11,
-      color: theme.textTertiary,
+    coordText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 13,
+      lineHeight: 20,
+      letterSpacing: 0.3,
+    },
+    coordTextMine: {
+      color: theme.accentText,
+    },
+    coordTextTheirs: {
+      color: theme.accent,
+    },
+    coordTextSpaced: {
       marginTop: 4,
+    },
+    timestamp: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      color: theme.textTertiary,
+      marginTop: 3,
     },
     timestampMine: {
       textAlign: 'right',
@@ -554,7 +734,9 @@ const createStyles = (theme: Theme) =>
       paddingHorizontal: 10,
     },
     dateSeparatorText: {
-      fontSize: 12,
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      letterSpacing: 1,
       color: theme.textTertiary,
     },
     inputArea: {
@@ -567,7 +749,18 @@ const createStyles = (theme: Theme) =>
     inputRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 8,
+    },
+    gemShareButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: theme.bgTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    gemShareEmoji: {
+      fontSize: 17,
     },
     input: {
       flex: 1,
@@ -582,14 +775,101 @@ const createStyles = (theme: Theme) =>
       maxHeight: 100,
     },
     sendButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 38,
+      height: 38,
+      borderRadius: 19,
       backgroundColor: theme.accent,
       alignItems: 'center',
       justifyContent: 'center',
     },
     sendButtonDisabled: {
       backgroundColor: theme.border,
+    },
+    gemPickerOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    gemPickerSheet: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 20,
+      paddingBottom: 24,
+      maxHeight: '70%',
+    },
+    gemPickerHandle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.border,
+      alignSelf: 'center',
+      marginTop: 10,
+      marginBottom: 16,
+    },
+    gemPickerTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 4,
+    },
+    gemPickerSubtitle: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 16,
+    },
+    gemPickerLoader: {
+      marginVertical: 24,
+    },
+    gemPickerEmpty: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      marginVertical: 24,
+    },
+    gemPickerList: {
+      maxHeight: 320,
+    },
+    gemPickerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 10,
+      borderBottomWidth: 0.5,
+      borderBottomColor: theme.border,
+    },
+    gemPickerThumb: {
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+    },
+    gemPickerThumbPlaceholder: {
+      backgroundColor: theme.bgTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    gemPickerMeta: {
+      flex: 1,
+      gap: 2,
+    },
+    gemPickerName: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    gemPickerCoords: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
+      color: theme.textTertiary,
+    },
+    gemPickerCancel: {
+      marginTop: 16,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    gemPickerCancelText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.textSecondary,
     },
   });

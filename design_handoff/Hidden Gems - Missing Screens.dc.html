@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; } button { cursor: pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Missing Screens</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">Social layer<br>+ connections</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:560px">5 screens that complete the social graph — messages inbox, other-user profiles, followers lists, community feeds, and gem check-ins. Closing the gap before Cursor handoff.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px">{{schemeLabel}}</button>
+  </div>
+
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══════════════════════════════════════
+         COL 1: MESSAGES INBOX
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Social</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Messages Inbox</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden; position:relative">
+            <!-- Header -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 20px 14px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}">Messages</span>
+              <div style="width:36px; height:36px; border-radius:18px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 14L3.5 9.5L11 2L14 5L6.5 12.5L2 14Z" stroke="{{accent}}" stroke-width="1.5" stroke-linejoin="round" fill="none"></path>
+                  <path d="M10 3L13 6" stroke="{{accent}}" stroke-width="1.5"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Search -->
+            <div style="margin:0 16px 10px; background:{{bgTer}}; border-radius:12px; height:40px; display:flex; align-items:center; padding:0 14px; gap:8px">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="{{textTer}}" stroke-width="1.5"></circle><path d="M10 10L13 13" stroke="{{textTer}}" stroke-width="1.5" stroke-linecap="round"></path></svg>
+              <span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textTer}}">Search conversations</span>
+            </div>
+
+            <!-- Conv 1: Ana — UNREAD -->
+            <div onClick="{{readConv0}}" style="display:flex; align-items:center; padding:11px 16px; gap:12px; border-bottom:0.5px solid {{border}}; cursor:pointer; background:{{conv0Bg}}">
+              <div style="position:relative; flex:none">
+                <div style="width:48px; height:48px; border-radius:24px; background:{{coral}}; display:flex; align-items:center; justify-content:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; color:#fff">A</span>
+                </div>
+                <sc-if value="{{conv0Unread}}" hint-placeholder-val="{{true}}">
+                  <div style="position:absolute; top:1px; right:1px; width:13px; height:13px; border-radius:7px; background:{{accent}}; border:2.5px solid {{bg}}"></div>
+                </sc-if>
+              </div>
+              <div style="flex:1; min-width:0">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:3px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:{{conv0Weight}}; color:{{text}}">@ana_dalmatian</span>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{conv0TimeColor}}; flex:none; margin-left:8px">2m</span>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{conv0MsgColor}}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Did you check out Modra špilja? 🐟</div>
+              </div>
+            </div>
+
+            <!-- Conv 2: sea_walker — read -->
+            <div style="display:flex; align-items:center; padding:11px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+              <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#0e3a52,#091c2a); display:flex; align-items:center; justify-content:center; flex:none">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; color:#EAF6F4">S</span>
+              </div>
+              <div style="flex:1; min-width:0">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:3px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:400; color:{{text}}">@sea_walker</span>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; flex:none; margin-left:8px">1h</span>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Incredible spot, thanks for the drop! 🙌</div>
+              </div>
+            </div>
+
+            <!-- Conv 3: marko_hr — read -->
+            <div style="display:flex; align-items:center; padding:11px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+              <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(145deg,#1a3a22,#0a1c10); display:flex; align-items:center; justify-content:center; flex:none">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; color:#EAF6F4">M</span>
+              </div>
+              <div style="flex:1; min-width:0">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:3px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:400; color:{{text}}">@marko_hr</span>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; flex:none; margin-left:8px">Yesterday</span>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Are you going to Vis this summer?</div>
+              </div>
+            </div>
+
+            <!-- Conv 4: HG Official -->
+            <div style="display:flex; align-items:center; padding:11px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+              <div style="width:48px; height:48px; border-radius:24px; background:{{accentSub}}; border:1.5px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none">
+                <span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:{{accent}}">HG</span>
+              </div>
+              <div style="flex:1; min-width:0">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px; gap:6px">
+                  <div style="display:flex; align-items:center; gap:5px; min-width:0">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:400; color:{{text}}; white-space:nowrap">Hidden Gems</span>
+                    <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:4px; padding:1px 5px; flex:none"><span style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}">OFFICIAL</span></div>
+                  </div>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; flex:none">3d</span>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Welcome! Drop your first gem →</div>
+              </div>
+            </div>
+
+            <!-- Message Requests separator -->
+            <div style="display:flex; align-items:center; padding:9px 16px; gap:8px; background:{{bgTer}}; border-bottom:0.5px solid {{border}}">
+              <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; flex:1">Message Requests</span>
+              <div style="background:{{accent}}; border-radius:8px; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; padding:0 4px">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:#0A1F1C">2</span>
+              </div>
+              <span style="color:{{textTer}}; font-size:14px">›</span>
+            </div>
+
+            <!-- Request 1 (dimmed) -->
+            <div style="display:flex; align-items:center; padding:11px 16px; gap:12px; border-bottom:0.5px solid {{border}}; opacity:0.55">
+              <div style="width:48px; height:48px; border-radius:24px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; flex:none">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:19px; color:{{textTer}}">?</span>
+              </div>
+              <div style="flex:1; min-width:0">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:3px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">@traveler_nomad</span>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; flex:none; margin-left:8px">3d</span>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textTer}}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Hey! Saw your gem from Korčula…</div>
+              </div>
+            </div>
+
+            <!-- Request 2 (dimmed) -->
+            <div style="display:flex; align-items:center; padding:11px 16px; gap:12px; opacity:0.45">
+              <div style="width:48px; height:48px; border-radius:24px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; flex:none">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:19px; color:{{textTer}}">?</span>
+              </div>
+              <div style="flex:1; min-width:0">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:3px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">@splitlocal88</span>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; flex:none; margin-left:8px">1w</span>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textTer}}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Do you know any good spots near Omiš?</div>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Unread = dot + bold + accent time</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Unread row: teal dot on avatar, <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">fontWeight:700</span>, accent-colored timestamp, full-brightness message preview. Tap Ana's row to mark read — all four signals clear at once.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Message requests quarantined</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Strangers' messages are separated into a dimmed "MESSAGE REQUESTS" section — not silently inserted into the main feed. Same pattern as Instagram DMs. Privacy-first default.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono timestamps + official badge</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Timestamps in SpaceMono — consistent with every other time label. The Official account gets the same teal badge pattern used in admin, so users recognise verified senders.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 2: PROFILE (OTHER USER)
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Social</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Profile (Other User)</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden">
+            <!-- Back + more nav -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 16px 10px">
+              <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; color:{{text}}">@ana_dalmatian</span>
+              <div style="width:26px; height:26px; border-radius:13px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center">
+                <span style="color:{{textSec}}; font-size:13px; letter-spacing:1px; margin-top:-4px">···</span>
+              </div>
+            </div>
+
+            <!-- Cover band -->
+            <div style="height:88px; background:linear-gradient(140deg,#162a14 0%,#1e4a2a 45%,#0e3018 100%); position:relative; flex:none">
+              <!-- Avatar overlapping -->
+              <div style="position:absolute; bottom:-34px; left:20px; width:72px; height:72px; border-radius:36px; background:{{coral}}; border:3px solid {{bg}}; display:flex; align-items:center; justify-content:center; z-index:2">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:#fff">A</span>
+              </div>
+              <!-- Follow + Message buttons top right -->
+              <div style="position:absolute; bottom:10px; right:16px; display:flex; gap:8px; align-items:center">
+                <button onClick="{{toggleFollow}}" style="background:{{followBg}}; border:{{followBorder}}; border-radius:20px; padding:8px 18px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{followTextColor}}">{{followLabel}}</button>
+                <div style="background:transparent; border:1.5px solid {{border}}; border-radius:20px; padding:7px 14px; cursor:pointer">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}">Message</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Name + bio section -->
+            <div style="padding:42px 20px 12px">
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; color:{{text}}; margin-bottom:1px">Ana Matić</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:7px">
+                <span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textSec}}">@ana_dalmatian</span>
+                <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:6px; padding:2px 6px"><span style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:0.5px">LV. 4</span></div>
+              </div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.55; margin-bottom:10px">Finding hidden spots around Dalmatia, one sunrise at a time 🌊</div>
+              <div style="display:flex; align-items:center; gap:5px">
+                <span style="font-size:12px">📍</span>
+                <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">Split, Croatia</span>
+              </div>
+            </div>
+
+            <!-- Stats row (tappable) -->
+            <div style="display:flex; border-top:0.5px solid {{border}}; border-bottom:0.5px solid {{border}}; margin:0 0 14px">
+              <div style="flex:1; padding:10px 0; text-align:center; border-right:0.5px solid {{border}}">
+                <div style="font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:{{text}}">47</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}; margin-top:1px">Gems</div>
+              </div>
+              <div style="flex:1; padding:10px 0; text-align:center; border-right:0.5px solid {{border}}; cursor:pointer">
+                <div style="font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:{{text}}">312</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; margin-top:1px">Followers ›</div>
+              </div>
+              <div style="flex:1; padding:10px 0; text-align:center; cursor:pointer">
+                <div style="font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:{{text}}">89</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; margin-top:1px">Following ›</div>
+              </div>
+            </div>
+
+            <!-- Gems grid label -->
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:2px; text-transform:uppercase; padding:0 16px 10px">Gems (47)</div>
+
+            <!-- 3×3 gem thumbnail grid -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; padding:0 16px">
+              <div style="aspect-ratio:1; border-radius:8px; background:linear-gradient(155deg,#162812,#0a180a); overflow:hidden; position:relative">
+                <div style="position:absolute; bottom:5px; left:6px; right:6px; font-family:'Space Grotesk',sans-serif; font-size:9px; font-weight:600; color:rgba(234,246,244,0.9); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Jezera Viewpoint</div>
+              </div>
+              <div style="aspect-ratio:1; border-radius:8px; background:linear-gradient(155deg,#0e2840,#081420); overflow:hidden; position:relative">
+                <div style="position:absolute; bottom:5px; left:6px; right:6px; font-family:'Space Grotesk',sans-serif; font-size:9px; font-weight:600; color:rgba(234,246,244,0.9); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Modra Špilja</div>
+              </div>
+              <div style="aspect-ratio:1; border-radius:8px; background:linear-gradient(155deg,#2a1a0a,#1a0e06); overflow:hidden; position:relative">
+                <div style="position:absolute; bottom:5px; left:6px; right:6px; font-family:'Space Grotesk',sans-serif; font-size:9px; font-weight:600; color:rgba(234,246,244,0.9); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Brela Rock</div>
+              </div>
+              <div style="aspect-ratio:1; border-radius:8px; background:linear-gradient(155deg,#1a3a38,#0a2028); overflow:hidden; position:relative">
+                <div style="position:absolute; bottom:5px; left:6px; right:6px; font-family:'Space Grotesk',sans-serif; font-size:9px; font-weight:600; color:rgba(234,246,244,0.9); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Šolta Cove</div>
+              </div>
+              <div style="aspect-ratio:1; border-radius:8px; background:linear-gradient(155deg,#1a0e2a,#0e0818); overflow:hidden; position:relative">
+                <div style="position:absolute; bottom:5px; left:6px; right:6px; font-family:'Space Grotesk',sans-serif; font-size:9px; font-weight:600; color:rgba(234,246,244,0.9); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Old Town Walls</div>
+              </div>
+              <div style="aspect-ratio:1; border-radius:8px; background:{{bgTer}}; overflow:hidden; display:flex; align-items:center; justify-content:center">
+                <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">+42</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Follow + Message hierarchy</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Follow = accent-filled primary CTA. Message = border-only secondary. Post-follow, "Follow" flips to a muted "Following ✓" pill — tap the button above. Own profile shows "Edit Profile" instead; the button slot never disappears.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Stats are tappable links</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"Followers ›" and "Following ›" link directly to the followers list with the right tab pre-selected. Gems count links to their grid. Uses <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">navigation.push('Followers', &#123; userId, tab &#125;)</span>.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Read-only gems grid</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">3-col grid with no edit/delete affordance — long-press context menu is gone. "+42" count tile at end routes to a paginated list. Own profile adds a "+" tile at position 0 as an add shortcut.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 3: FOLLOWERS / FOLLOWING
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Social</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Followers / Following</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden">
+            <!-- Nav -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 16px 10px">
+              <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; color:{{text}}">@ana_dalmatian</span>
+              <div style="width:22px"></div>
+            </div>
+
+            <!-- Tab bar -->
+            <div style="display:flex; margin:0 16px 12px; background:{{bgTer}}; border-radius:12px; padding:3px; gap:3px">
+              <button onClick="{{setFollowersTab}}" style="flex:1; background:{{followersTabBg}}; border:none; border-radius:10px; padding:8px 0; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{followersTabColor}}">Followers (312)</button>
+              <button onClick="{{setFollowingTab}}" style="flex:1; background:{{followingTabBg}}; border:none; border-radius:10px; padding:8px 0; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{followingTabColor}}">Following (89)</button>
+            </div>
+
+            <!-- Search -->
+            <div style="margin:0 16px 10px; background:{{bgTer}}; border-radius:12px; height:38px; display:flex; align-items:center; padding:0 14px; gap:8px">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="{{textTer}}" stroke-width="1.5"></circle><path d="M10 10L13 13" stroke="{{textTer}}" stroke-width="1.5" stroke-linecap="round"></path></svg>
+              <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">Search</span>
+            </div>
+
+            <!-- ── FOLLOWERS TAB ── -->
+            <sc-if value="{{showFollowers}}" hint-placeholder-val="{{true}}">
+              <div>
+                <!-- Row: Marko (Follow Back) -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+                  <div style="width:44px; height:44px; border-radius:22px; background:linear-gradient(145deg,#1a3a22,#0a1c10); display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4">M</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Marko S.</div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@marko_hr</div>
+                  </div>
+                  <button onClick="{{toggleMarko}}" style="background:{{markoFBg}}; border:{{markoFBorder}}; border-radius:16px; padding:6px 14px; font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:{{markoFText}}; flex:none">{{markoFLabel}}</button>
+                </div>
+                <!-- Row: sea_walker (mutual — Following) -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+                  <div style="width:44px; height:44px; border-radius:22px; background:linear-gradient(145deg,#0e3a52,#091c2a); display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4">S</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="display:flex; align-items:center; gap:6px">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Sea Walker</span>
+                      <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:5px; padding:1px 5px"><span style="font-family:'Space Mono',monospace; font-size:8px; color:{{accent}}">MUTUAL</span></div>
+                    </div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@sea_walker</div>
+                  </div>
+                  <button onClick="{{toggleSea}}" style="background:{{seaFBg}}; border:{{seaFBorder}}; border-radius:16px; padding:6px 14px; font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:{{seaFText}}; flex:none">{{seaFLabel}}</button>
+                </div>
+                <!-- Row: Petra (Follow) -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+                  <div style="width:44px; height:44px; border-radius:22px; background:linear-gradient(145deg,#3a1a30,#1e0e1a); display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4">P</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Petra V.</div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@petra_vis</div>
+                  </div>
+                  <button onClick="{{togglePetra}}" style="background:{{petraFBg}}; border:{{petraFBorder}}; border-radius:16px; padding:6px 14px; font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:{{petraFText}}; flex:none">{{petraFLabel}}</button>
+                </div>
+                <!-- Row: Ivan (mutual) -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+                  <div style="width:44px; height:44px; border-radius:22px; background:linear-gradient(145deg,#2a3a1a,#141e0a); display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4">I</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="display:flex; align-items:center; gap:6px">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Ivan K.</span>
+                      <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:5px; padding:1px 5px"><span style="font-family:'Space Mono',monospace; font-size:8px; color:{{accent}}">MUTUAL</span></div>
+                    </div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@ivan_explorer</div>
+                  </div>
+                  <button onClick="{{toggleIvan}}" style="background:{{ivanFBg}}; border:{{ivanFBorder}}; border-radius:16px; padding:6px 14px; font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:{{ivanFText}}; flex:none">{{ivanFLabel}}</button>
+                </div>
+                <!-- Row: Dubrovnik -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px">
+                  <div style="width:44px; height:44px; border-radius:22px; background:linear-gradient(145deg,#3a2a1a,#1e160a); display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4">D</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Dubrovnik Walks</div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@dubrovnik_walks</div>
+                  </div>
+                  <button onClick="{{toggleDubrovnik}}" style="background:{{dubrovnikFBg}}; border:{{dubrovnikFBorder}}; border-radius:16px; padding:6px 14px; font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:{{dubrovnikFText}}; flex:none">{{dubrovnikFLabel}}</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- ── FOLLOWING TAB ── -->
+            <sc-if value="{{showFollowing}}" hint-placeholder-val="{{false}}">
+              <div>
+                <!-- buke (you) -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px; border-bottom:0.5px solid {{border}}; background:{{accentSub}}">
+                  <div style="width:44px; height:44px; border-radius:22px; background:{{accent}}; display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#0A1F1C">B</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="display:flex; align-items:center; gap:6px">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Buke</span>
+                      <div style="background:{{accent}}; border-radius:5px; padding:1px 6px"><span style="font-family:'Space Mono',monospace; font-size:8px; color:#0A1F1C">YOU</span></div>
+                    </div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@buke</div>
+                  </div>
+                  <div style="background:{{bgTer}}; border:1px solid {{border}}; border-radius:16px; padding:6px 14px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Following</span>
+                  </div>
+                </div>
+                <!-- sea_walker (mutual) -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+                  <div style="width:44px; height:44px; border-radius:22px; background:linear-gradient(145deg,#0e3a52,#091c2a); display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4">S</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="display:flex; align-items:center; gap:6px">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Sea Walker</span>
+                      <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:5px; padding:1px 5px"><span style="font-family:'Space Mono',monospace; font-size:8px; color:{{accent}}">MUTUAL</span></div>
+                    </div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@sea_walker</div>
+                  </div>
+                  <div style="background:{{bgTer}}; border:1px solid {{border}}; border-radius:16px; padding:6px 14px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Following</span>
+                  </div>
+                </div>
+                <!-- HG official -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+                  <div style="width:44px; height:44px; border-radius:22px; background:{{accentSub}}; border:1.5px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:{{accent}}">HG</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="display:flex; align-items:center; gap:5px">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Hidden Gems</span>
+                      <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:4px; padding:1px 5px"><span style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}">OFFICIAL</span></div>
+                    </div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@hiddengems_hq</div>
+                  </div>
+                  <div style="background:{{bgTer}}; border:1px solid {{border}}; border-radius:16px; padding:6px 14px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Following</span>
+                  </div>
+                </div>
+                <!-- pero_split (not following back) -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px; border-bottom:0.5px solid {{border}}">
+                  <div style="width:44px; height:44px; border-radius:22px; background:linear-gradient(145deg,#1a2a3a,#0a161e); display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4">P</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Pero Split</div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@pero_split</div>
+                  </div>
+                  <div style="background:{{bgTer}}; border:1px solid {{border}}; border-radius:16px; padding:6px 14px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Following</span>
+                  </div>
+                </div>
+                <!-- vis_adventures -->
+                <div style="display:flex; align-items:center; padding:10px 16px; gap:12px">
+                  <div style="width:44px; height:44px; border-radius:22px; background:linear-gradient(145deg,#1a3a20,#0a1e10); display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4">V</span>
+                  </div>
+                  <div style="flex:1; min-width:0">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; color:{{text}}">Vis Adventures</div>
+                    <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">@vis_adventures</div>
+                  </div>
+                  <div style="background:{{bgTer}}; border:1px solid {{border}}; border-radius:16px; padding:6px 14px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Following</span>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">"Follow Back" tertiary state</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Followers tab shows three button states: "Follow Back" (accent-filled, they follow you), "Following" (muted, mutual), "Follow" (outline, new discovery). Priority is visually clear. Tap each to toggle — mutual followers gain the teal MUTUAL badge.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">MUTUAL badge on rows</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Teal "MUTUAL" chip at a glance shows reciprocal follows — no need to cross-reference. Identical pattern to the "OFFICIAL" badge; one shared component, two semantic values.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">"YOU" highlighted row</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">In the Following tab, the viewing user's own row is teal-tinted with a "YOU" badge — orientation anchor so you never wonder "am I on someone else's list?" Switch tabs above to see both lists.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 4: COMMUNITY DETAIL (FEED + CHAT)
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">04 — Community</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Community Detail</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden; position:relative">
+            <!-- Community banner header -->
+            <div style="height:96px; background:linear-gradient(140deg,#0e2840 0%,#1a3a5a 50%,#0a1c30 100%); position:relative; overflow:hidden">
+              <!-- Back -->
+              <div style="position:absolute; top:10px; left:16px; width:30px; height:30px; border-radius:15px; background:rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center">
+                <div style="width:7px; height:7px; border-left:2px solid #EAF6F4; border-bottom:2px solid #EAF6F4; transform:rotate(45deg); margin-left:2px"></div>
+              </div>
+              <!-- Community info -->
+              <div style="position:absolute; bottom:10px; left:16px; right:16px">
+                <div style="display:flex; align-items:flex-end; justify-content:space-between">
+                  <div>
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#EAF6F4; line-height:1.2">Dalmatian Coast<br>Explorers</div>
+                  </div>
+                  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px">
+                    <div style="background:rgba(45,212,191,0.2); border:1px solid #2DD4BF; border-radius:10px; padding:3px 9px">
+                      <span style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF">✓ JOINED</span>
+                    </div>
+                    <div style="font-family:'Space Mono',monospace; font-size:10px; color:rgba(234,246,244,0.6)">847 members</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab bar -->
+            <div style="display:flex; margin:10px 16px 0; background:{{bgTer}}; border-radius:12px; padding:3px; gap:3px">
+              <button onClick="{{setFeedTab}}" style="flex:1; background:{{feedTabBg}}; border:none; border-radius:10px; padding:8px 0; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{feedTabColor}}">Feed</button>
+              <button onClick="{{setChatTab}}" style="flex:1; background:{{chatTabBg}}; border:none; border-radius:10px; padding:8px 0; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{chatTabColor}}">Chat</button>
+              <div style="flex:1; background:{{bgTer}}; border-radius:10px; padding:8px 0; text-align:center">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textTer}}">About</span>
+              </div>
+            </div>
+
+            <!-- ── FEED TAB ── -->
+            <sc-if value="{{showFeed}}" hint-placeholder-val="{{true}}">
+              <div style="padding:10px 16px; display:flex; flex-direction:column; gap:10px">
+
+                <!-- Post 1: pinned gem share -->
+                <div style="background:{{card}}; border-radius:14px; border:0.5px solid {{border}}; overflow:hidden">
+                  <div style="display:flex; align-items:center; padding:10px 12px 8px; gap:9px">
+                    <div style="width:32px; height:32px; border-radius:16px; background:{{coral}}; display:flex; align-items:center; justify-content:center; flex:none">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:#fff">A</span>
+                    </div>
+                    <div style="flex:1">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">@ana_dalmatian</span>
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}"> shared a gem</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:5px">
+                      <div style="background:{{bgTer}}; border-radius:6px; padding:2px 6px"><span style="font-family:'Space Mono',monospace; font-size:8px; color:{{textTer}}">📌 PINNED</span></div>
+                      <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">3h</span>
+                    </div>
+                  </div>
+                  <!-- Embedded gem card -->
+                  <div style="display:flex; height:68px; margin:0 12px 10px; background:{{bgTer}}; border-radius:10px; overflow:hidden; border:0.5px solid {{border}}">
+                    <div style="width:68px; background:linear-gradient(155deg,#0e2840,#081420); flex:none"></div>
+                    <div style="padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; flex:1">
+                      <div>
+                        <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:6px; padding:1px 6px; display:inline-flex; margin-bottom:3px">
+                          <span style="font-family:'Space Grotesk',sans-serif; font-size:9px; font-weight:600; color:{{accent}}">Views</span>
+                        </div>
+                        <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:{{text}}">Modra Špilja Cave</div>
+                      </div>
+                      <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">♥ 41 · Vis Island</div>
+                    </div>
+                  </div>
+                  <!-- Reaction bar -->
+                  <div style="display:flex; align-items:center; padding:0 12px 10px; gap:12px; border-top:0.5px solid {{border}}; padding-top:8px">
+                    <div style="display:flex; gap:8px">
+                      <div style="background:{{bgTer}}; border-radius:20px; padding:4px 10px; display:flex; align-items:center; gap:4px">
+                        <span style="font-size:12px">🔥</span><span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">14</span>
+                      </div>
+                      <div style="background:{{bgTer}}; border-radius:20px; padding:4px 10px; display:flex; align-items:center; gap:4px">
+                        <span style="font-size:12px">🌊</span><span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">7</span>
+                      </div>
+                    </div>
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textTer}}; margin-left:auto">2 comments</span>
+                  </div>
+                </div>
+
+                <!-- Post 2: text post -->
+                <div style="background:{{card}}; border-radius:14px; border:0.5px solid {{border}}; padding:12px">
+                  <div style="display:flex; align-items:center; gap:9px; margin-bottom:8px">
+                    <div style="width:32px; height:32px; border-radius:16px; background:linear-gradient(145deg,#1a3a22,#0a1c10); display:flex; align-items:center; justify-content:center; flex:none">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:#EAF6F4">M</span>
+                    </div>
+                    <div style="flex:1">
+                      <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">@marko_hr</span>
+                    </div>
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">Yesterday</span>
+                  </div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}; line-height:1.55; margin-bottom:10px">Anyone heading to Vis this weekend? Water temp was 26°C last Sunday — absolutely worth it 🌊</div>
+                  <div style="display:flex; align-items:center; gap:8px; border-top:0.5px solid {{border}}; padding-top:8px">
+                    <div style="background:{{bgTer}}; border-radius:20px; padding:4px 10px; display:flex; align-items:center; gap:4px">
+                      <span style="font-size:12px">🌊</span><span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">12</span>
+                    </div>
+                    <div style="background:{{bgTer}}; border-radius:20px; padding:4px 10px; display:flex; align-items:center; gap:4px">
+                      <span style="font-size:12px">❤</span><span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">5</span>
+                    </div>
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textTer}}; margin-left:auto">Reply</span>
+                  </div>
+                </div>
+
+              </div>
+            </sc-if>
+
+            <!-- ── CHAT TAB ── -->
+            <sc-if value="{{showChat}}" hint-placeholder-val="{{false}}">
+              <div style="display:flex; flex-direction:column; height:544px; position:relative">
+                <!-- Messages -->
+                <div style="flex:1; padding:10px 14px; display:flex; flex-direction:column; gap:8px; overflow:hidden">
+                  <!-- left bubble -->
+                  <div style="display:flex; align-items:flex-end; gap:7px">
+                    <div style="width:26px; height:26px; border-radius:13px; background:linear-gradient(145deg,#0e3a52,#091c2a); flex:none; display:flex; align-items:center; justify-content:center"><span style="font-size:11px; font-weight:700; color:#EAF6F4">S</span></div>
+                    <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:14px 14px 14px 4px; padding:9px 12px; max-width:240px">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{text}}; margin-bottom:3px; line-height:1.5">Did anyone check out that cove on Šolta? Hiked there last week 🏔</div>
+                      <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">sea_walker · 10:12</div>
+                    </div>
+                  </div>
+                  <!-- right bubble (me) -->
+                  <div style="display:flex; justify-content:flex-end">
+                    <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:14px 14px 4px 14px; padding:9px 12px; max-width:240px">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{text}}; margin-bottom:3px; line-height:1.5">Yes!! Incredible spot — water's pristine and no tourists yet 💎</div>
+                      <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; text-align:right">you · 10:15</div>
+                    </div>
+                  </div>
+                  <!-- left bubble -->
+                  <div style="display:flex; align-items:flex-end; gap:7px">
+                    <div style="width:26px; height:26px; border-radius:13px; background:{{coral}}; flex:none; display:flex; align-items:center; justify-content:center"><span style="font-size:11px; font-weight:700; color:#fff">A</span></div>
+                    <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:14px 14px 14px 4px; padding:9px 12px; max-width:220px">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{text}}; margin-bottom:3px; line-height:1.5">Adding it to the community map now 🗺</div>
+                      <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">ana_dalmatian · 10:18</div>
+                    </div>
+                  </div>
+                  <!-- right bubble (me) -->
+                  <div style="display:flex; justify-content:flex-end">
+                    <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:14px 14px 4px 14px; padding:9px 12px; max-width:220px">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{text}}; margin-bottom:3px; line-height:1.5">Can you share the exact coords? 📍</div>
+                      <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; text-align:right">you · 10:19</div>
+                    </div>
+                  </div>
+                  <!-- left bubble -->
+                  <div style="display:flex; align-items:flex-end; gap:7px">
+                    <div style="width:26px; height:26px; border-radius:13px; background:linear-gradient(145deg,#0e3a52,#091c2a); flex:none; display:flex; align-items:center; justify-content:center"><span style="font-size:11px; font-weight:700; color:#EAF6F4">S</span></div>
+                    <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:14px 14px 14px 4px; padding:9px 12px; max-width:240px">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{text}}; margin-bottom:3px; line-height:1.5">Water was 26° yesterday too, perfect 🌊</div>
+                      <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">sea_walker · 10:22</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Input bar -->
+                <div style="padding:10px 14px 12px; border-top:0.5px solid {{border}}; display:flex; align-items:center; gap:8px">
+                  <div style="flex:1; background:{{bgTer}}; border-radius:20px; height:38px; display:flex; align-items:center; padding:0 14px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textTer}}">Message the group…</span>
+                  </div>
+                  <div style="width:36px; height:36px; border-radius:18px; background:{{accent}}; display:flex; align-items:center; justify-content:center; flex:none">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7L12 7M12 7L8 3M12 7L8 11" stroke="#0A1F1C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Gem-share post type</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">A post where a user shares a gem card is a distinct type — mini gem card embedded inline, not a plain link. Uses the same card component from Discover/Trip Planner. Tap Feed → Chat above to switch views.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Category emoji reactions</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Reactions use contextual emojis (🔥🌊❤) not a generic 👍 counter. Matches the app's category language and feels native to the explorer community. Available set defined in <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">REACTION_TYPES</span> constant.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Chat bubbles: teal for "me"</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Own messages use <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">accentSub + accent border</span> — consistent with selected states everywhere else. Others' messages use <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">card</span> — same contrast, different identity.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         COL 5: GEM DETAIL — COMMENTS + CHECK-IN
+    ═══════════════════════════════════════ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">05 — Gem Detail</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Comments + Check-in</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden; position:relative">
+
+            <!-- Gem header strip (scroll-context) -->
+            <div style="height:52px; background:linear-gradient(155deg,#0e2840,#081420); position:relative; overflow:hidden">
+              <!-- Fade up from below to signal "scrolled" -->
+              <div style="position:absolute; bottom:0; left:0; right:0; height:24px; background:linear-gradient(transparent,{{bg}})"></div>
+              <div style="position:absolute; top:12px; left:16px; right:16px; display:flex; align-items:center; justify-content:space-between">
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:7px; height:7px; border-left:2px solid rgba(234,246,244,0.7); border-bottom:2px solid rgba(234,246,244,0.7); transform:rotate(45deg); margin-left:2px"></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#EAF6F4">Modra Špilja Cave</span>
+                </div>
+                <div style="background:rgba(45,212,191,0.18); border:1px solid rgba(45,212,191,0.5); border-radius:8px; padding:3px 8px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:600; color:#2DD4BF">Views</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gem meta row -->
+            <div style="display:flex; align-items:center; padding:8px 16px; gap:10px; border-bottom:0.5px solid {{border}}">
+              <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">♥ 41</span>
+              <span style="color:{{textTer}}; font-size:10px">·</span>
+              <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">Vis Island, Croatia</span>
+              <span style="color:{{textTer}}; font-size:10px">·</span>
+              <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:6px; padding:1px 6px">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}">LV. 4</span>
+              </div>
+            </div>
+
+            <!-- Check-in row -->
+            <div style="display:flex; align-items:center; padding:11px 16px; gap:10px; border-bottom:0.5px solid {{border}}">
+              <div style="flex:1">
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}; margin-bottom:1px">Check In Here</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">43.0540° N, 16.1869° E · 24 check-ins</div>
+              </div>
+              <button onClick="{{doCheckIn}}" style="background:{{checkInBg}}; border:{{checkInBorder}}; border-radius:20px; padding:8px 16px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{checkInTextColor}}; flex:none">{{checkInLabel}}</button>
+            </div>
+
+            <!-- Comments section -->
+            <div style="padding:10px 16px 6px; display:flex; align-items:center; justify-content:space-between">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:2px; text-transform:uppercase">Comments (14)</div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Most recent</span>
+            </div>
+
+            <!-- Comment 1 -->
+            <div style="padding:10px 16px; border-bottom:0.5px solid {{border}}">
+              <div style="display:flex; gap:9px; align-items:flex-start">
+                <div style="width:30px; height:30px; border-radius:15px; background:linear-gradient(145deg,#0e3a52,#091c2a); flex:none; display:flex; align-items:center; justify-content:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#EAF6F4">S</span>
+                </div>
+                <div style="flex:1">
+                  <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:3px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">@sea_walker</span>
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">2h</span>
+                  </div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.5">Worth the boat ride, 100%. The bioluminescence at dusk is something else 🌊</div>
+                  <div style="display:flex; align-items:center; gap:12px; margin-top:6px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}">❤ 4</span>
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}">Reply</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comment 2 -->
+            <div style="padding:10px 16px; border-bottom:0.5px solid {{border}}">
+              <div style="display:flex; gap:9px; align-items:flex-start">
+                <div style="width:30px; height:30px; border-radius:15px; background:{{coral}}; flex:none; display:flex; align-items:center; justify-content:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#fff">A</span>
+                </div>
+                <div style="flex:1">
+                  <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:3px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">@ana_dalmatian</span>
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">5h</span>
+                  </div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.5">Go early morning — the colours in the cave are completely different. Bring a mask 🤿</div>
+                  <div style="display:flex; align-items:center; gap:12px; margin-top:6px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}">❤ 9</span>
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}">Reply</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comment 3 -->
+            <div style="padding:10px 16px; border-bottom:0.5px solid {{border}}">
+              <div style="display:flex; gap:9px; align-items:flex-start">
+                <div style="width:30px; height:30px; border-radius:15px; background:linear-gradient(145deg,#2a3a1a,#141e0a); flex:none; display:flex; align-items:center; justify-content:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#EAF6F4">I</span>
+                </div>
+                <div style="flex:1">
+                  <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:3px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">@ivan_explorer</span>
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">1d</span>
+                  </div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.5">Is it accessible by kayak? Was thinking about paddling from Komiža</div>
+                  <div style="display:flex; align-items:center; gap:12px; margin-top:6px">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}">❤ 2</span>
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}">Reply</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- View all + comment input sticky -->
+            <div style="display:flex; align-items:center; justify-content:center; padding:10px">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{accent}}">View all 14 comments →</span>
+            </div>
+
+            <!-- Input bar (sticky bottom) -->
+            <div style="position:absolute; bottom:0; left:0; right:0; padding:8px 14px 10px; border-top:0.5px solid {{border}}; background:{{bg}}; display:flex; align-items:center; gap:8px; z-index:5">
+              <div style="width:30px; height:30px; border-radius:15px; background:{{accent}}; display:flex; align-items:center; justify-content:center; flex:none">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#0A1F1C">B</span>
+              </div>
+              <div style="flex:1; background:{{bgTer}}; border-radius:20px; height:36px; display:flex; align-items:center; padding:0 14px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textTer}}">Add a comment…</span>
+              </div>
+            </div>
+
+            <!-- ── CHECK-IN CONFIRMATION SHEET ── -->
+            <div style="position:absolute; inset:0; background:{{overlayBg}}; z-index:8; opacity:{{overlayOpacity}}; pointer-events:{{overlayPointer}}; transition:opacity 0.3s"></div>
+            <div style="position:absolute; bottom:0; left:0; right:0; background:{{card}}; border-radius:24px 24px 0 0; padding:16px 24px 32px; z-index:9; transform:{{sheetTransform}}; transition:transform 0.4s cubic-bezier(0.32,0.72,0,1); border-top:1px solid {{border}}">
+              <!-- Drag handle -->
+              <div style="width:36px; height:4px; background:{{border}}; border-radius:2px; margin:0 auto 18px"></div>
+              <!-- Compass icon -->
+              <div style="width:64px; height:64px; border-radius:32px; border:2px solid {{accent}}; display:flex; align-items:center; justify-content:center; position:relative; margin:0 auto 16px; box-shadow:0 0 0 8px {{accentSub}}">
+                <div style="position:absolute; top:8px; left:50%; transform:translateX(-50%); width:2px; height:14px; background:{{coral}}; border-radius:1px 1px 0 0"></div>
+                <div style="position:absolute; bottom:8px; left:50%; transform:translateX(-50%); width:2px; height:14px; background:{{accent}}; border-radius:0 0 1px 1px"></div>
+                <div style="width:7px; height:7px; background:{{accent}}; border-radius:50%"></div>
+              </div>
+              <!-- Heading -->
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; text-align:center; margin-bottom:6px">Checked In</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}; text-align:center; margin-bottom:4px">Modra Špilja Cave</div>
+              <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}; text-align:center; margin-bottom:4px">43.0540° N, 16.1869° E</div>
+              <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; text-align:center; margin-bottom:20px">Today at 9:41 AM · check-in #25</div>
+              <!-- Actions -->
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <div style="background:{{accent}}; border-radius:12px; padding:14px; text-align:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#0A1F1C">Share This Check-in</span>
+                </div>
+                <button onClick="{{resetCheckIn}}" style="background:transparent; border:none; padding:10px; text-align:center">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Done</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotation -->
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Check-in confirmation sheet</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Bottom sheet slides up with compass motif, coordinates, and "check-in #N" count — confirmation that the action registered. Tap "Check In Here" above to see it; "Done" dismisses. Needs <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">hapticSuccess()</span> on trigger.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Comment input always visible</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The composer bar is sticky at the bottom of the screen — not hidden behind a "Comment" button. Lowers friction for contribution. Avatar in composer personalises the row. <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">KeyboardAvoidingView</span> needed here (see platform gaps).</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Coordinates on check-in</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">SpaceMono coordinates + sequential "check-in #25" counter in the sheet reinforce the explorer-data identity. The counter is a social signal: "25 people have stood exactly here." Requires <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">Expo.Location</span> at check-in time.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 2250, &quot;height&quot;: 1100}}">
+
+class Component extends DCLogic {
+  state = {
+    scheme: 'dark',
+    conv0Read: false,
+    profileFollowing: false,
+    followersTab: 'followers',
+    followerStates: { marko: false, sea: true, petra: false, ivan: true, dubrovnik: false },
+    communityTab: 'feed',
+    checkedIn: false,
+  };
+
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg       = dark ? '#0B1A1C' : '#F7FAF9';
+    const card     = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer    = dark ? '#1C3438' : '#E3F1EF';
+    const border   = dark ? '#1C3438' : '#DCE8E6';
+    const text     = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec  = dark ? '#7FA8A8' : '#5B7472';
+    const textTer  = dark ? '#5C8484' : '#8FA3A1';
+    const accent   = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub= dark ? '#1C3438' : '#E3F1EF';
+    const coral    = dark ? '#FF9F5A' : '#E8723D';
+    const homeInd  = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+    const coralSub = dark ? 'rgba(255,159,90,0.15)' : 'rgba(232,114,61,0.12)';
+
+    // ── Messages ──────────────────────────
+    const c0r = this.state.conv0Read;
+
+    // ── Profile ───────────────────────────
+    const following = this.state.profileFollowing;
+
+    // ── Followers ────────────────────────
+    const ft = this.state.followersTab;
+    const fs = this.state.followerStates;
+
+    const fbStyle = (isFollowing, label, altLabel) => ({
+      bg:     isFollowing ? bgTer   : accent,
+      text:   isFollowing ? textSec : '#0A1F1C',
+      label:  isFollowing ? 'Following' : (label || 'Follow'),
+      border: isFollowing ? `1px solid ${border}` : 'none',
+    });
+
+    // ── Community ─────────────────────────
+    const ct = this.state.communityTab;
+
+    // ── Check-in ──────────────────────────
+    const ci = this.state.checkedIn;
+
+    const marko     = fbStyle(fs.marko,     'Follow Back');
+    const sea       = fbStyle(fs.sea,       'Follow');
+    const petra     = fbStyle(fs.petra,     'Follow');
+    const ivan      = fbStyle(fs.ivan,      'Follow');
+    const dubrovnik = fbStyle(fs.dubrovnik, 'Follow');
+
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, accentText: '#0A1F1C', coral, coralSub, homeInd, dark,
+
+      toggleScheme: () => this.setState(s => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+
+      // ─ Messages ─
+      conv0Unread:    !c0r,
+      conv0Bg:        !c0r ? (dark ? 'rgba(45,212,191,0.05)' : 'rgba(15,148,136,0.05)') : 'transparent',
+      conv0Weight:    c0r ? '400' : '700',
+      conv0TimeColor: c0r ? textTer : accent,
+      conv0MsgColor:  c0r ? textSec : text,
+      readConv0:      () => this.setState({ conv0Read: true }),
+
+      // ─ Profile ─
+      followBg:        following ? bgTer  : accent,
+      followTextColor: following ? textSec: '#0A1F1C',
+      followLabel:     following ? 'Following ✓' : '+ Follow',
+      followBorder:    following ? `1.5px solid ${border}` : 'none',
+      toggleFollow:    () => this.setState(s => ({ profileFollowing: !s.profileFollowing })),
+
+      // ─ Followers tabs ─
+      showFollowers:     ft === 'followers',
+      showFollowing:     ft === 'following',
+      followersTabBg:    ft === 'followers' ? accent : bgTer,
+      followingTabBg:    ft === 'following' ? accent : bgTer,
+      followersTabColor: ft === 'followers' ? '#0A1F1C' : textSec,
+      followingTabColor: ft === 'following' ? '#0A1F1C' : textSec,
+      setFollowersTab:   () => this.setState({ followersTab: 'followers' }),
+      setFollowingTab:   () => this.setState({ followersTab: 'following' }),
+
+      // follower rows
+      markoFBg:     marko.bg,     markoFText:     marko.text,     markoFLabel:     marko.label,     markoFBorder:     marko.border,
+      seaFBg:       sea.bg,       seaFText:       sea.text,       seaFLabel:       sea.label,       seaFBorder:       sea.border,
+      petraFBg:     petra.bg,     petraFText:     petra.text,     petraFLabel:     petra.label,     petraFBorder:     petra.border,
+      ivanFBg:      ivan.bg,      ivanFText:      ivan.text,      ivanFLabel:      ivan.label,      ivanFBorder:      ivan.border,
+      dubrovnikFBg: dubrovnik.bg, dubrovnikFText: dubrovnik.text, dubrovnikFLabel: dubrovnik.label, dubrovnikFBorder: dubrovnik.border,
+
+      toggleMarko:     () => this.setState(s => ({ followerStates: { ...s.followerStates, marko:     !s.followerStates.marko     }})),
+      toggleSea:       () => this.setState(s => ({ followerStates: { ...s.followerStates, sea:       !s.followerStates.sea       }})),
+      togglePetra:     () => this.setState(s => ({ followerStates: { ...s.followerStates, petra:     !s.followerStates.petra     }})),
+      toggleIvan:      () => this.setState(s => ({ followerStates: { ...s.followerStates, ivan:      !s.followerStates.ivan      }})),
+      toggleDubrovnik: () => this.setState(s => ({ followerStates: { ...s.followerStates, dubrovnik: !s.followerStates.dubrovnik }})),
+
+      // ─ Community ─
+      showFeed:    ct === 'feed',
+      showChat:    ct === 'chat',
+      feedTabBg:   ct === 'feed' ? accent : bgTer,
+      chatTabBg:   ct === 'chat' ? accent : bgTer,
+      feedTabColor:ct === 'feed' ? '#0A1F1C' : textSec,
+      chatTabColor:ct === 'chat' ? '#0A1F1C' : textSec,
+      setFeedTab:  () => this.setState({ communityTab: 'feed' }),
+      setChatTab:  () => this.setState({ communityTab: 'chat' }),
+
+      // ─ Check-in ─
+      checkInLabel:     ci ? '✓ Checked In' : 'Check In',
+      checkInBg:        ci ? accentSub : accent,
+      checkInTextColor: ci ? accent    : '#0A1F1C',
+      checkInBorder:    ci ? `1.5px solid ${accent}` : 'none',
+      doCheckIn:        () => this.setState({ checkedIn: true }),
+      resetCheckIn:     () => this.setState({ checkedIn: false }),
+      sheetTransform:   ci ? 'translateY(0)'    : 'translateY(102%)',
+      overlayBg:        dark ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.35)',
+      overlayOpacity:   ci ? '1' : '0',
+      overlayPointer:   ci ? 'auto' : 'none',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

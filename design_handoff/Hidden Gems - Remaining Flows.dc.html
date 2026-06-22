@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing:border-box; margin:0; padding:0; } button { cursor:pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Remaining Flows</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">Gem edit, settings,<br>edge cases + web</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:560px">Gem edit + photo picker, report/flag, community creation, settings sub-screens, billing failure, rate app, web landing page and trip export — the last pieces before full handoff.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px">{{schemeLabel}}</button>
+  </div>
+
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══ COL 1: GEM EDIT ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Gem</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Edit Gem</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; display:flex; flex-direction:column">
+            <!-- Header -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 16px 10px; border-bottom:0.5px solid {{border}}; flex:none">
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Cancel</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{text}}">Edit Gem</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{accent}}">Save</div>
+            </div>
+            <!-- Existing photo + replace -->
+            <div style="height:160px; background:linear-gradient(155deg,#0e2840,#081420); position:relative; flex:none">
+              <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.55); border-radius:8px; padding:6px 10px; display:flex; align-items:center; gap:6px">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="12" height="9" rx="2" stroke="#EAF6F4" stroke-width="1.5"></rect><circle cx="7" cy="8.5" r="2" stroke="#EAF6F4" stroke-width="1.5"></circle><path d="M4 4V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="#EAF6F4" stroke-width="1.5"></path></svg>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; color:#EAF6F4">Replace photo</span>
+              </div>
+              <div style="position:absolute; bottom:0; left:0; right:0; height:40px; background:linear-gradient(transparent,{{bg}})"></div>
+            </div>
+            <!-- Fields -->
+            <div style="flex:1; overflow:hidden; padding:14px 16px; display:flex; flex-direction:column; gap:12px">
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Name</div>
+                <div style="background:{{card}}; border:1.5px solid {{accent}}; border-radius:10px; height:44px; display:flex; align-items:center; padding:0 14px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}; flex:1">Modra Špilja Cave</span>
+                  <span style="display:inline-block; width:2px; height:16px; background:{{accent}}; border-radius:1px"></span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Description</div>
+                <div style="background:{{card}}; border:1.5px solid {{border}}; border-radius:10px; height:72px; padding:10px 14px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.5">A stunning sea cave on the west side of Biševo Island…</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Category</div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap">
+                  <div style="background:{{accent}}; border-radius:20px; padding:6px 14px"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:#0A1F1C">Views</span></div>
+                  <div style="background:{{bgTer}}; border:0.5px solid {{border}}; border-radius:20px; padding:6px 14px"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Hidden</span></div>
+                  <div style="background:{{bgTer}}; border:0.5px solid {{border}}; border-radius:20px; padding:6px 14px"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Beach</span></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Visibility</div>
+                <div style="display:flex; background:{{bgTer}}; border-radius:10px; padding:3px; gap:3px">
+                  <div style="flex:1; background:{{accent}}; border-radius:8px; padding:7px 0; text-align:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:#0A1F1C">Public</span></div>
+                  <div style="flex:1; border-radius:8px; padding:7px 0; text-align:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Friends</span></div>
+                  <div style="flex:1; border-radius:8px; padding:7px 0; text-align:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Private</span></div>
+                </div>
+              </div>
+              <!-- Danger zone -->
+              <div style="margin-top:4px; padding-top:12px; border-top:0.5px solid {{border}}">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#F87171">Delete this gem</span>
+                  <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M2 4H12M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M4.5 4L5 11.5H9L9.5 4" stroke="#F87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Same form as Add Gem, pre-filled</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Reuses the Add Gem component with existing data pre-filled. Header changes Cancel/Edit Gem/Save instead of ×/Add/Post. Opened from gem detail's ··· menu → Edit.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Delete at bottom, confirm dialog required</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Delete gem is a red text link at the very bottom — visually separated by a divider. Tapping shows a confirmation bottom sheet ("Delete this gem? This cannot be undone." with red confirm + cancel). Never a single tap to delete.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Visibility toggle — new field</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Public / Friends / Private segmented control — not in Add Gem (defaults to Public). Only shown in edit so new gems are public by default, discoverable from day one.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 2: PHOTO PICKER + REPORT ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Gem</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Photo Picker + Report</div>
+      </div>
+      <!-- Photo picker action sheet -->
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:500px; display:flex; flex-direction:column; position:relative">
+            <!-- Dimmed background -->
+            <div style="flex:1; background:rgba(0,0,0,0.45)"></div>
+            <!-- Photo picker sheet -->
+            <div style="background:{{card}}; border-radius:20px 20px 0 0; padding:14px 20px 24px; border-top:0.5px solid {{border}}">
+              <div style="width:36px; height:4px; background:{{border}}; border-radius:2px; margin:0 auto 16px"></div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{text}}; margin-bottom:4px">Add photo</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; margin-bottom:16px">Show other explorers what makes this gem special</div>
+              <!-- Preview row (already has 2 photos) -->
+              <div style="display:flex; gap:8px; margin-bottom:16px; overflow:hidden">
+                <div style="width:80px; height:80px; border-radius:10px; background:linear-gradient(155deg,#0e2840,#081420); flex:none"></div>
+                <div style="width:80px; height:80px; border-radius:10px; background:linear-gradient(155deg,#162812,#0a180a); flex:none"></div>
+                <div style="width:80px; height:80px; border-radius:10px; background:{{bgTer}}; flex:none; display:flex; align-items:center; justify-content:center; border:1.5px dashed {{border}}">
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="{{textTer}}" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:2px">
+                <div style="display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:0.5px solid {{border}}">
+                  <svg width="20" height="20" viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="12" height="9" rx="2" stroke="{{accent}}" stroke-width="1.5"></rect><circle cx="7" cy="8.5" r="2" stroke="{{accent}}" stroke-width="1.5"></circle><path d="M4 4V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="{{accent}}" stroke-width="1.5"></path></svg>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Take a photo</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:0.5px solid {{border}}">
+                  <svg width="20" height="20" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="2" stroke="{{accent}}" stroke-width="1.5"></rect><path d="M1 5H13" stroke="{{accent}}" stroke-width="1"></path><rect x="3" y="7" width="3" height="3" rx="1" fill="{{accent}}"></rect></svg>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Choose from library</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; padding:13px 0">
+                  <svg width="20" height="20" viewBox="0 0 14 14" fill="none"><path d="M2 4H12M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M4.5 4L5 11.5H9L9.5 4" stroke="#F87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#F87171">Remove all photos</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Report flow sheet -->
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:420px; display:flex; flex-direction:column; position:relative">
+            <div style="flex:1; background:rgba(0,0,0,0.4)"></div>
+            <div style="background:{{card}}; border-radius:20px 20px 0 0; padding:14px 20px 20px; border-top:0.5px solid {{border}}">
+              <div style="width:36px; height:4px; background:{{border}}; border-radius:2px; margin:0 auto 16px"></div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{text}}; margin-bottom:4px">Report gem</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; margin-bottom:14px">What's wrong with this gem?</div>
+              <div style="display:flex; flex-direction:column; gap:2px">
+                <div style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:0.5px solid {{border}}">
+                  <div style="width:18px; height:18px; border-radius:9px; border:1.5px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><div style="width:8px; height:8px; border-radius:4px; background:{{accent}}"></div></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">It doesn't exist / wrong location</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:0.5px solid {{border}}">
+                  <div style="width:18px; height:18px; border-radius:9px; border:1.5px solid {{border}}; flex:none"></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Spam or commercial</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:0.5px solid {{border}}">
+                  <div style="width:18px; height:18px; border-radius:9px; border:1.5px solid {{border}}; flex:none"></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Inappropriate content</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; padding:11px 0">
+                  <div style="width:18px; height:18px; border-radius:9px; border:1.5px solid {{border}}; flex:none"></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Other</span>
+                </div>
+              </div>
+              <div style="background:#F87171; border-radius:12px; height:46px; display:flex; align-items:center; justify-content:center; margin-top:14px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:#fff">Submit report</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Photo picker supports multiple photos</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Preview row shows existing photos + an add tile. Max 5 per gem. Camera / library / remove all in a consistent bottom sheet. Uses expo-image-picker with allowsMultipleSelection:true for library flow.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Report: radio list + red submit</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">4 report reasons as radio buttons. Submit button is red (semantic — destructive action). Same sheet works for reporting a user or a comment — swap the title and reasons list. After submit: success toast + auto-dismiss.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 3: COMMUNITY CREATION + SETTINGS ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Community + Settings</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Create Community</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; display:flex; flex-direction:column">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 16px 10px; border-bottom:0.5px solid {{border}}; flex:none">
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Cancel</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{text}}">New Community</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{accent}}">Create</div>
+            </div>
+            <div style="flex:1; overflow:hidden; padding:16px; display:flex; flex-direction:column; gap:14px">
+              <!-- Cover + icon -->
+              <div style="height:120px; background:linear-gradient(140deg,#0e2840,#1a3a5a); border-radius:14px; position:relative; display:flex; align-items:flex-end; padding:10px">
+                <div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.4); border-radius:7px; padding:5px 9px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:#EAF6F4">Change cover</span>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:#EAF6F4">Dalmatian Coast Explorers</div>
+              </div>
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Community name</div>
+                <div style="background:{{card}}; border:1.5px solid {{accent}}; border-radius:10px; height:44px; display:flex; align-items:center; padding:0 14px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}; flex:1">Dalmatian Coast Explorers</span>
+                  <span style="display:inline-block; width:2px; height:16px; background:{{accent}}; border-radius:1px"></span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Description</div>
+                <div style="background:{{card}}; border:1.5px solid {{border}}; border-radius:10px; height:68px; padding:10px 14px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; line-height:1.5">A community for discovering the hidden spots of the Dalmatian coast…</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Type</div>
+                <div style="display:flex; background:{{bgTer}}; border-radius:10px; padding:3px; gap:3px">
+                  <div style="flex:1; background:{{accent}}; border-radius:8px; padding:7px 0; text-align:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:#0A1F1C">Open</span></div>
+                  <div style="flex:1; border-radius:8px; padding:7px 0; text-align:center"><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Invite only</span></div>
+                </div>
+              </div>
+              <!-- Location tag -->
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px">Location tag (optional)</div>
+                <div style="background:{{card}}; border:1.5px solid {{border}}; border-radius:10px; height:44px; display:flex; align-items:center; padding:0 14px; gap:8px">
+                  <span style="font-size:14px">📍</span>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{textSec}}">Dalmatia, Croatia</span>
+                </div>
+              </div>
+              <div style="background:{{accent}}; border-radius:12px; height:50px; display:flex; align-items:center; justify-content:center">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:#0A1F1C">Create community</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Cover renders live from name</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The cover preview at the top updates live as the name is typed — same gradient + name overlay as the community list card. "Change cover" lets the user pick a photo or a theme colour.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Open vs Invite only</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Open: anyone can join. Invite only: creator approves requests — Join button on the community card becomes "Request to join." Default is Open to maximise discovery.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 4: SETTINGS SUB-SCREENS ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">04 — Settings</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Settings Sub-Screens</div>
+      </div>
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px"><div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div></div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden">
+            <div style="display:flex; align-items:center; gap:8px; padding:2px 16px 12px">
+              <div style="width:7px; height:7px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:2px"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{text}}">Notifications</span>
+            </div>
+            <!-- Notification prefs -->
+            <div style="display:flex; flex-direction:column; gap:1px">
+              <div style="padding:8px 16px; background:{{bgTer}}">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Activity</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div><div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">New followers</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">Push + in-app</div></div>
+                <div style="width:44px; height:26px; border-radius:13px; background:{{accent}}; position:relative"><div style="position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div></div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div><div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Gem likes</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">In-app only</div></div>
+                <div style="width:44px; height:26px; border-radius:13px; background:{{accent}}; position:relative"><div style="position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div></div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div><div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Comments on my gems</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">Push + in-app</div></div>
+                <div style="width:44px; height:26px; border-radius:13px; background:{{accent}}; position:relative"><div style="position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div></div>
+              </div>
+              <div style="padding:8px 16px; background:{{bgTer}}; margin-top:2px">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Nearby</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div><div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">New gems within 1km</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">Push only</div></div>
+                <div style="width:44px; height:26px; border-radius:13px; background:{{bgTer}}; border:1.5px solid {{border}}; position:relative"><div style="position:absolute; left:3px; top:3px; width:18px; height:18px; border-radius:9px; background:{{border}}"></div></div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div><div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Community activity</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">Push + in-app</div></div>
+                <div style="width:44px; height:26px; border-radius:13px; background:{{accent}}; position:relative"><div style="position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div></div>
+              </div>
+              <!-- Privacy section -->
+              <div style="padding:8px 16px; background:{{bgTer}}; margin-top:2px">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Privacy</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div><div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Private account</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">Approve all followers</div></div>
+                <div style="width:44px; height:26px; border-radius:13px; background:{{bgTer}}; border:1.5px solid {{border}}; position:relative"><div style="position:absolute; left:3px; top:3px; width:18px; height:18px; border-radius:9px; background:{{border}}"></div></div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:{{card}}; border-bottom:0.5px solid {{border}}">
+                <div><div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:{{text}}">Show on leaderboards</div></div>
+                <div style="width:44px; height:26px; border-radius:13px; background:{{accent}}; position:relative"><div style="position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div></div>
+              </div>
+              <!-- Danger zone -->
+              <div style="padding:8px 16px; background:{{bgTer}}; margin-top:2px">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase">Account</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:{{card}}">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#F87171">Delete account</span>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 9L9 5M9 5H5M9 5V9" stroke="#F87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Push vs in-app granularity</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Each notification type shows its delivery channel (Push + in-app / in-app only / push only) as a sub-label. A single toggle controls both channels together — advanced users can dig into notification channels in OS settings.</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Delete account: multi-step with cooldown</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Tapping "Delete account" opens a sheet: step 1 explains what's deleted, step 2 asks them to type "DELETE", step 3 shows a 30-day recovery window. Account is deactivated immediately, deleted after 30 days.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 5: EDGE CASES + WEB LANDING ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">05 — Edge Cases</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Edge Cases + Web</div>
+      </div>
+
+      <!-- Billing failure -->
+      <div style="background:{{card}}; border-radius:20px; padding:16px; border:0.5px solid {{border}}">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px">Billing failure</div>
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:1.5px solid #F87171; display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:10px">
+          <div style="width:44px; height:44px; border-radius:22px; background:rgba(248,113,113,0.1); display:flex; align-items:center; justify-content:center">
+            <svg width="22" height="22" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="2" stroke="#F87171" stroke-width="1.5"></rect><path d="M1 7H13" stroke="#F87171" stroke-width="1.5"></path><circle cx="7" cy="10" r="1" fill="#F87171"></circle></svg>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:{{text}}; text-align:center">Payment failed</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}; text-align:center; line-height:1.5">Your Pro subscription couldn't be renewed. Update your payment to keep access.</div>
+          <div style="background:#F87171; border-radius:10px; padding:10px 20px; width:100%; text-align:center; margin-top:2px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:#fff">Update payment</span>
+          </div>
+          <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Grace period: 3 days remaining</span>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}; line-height:1.5">Shown as a banner on the Profile tab + a modal on next app open. Grace period = 3 days before Pro features are gated. "Update payment" opens the platform's native subscription management.</div>
+      </div>
+
+      <!-- Rate the app -->
+      <div style="background:{{card}}; border-radius:20px; padding:16px; border:0.5px solid {{border}}">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px">Rate the app</div>
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{accent}}; display:flex; flex-direction:column; align-items:center; gap:10px">
+          <div style="font-size:28px">💎</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{text}}; text-align:center">Enjoying Hidden Gems?</div>
+          <div style="display:flex; gap:4px; font-size:22px">⭐⭐⭐⭐⭐</div>
+          <div style="background:{{accent}}; border-radius:10px; padding:10px 20px; width:100%; text-align:center">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:#0A1F1C">Rate us ★★★★★</span>
+          </div>
+          <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{textSec}}">Not now</span>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}; line-height:1.5; margin-top:8px">Trigger: 5th gem saved + 3 days since install + no previous rating. Uses SKStoreReviewRequest (iOS) / in-app review API (Android). Never shown more than once per 6 months.</div>
+      </div>
+
+      <!-- Trip export -->
+      <div style="background:{{card}}; border-radius:20px; padding:16px; border:0.5px solid {{border}}">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px">Trip export + share</div>
+        <div style="background:{{bg}}; border-radius:12px; padding:14px; border:0.5px solid {{border}}; display:flex; flex-direction:column; gap:8px">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}">Share "Dalmatia 5-day"</div>
+          <div style="display:flex; flex-direction:column; gap:6px">
+            <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:{{bgTer}}; border-radius:8px">
+              <span style="font-size:16px">🔗</span>
+              <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Share link</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">hiddengems.app/trip/abc123</div></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:{{bgTer}}; border-radius:8px">
+              <span style="font-size:16px">🗺</span>
+              <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Export to Maps</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">Apple Maps / Google Maps</div></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:{{bgTer}}; border-radius:8px">
+              <span style="font-size:16px">📄</span>
+              <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Save as PDF</div><div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">Offline reference</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}; line-height:1.5; margin-top:8px">Share link generates a public read-only web view. Maps export uses Universal Links (iOS) or Google Maps intent (Android). PDF uses react-native-print.</div>
+      </div>
+
+      <!-- Web landing page mini spec -->
+      <div style="background:{{card}}; border-radius:20px; padding:16px; border:0.5px solid {{border}}">
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px">Web deep link landing</div>
+        <!-- Mini web preview -->
+        <div style="background:#0B1A1C; border-radius:12px; overflow:hidden; margin-bottom:10px">
+          <!-- Fake browser bar -->
+          <div style="background:#1C3438; padding:6px 12px; display:flex; align-items:center; gap:6px">
+            <div style="width:8px; height:8px; border-radius:4px; background:#F87171; flex:none"></div>
+            <div style="width:8px; height:8px; border-radius:4px; background:#FBBF24; flex:none"></div>
+            <div style="width:8px; height:8px; border-radius:4px; background:#22C55E; flex:none"></div>
+            <div style="flex:1; background:#0B1A1C; border-radius:4px; padding:2px 8px; margin-left:4px">
+              <span style="font-family:'Space Mono',monospace; font-size:9px; color:#5C8484">hiddengems.app/gem/modra-spilja</span>
+            </div>
+          </div>
+          <!-- Web page content -->
+          <div style="padding:16px; display:flex; flex-direction:column; gap:10px">
+            <div style="display:flex; align-items:center; gap:6px">
+              <svg viewBox="0 0 100 100" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="34" stroke="#2DD4BF" stroke-width="3" fill="none"></circle><line x1="50" y1="17" x2="50" y2="41" stroke="#FF9F5A" stroke-width="5" stroke-linecap="round"></line><line x1="50" y1="59" x2="50" y2="83" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><line x1="17" y1="50" x2="41" y2="50" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><line x1="59" y1="50" x2="83" y2="50" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"></line><circle cx="50" cy="50" r="7" fill="#2DD4BF"></circle></svg>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:#5C8484">Hidden Gems</span>
+            </div>
+            <div style="height:80px; background:linear-gradient(155deg,#0e2840,#081420); border-radius:8px"></div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:#EAF6F4">Modra Špilja Cave</div>
+            <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF">43.0540° N, 16.1869° E · Vis Island</div>
+            <!-- App CTA banner -->
+            <div style="background:#2DD4BF; border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between">
+              <div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#0A1F1C">Open in the app</div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:#0A1F1C; opacity:0.6">Better experience + save gems</div>
+              </div>
+              <div style="background:#0A1F1C; border-radius:6px; padding:5px 10px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:700; color:#2DD4BF">Open →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textTer}}; line-height:1.5">Minimal server-rendered page. Gem photo + name + coords + a sticky "Open in app" banner. App Store / Play Store CTA below if app not installed. Meta tags feed the OG image from the API.</div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:11px">
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Billing: 3-day grace + banner</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Failed payment doesn't immediately remove Pro access — 3-day grace period. Banner on Profile + modal on next open. "Update payment" routes to the platform's native IAP management (no custom UI needed).</div></div></div>
+        <div style="display:flex; gap:10px"><div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div><div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Trip export: 3 channels</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Link, Maps, PDF — served from a bottom sheet on the Trip Planner results screen. Sticky "Open in app" banner on the web landing page — tap opens the gem deep link in the app, or App Store if not installed.</div></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2200,&quot;height&quot;:1200}}">
+
+class Component extends DCLogic {
+  state = { scheme: 'dark' };
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg      = dark ? '#0B1A1C' : '#F7FAF9';
+    const card    = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer   = dark ? '#1C3438' : '#E3F1EF';
+    const border  = dark ? '#1C3438' : '#DCE8E6';
+    const text    = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent  = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub = dark ? '#1C3438' : '#E3F1EF';
+    const coral   = dark ? '#FF9F5A' : '#E8723D';
+    const homeInd = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, coral, homeInd,
+      toggleScheme: () => this.setState(s => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

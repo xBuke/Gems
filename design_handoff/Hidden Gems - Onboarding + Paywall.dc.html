@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; } button { cursor: pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <!-- PAGE HEADER -->
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Onboarding + Paywall</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">First impressions<br>+ conversion</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:520px">Every new user sees these screens. Onboarding sets the personality; paywall determines revenue. Both are redesigned to earn the app's premium positioning.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px; white-space:nowrap">{{schemeLabel}}</button>
+  </div>
+
+  <!-- PHONES ROW -->
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══ COL 1: STORY SCREENS ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Onboarding</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Story Screens</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:#0B1A1C; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:785px; position:relative; overflow:hidden">
+            <!-- Background: scene gradient (changes per story step) -->
+            <div style="position:absolute; inset:0; background:{{storyBg}}"></div>
+            <!-- Subtle texture overlay -->
+            <div style="position:absolute; inset:0; background:repeating-linear-gradient(135deg, transparent 0, transparent 40px, rgba(255,255,255,0.01) 40px, rgba(255,255,255,0.01) 41px)"></div>
+            <!-- IMPROVED: Richer gradient overlay (not flat rgba block) -->
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 30%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.88) 100%)"></div>
+
+            <!-- Status bar -->
+            <div style="position:absolute; top:0; left:0; right:0; height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px; z-index:5">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:#EAF6F4; letter-spacing:-0.3px">9:41</span>
+              <div style="display:flex; align-items:center; gap:5px">
+                <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                  <div style="width:3px; height:4px; background:#EAF6F4; border-radius:1px; opacity:0.5"></div>
+                  <div style="width:3px; height:6px; background:#EAF6F4; border-radius:1px; opacity:0.7"></div>
+                  <div style="width:3px; height:9px; background:#EAF6F4; border-radius:1px; opacity:0.9"></div>
+                  <div style="width:3px; height:11px; background:#EAF6F4; border-radius:1px"></div>
+                </div>
+                <div style="width:22px; height:11px; border:1.5px solid #EAF6F4; border-radius:3px; padding:1.5px">
+                  <div style="background:#EAF6F4; height:100%; width:72%; border-radius:1px"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- IMPROVED: Dot progress (not thin segments) -->
+            <div style="position:absolute; top:68px; left:0; right:0; display:flex; justify-content:center; gap:6px; z-index:5">
+              <div style="width:7px; height:7px; border-radius:50%; background:{{d0}}"></div>
+              <div style="width:7px; height:7px; border-radius:50%; background:{{d1}}"></div>
+              <div style="width:7px; height:7px; border-radius:50%; background:{{d2}}"></div>
+              <div style="width:7px; height:7px; border-radius:50%; background:{{d3}}"></div>
+              <div style="width:7px; height:7px; border-radius:50%; background:{{d4}}"></div>
+              <div style="width:7px; height:7px; border-radius:50%; background:{{d5}}"></div>
+            </div>
+
+            <!-- Skip -->
+            <div style="position:absolute; top:62px; right:20px; z-index:5">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:rgba(255,255,255,0.55)">Skip</span>
+            </div>
+
+            <!-- Pro badge -->
+            <sc-if value="{{storyPro}}" hint-placeholder-val="{{false}}">
+              <div style="position:absolute; top:88px; left:20px; background:rgba(255,255,255,0.1); border:1px solid #FF9F5A; border-radius:12px; padding:4px 10px; z-index:5; display:flex; align-items:center; gap:5px">
+                <span style="font-size:11px">💎</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; color:#FF9F5A; letter-spacing:0.5px">PRO</span>
+              </div>
+            </sc-if>
+
+            <!-- Bottom content -->
+            <div style="position:absolute; bottom:0; left:0; right:0; padding:20px 24px 54px; z-index:5">
+              <!-- IMPROVED: Coordinate watermark -->
+              <div style="font-family:'Space Mono',monospace; font-size:10px; color:rgba(255,255,255,0.38); margin-bottom:10px; letter-spacing:0.5px">43.0512° N, 17.4291° E</div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; color:#EAF6F4; line-height:1.25; margin-bottom:10px">{{storyText}}</div>
+              <sc-if value="{{storyHasSub}}" hint-placeholder-val="{{false}}">
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:rgba(255,255,255,0.72); line-height:1.6">{{storySub}}</div>
+              </sc-if>
+            </div>
+
+            <!-- Prev / Next nav buttons -->
+            <button onClick="{{prevStory}}" style="position:absolute; left:16px; bottom:92px; width:40px; height:40px; border-radius:20px; background:rgba(255,255,255,0.12); border:none; display:flex; align-items:center; justify-content:center; z-index:6; opacity:{{prevOpacity}}">
+              <div style="width:8px; height:8px; border-left:2px solid #EAF6F4; border-bottom:2px solid #EAF6F4; transform:rotate(45deg); margin-left:3px"></div>
+            </button>
+            <button onClick="{{nextStory}}" style="position:absolute; right:16px; bottom:92px; width:40px; height:40px; border-radius:20px; background:rgba(255,255,255,0.12); border:none; display:flex; align-items:center; justify-content:center; z-index:6">
+              <div style="width:8px; height:8px; border-right:2px solid #EAF6F4; border-top:2px solid #EAF6F4; transform:rotate(45deg); margin-right:3px"></div>
+            </button>
+
+            <!-- Home indicator -->
+            <div style="position:absolute; bottom:0; left:0; right:0; height:34px; display:flex; align-items:center; justify-content:center; z-index:5">
+              <div style="width:134px; height:5px; background:rgba(234,246,244,0.2); border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Progress dots, not segments</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">6 circular dots at 7px. Current <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">height:3</span> segments are barely legible. Dots show position clearly and look intentional. Use arrows above to navigate stories.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Coordinate watermark</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">SpaceMono coords at <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">opacity:0.38</span> above the story text. Subtle — feels like a data layer. Zero cost, high personality.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Gradient overlay depth</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Replaced flat <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">rgba(0,0,0,0.55)</span> block with a 4-stop gradient: transparent → faint → medium → opaque. Text readable, image still breathes at the top.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 2: CATEGORY PICKER ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Onboarding</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Category Picker</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; position:relative">
+            <!-- Header -->
+            <div style="padding:52px 20px 4px; display:flex; align-items:center; justify-content:center; gap:10px">
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}">What calls to you?</div>
+              <!-- IMPROVED: Selected count badge -->
+              <div style="background:{{accentSub}}; border:1px solid {{accent}}; border-radius:12px; padding:3px 8px">
+                <span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:{{accent}}">{{catCount}}</span>
+              </div>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; text-align:center; margin-bottom:16px; padding:0 20px">Pick as many as you like</div>
+
+            <!-- IMPROVED: Category grid with gradient backgrounds -->
+            <div style="padding:0 16px; display:flex; flex-wrap:wrap; gap:8px; padding-bottom:80px">
+              <sc-for list="{{cats}}" as="cat" hint-placeholder-count="8">
+                <div onClick="{{cat.toggle}}" style="width:calc(50% - 4px); aspect-ratio:1; border-radius:16px; overflow:hidden; position:relative; cursor:pointer; flex:none; border:{{cat.cardBorder}}">
+                  <div style="position:absolute; inset:0; background:{{cat.bg}}"></div>
+                  <div style="position:absolute; bottom:0; left:0; right:0; height:64px; background:linear-gradient(transparent, rgba(0,0,0,0.72))"></div>
+                  <div style="position:absolute; bottom:10px; left:12px; display:flex; align-items:center; gap:6px">
+                    <span style="font-size:15px">{{cat.emoji}}</span>
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#EAF6F4">{{cat.name}}</span>
+                  </div>
+                  <sc-if value="{{cat.selected}}" hint-placeholder-val="{{false}}">
+                    <div style="position:absolute; top:8px; right:8px; width:22px; height:22px; border-radius:11px; background:#2DD4BF; display:flex; align-items:center; justify-content:center">
+                      <span style="color:#0A1F1C; font-size:12px; font-weight:700; line-height:1">✓</span>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- IMPROVED: Continue button shows count -->
+            <div style="position:absolute; bottom:50px; left:16px; right:16px; background:{{continueBg}}; border-radius:12px; padding:16px; text-align:center; border:{{continueBorder}}">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{continueColor}}">Continue{{catCountLabel}}</span>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Live selected counter</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Teal count badge next to the title updates as you tap. "Continue (3)" on the button confirms selections are registered. Tap categories to try it.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Button state tracks selections</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Continue button is greyed/borderless at 0 selections, accent-filled at 1+. Currently it's always teal — implies selections are optional when they're required.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Gradient-toned category cards</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Each category has a unique color-temperature gradient (warm for social/food, cool for views/sport, deep for urban) — more personality than the flat <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">cat.color + '33'</span> fill.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 3: TRIAL OFFER ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Onboarding</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Trial Offer</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden">
+            <!-- IMPROVED: Teal hero section with compass -->
+            <div style="height:140px; background:linear-gradient(160deg, #0B2E2B 0%, #142B2E 40%, #1C3438 100%); position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px">
+              <!-- Radial glow -->
+              <div style="position:absolute; top:-20px; left:50%; transform:translateX(-50%); width:200px; height:200px; background:radial-gradient(circle, rgba(45,212,191,0.18) 0%, transparent 70%)"></div>
+              <!-- Compass icon -->
+              <div style="width:60px; height:60px; border-radius:30px; border:2px solid #2DD4BF; display:flex; align-items:center; justify-content:center; position:relative; z-index:1">
+                <div style="position:absolute; top:8px; left:50%; transform:translateX(-50%); width:2px; height:16px; background:#FF9F5A; border-radius:1px 1px 0 0"></div>
+                <div style="position:absolute; bottom:8px; left:50%; transform:translateX(-50%); width:2px; height:16px; background:#2DD4BF; border-radius:0 0 1px 1px"></div>
+                <div style="width:7px; height:7px; background:#2DD4BF; border-radius:50%"></div>
+              </div>
+              <!-- IMPROVED: 3 DAYS FREE badge -->
+              <div style="background:#FF9F5A; border-radius:20px; padding:5px 14px; z-index:1">
+                <span style="font-family:'Space Mono',monospace; font-size:12px; font-weight:700; color:#0A1F1C; letter-spacing:1px">3 DAYS FREE</span>
+              </div>
+            </div>
+
+            <!-- Content -->
+            <div style="padding:16px 20px">
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:{{text}}; text-align:center; margin-bottom:5px">Try Hidden Gems Premium</div>
+              <!-- IMPROVED: Pricing crystal clear in SpaceMono -->
+              <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}; text-align:center; margin-bottom:18px">€0 today · €5.99/month after · cancel anytime</div>
+
+              <!-- IMPROVED: Features in 2 columns -->
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; margin-bottom:20px">
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:18px; height:18px; border-radius:9px; background:{{accentSub}}; border:1px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><span style="font-size:10px; color:{{accent}}">✓</span></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Gem Swipe</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:18px; height:18px; border-radius:9px; background:{{accentSub}}; border:1px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><span style="font-size:10px; color:{{accent}}">✓</span></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Unlimited drops</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:18px; height:18px; border-radius:9px; background:{{accentSub}}; border:1px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><span style="font-size:10px; color:{{accent}}">✓</span></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Trip Planner</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:18px; height:18px; border-radius:9px; background:{{accentSub}}; border:1px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><span style="font-size:10px; color:{{accent}}">✓</span></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Private pins</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:18px; height:18px; border-radius:9px; background:{{accentSub}}; border:1px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><span style="font-size:10px; color:{{accent}}">✓</span></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Communities</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:18px; height:18px; border-radius:9px; background:{{accentSub}}; border:1px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><span style="font-size:10px; color:{{accent}}">✓</span></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">No ads</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:18px; height:18px; border-radius:9px; background:{{accentSub}}; border:1px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><span style="font-size:10px; color:{{accent}}">✓</span></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Custom categories</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px">
+                  <div style="width:18px; height:18px; border-radius:9px; background:{{accentSub}}; border:1px solid {{accent}}; display:flex; align-items:center; justify-content:center; flex:none"><span style="font-size:10px; color:{{accent}}">✓</span></div>
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">Hidden Gems cat.</span>
+                </div>
+              </div>
+
+              <!-- CTA -->
+              <div style="background:{{accent}}; border-radius:12px; padding:16px; text-align:center; margin-bottom:12px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{accentText}}">Start Free Trial</span>
+              </div>
+              <div style="text-align:center">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}">Maybe later</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Hero section replaces lone icon</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Teal gradient band + compass + coral "3 DAYS FREE" badge creates a visual anchor. The lone floating diamond icon at 60px with 60px margin-top is a missed brand moment.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Pricing above the fold in SpaceMono</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"€0 today · €5.99/month after" shown immediately. Currently pricing is <em>below</em> the 8-item feature list — users must scroll past everything before seeing the cost.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">2-column feature grid</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">8 features in 2 columns = 4 rows. Faster scan than a single column at a conversion moment. Same content, half the vertical height.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 4: YOU'RE ALL SET ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">04 — Onboarding</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">You're All Set</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px">
+            <!-- IMPROVED: Compass hero (not generic checkmark) -->
+            <div style="width:96px; height:96px; border-radius:48px; border:2.5px solid {{accent}}; display:flex; align-items:center; justify-content:center; position:relative; margin-bottom:24px; box-shadow:0 0 0 12px {{accentSub}}, 0 0 0 24px {{bg}}">
+              <!-- N needle (coral) -->
+              <div style="position:absolute; top:10px; left:50%; transform:translateX(-50%); width:3px; height:24px; background:{{coral}}; border-radius:2px 2px 0 0"></div>
+              <!-- S needle (teal) -->
+              <div style="position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:3px; height:24px; background:{{accent}}; border-radius:0 0 2px 2px"></div>
+              <!-- E needle -->
+              <div style="position:absolute; right:10px; top:50%; transform:translateY(-50%); height:3px; width:24px; background:{{accent}}; border-radius:0 2px 2px 0"></div>
+              <!-- W needle -->
+              <div style="position:absolute; left:10px; top:50%; transform:translateY(-50%); height:3px; width:24px; background:{{accent}}; border-radius:2px 0 0 2px"></div>
+              <div style="width:10px; height:10px; background:{{accent}}; border-radius:50%"></div>
+            </div>
+
+            <!-- IMPROVED: "Welcome, Explorer" not just "You're all set" -->
+            <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:10px">Welcome, Explorer</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{text}}; text-align:center; line-height:1.2; margin-bottom:8px">Your adventure starts here.</div>
+            <!-- IMPROVED: Coordinates personalisation -->
+            <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}; margin-bottom:8px">43.0512° N, 17.4291° E</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; text-align:center; line-height:1.6; margin-bottom:36px; max-width:280px">Your feed is ready. Start discovering the places most people will never find.</div>
+
+            <!-- CTA -->
+            <div style="width:100%; background:{{accent}}; border-radius:14px; padding:18px; text-align:center; box-shadow:0 8px 24px rgba(45,212,191,0.25)">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{accentText}}">Start Exploring →</span>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Compass replaces checkmark</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Generic ✓ icon replaced with the app's own compass motif (teal ring, coral N-needle). Consistent with the auth screen logo and the app icon. Last screen should reinforce the brand, not use a system symbol.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">"Welcome, Explorer" + coords</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">SpaceMono "WELCOME, EXPLORER" label + coordinates creates the feeling of being logged as a new field agent. Memorable first impression > generic "You're all set".</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Button with glow shadow</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5"><span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">box-shadow:0 8px 24px rgba(45,212,191,0.25)</span> gives the final CTA lift. The launchpad moment should feel elevated, not flat.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 5: PAYWALL ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">05 — Paywall</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Pricing Screen</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:700px; overflow:hidden">
+            <!-- Close button -->
+            <div style="position:absolute; top:66px; right:18px; width:32px; height:32px; border-radius:16px; background:{{bgTer}}; display:flex; align-items:center; justify-content:center; z-index:5">
+              <span style="color:{{textSec}}; font-size:16px; line-height:1">✕</span>
+            </div>
+
+            <!-- IMPROVED: Hero section -->
+            <div style="padding:16px 20px 0; display:flex; flex-direction:column; align-items:center">
+              <div style="position:relative; margin-bottom:12px">
+                <div style="position:absolute; inset:-20px; background:radial-gradient(circle, {{coralSub}} 0%, transparent 70%)"></div>
+                <span style="font-size:56px; position:relative; z-index:1">💎</span>
+              </div>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:{{text}}; margin-bottom:4px">Hidden Gems Premium</div>
+              <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}; margin-bottom:16px; letter-spacing:0.3px">Unlock the full explorer experience</div>
+
+              <!-- IMPROVED: Feature groups (not a flat list) -->
+              <div style="width:100%; background:{{card}}; border-radius:14px; padding:12px 14px; margin-bottom:12px; border:0.5px solid {{border}}">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">Discover More</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap">
+                  <div style="background:{{accentSub}}; border-radius:8px; padding:4px 10px; display:flex; align-items:center; gap:5px"><span style="font-size:12px">🃏</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{accent}}">Gem Swipe</span></div>
+                  <div style="background:{{accentSub}}; border-radius:8px; padding:4px 10px; display:flex; align-items:center; gap:5px"><span style="font-size:12px">🗺</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{accent}}">Trip Planner</span></div>
+                  <div style="background:{{accentSub}}; border-radius:8px; padding:4px 10px; display:flex; align-items:center; gap:5px"><span style="font-size:12px">💎</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{accent}}">Hidden Gems cat.</span></div>
+                </div>
+              </div>
+              <div style="width:100%; background:{{card}}; border-radius:14px; padding:12px 14px; margin-bottom:12px; border:0.5px solid {{border}}">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{coral}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px">Create + Share</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap">
+                  <div style="background:{{coralSub}}; border-radius:8px; padding:4px 10px; display:flex; align-items:center; gap:5px"><span style="font-size:12px">👥</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{coral}}">Communities</span></div>
+                  <div style="background:{{coralSub}}; border-radius:8px; padding:4px 10px; display:flex; align-items:center; gap:5px"><span style="font-size:12px">🏷</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{coral}}">Custom cats.</span></div>
+                  <div style="background:{{coralSub}}; border-radius:8px; padding:4px 10px; display:flex; align-items:center; gap:5px"><span style="font-size:12px">🔒</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{coral}}">Private pins</span></div>
+                </div>
+              </div>
+
+              <!-- IMPROVED: Pricing plans — Yearly dominant -->
+              <!-- Monthly (de-emphasised) -->
+              <button onClick="{{setMonthly}}" style="width:100%; background:{{monthlyCardBg}}; border-radius:12px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; border:{{monthlyBorder}}; cursor:pointer">
+                <div style="text-align:left">
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; margin-bottom:2px">Monthly</div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; color:{{text}}">5.99<span style="font-size:13px; font-weight:500">€/mo</span></div>
+                </div>
+                <div style="width:20px; height:20px; border-radius:10px; border:1.5px solid {{monthlyRadioColor}}; display:flex; align-items:center; justify-content:center">
+                  <sc-if value="{{isMonthly}}" hint-placeholder-val="{{false}}">
+                    <div style="width:10px; height:10px; border-radius:5px; background:{{accent}}"></div>
+                  </sc-if>
+                </div>
+              </button>
+
+              <!-- Yearly (featured/dominant) -->
+              <button onClick="{{setYearly}}" style="width:100%; background:{{yearlyCardBg}}; border-radius:12px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; border:{{yearlyBorder}}; cursor:pointer; position:relative; overflow:hidden">
+                <!-- Best value badge -->
+                <div style="position:absolute; top:0; right:0; background:{{accent}}; border-radius:0 12px 0 10px; padding:4px 10px">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; color:{{accentText}}">BEST VALUE</span>
+                </div>
+                <div style="text-align:left">
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}; margin-bottom:2px">Yearly</div>
+                  <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:{{text}}">44.99<span style="font-size:13px; font-weight:500">€/yr</span></div>
+                  <div style="font-family:'Space Mono',monospace; font-size:11px; color:{{accent}}">3.75€/mo · Save 37%</div>
+                </div>
+                <div style="width:20px; height:20px; border-radius:10px; border:1.5px solid {{yearlyRadioColor}}; display:flex; align-items:center; justify-content:center">
+                  <sc-if value="{{isYearly}}" hint-placeholder-val="{{true}}">
+                    <div style="width:10px; height:10px; border-radius:5px; background:{{accent}}"></div>
+                  </sc-if>
+                </div>
+              </button>
+
+              <!-- Lifetime (coral, scarcity) -->
+              <button onClick="{{setLifetime}}" style="width:100%; background:{{lifetimeCardBg}}; border-radius:12px; padding:12px 16px; margin-bottom:12px; border:{{lifetimeBorder}}; cursor:pointer; position:relative; overflow:hidden">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+                  <div style="text-align:left">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px">
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textSec}}">Lifetime</div>
+                      <div style="background:{{coral}}; border-radius:6px; padding:2px 7px"><span style="font-family:'Space Grotesk',sans-serif; font-size:9px; font-weight:700; color:#fff">FOUNDING MEMBER</span></div>
+                    </div>
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; color:{{text}}">119<span style="font-size:13px; font-weight:500">€</span></div>
+                  </div>
+                  <div style="width:20px; height:20px; border-radius:10px; border:1.5px solid {{lifetimeRadioColor}}; display:flex; align-items:center; justify-content:center">
+                    <sc-if value="{{isLifetime}}" hint-placeholder-val="{{false}}">
+                      <div style="width:10px; height:10px; border-radius:5px; background:{{coral}}"></div>
+                    </sc-if>
+                  </div>
+                </div>
+                <!-- Slots progress bar -->
+                <div style="height:4px; background:{{bgTer}}; border-radius:2px; overflow:hidden; margin-bottom:4px">
+                  <div style="width:72%; height:100%; background:{{coral}}; border-radius:2px"></div>
+                </div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">280 of 1000 founding spots left</div>
+              </button>
+
+              <!-- Main CTA -->
+              <div style="width:100%; background:{{ctaBg}}; border-radius:12px; padding:16px; text-align:center; margin-bottom:8px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:{{accentText}}">{{ctaText}}</span>
+              </div>
+              <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}; text-align:center">Cancel anytime · Secure payment</div>
+            </div>
+          </div>
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Feature groups, not flat list</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">8 features split into "Discover More" (teal) and "Create + Share" (coral) groups as pill chips. Faster to scan than a single column of checkmarks. Matches the app's teal/coral duality.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Yearly plan is visually dominant</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Yearly card is larger, accent-bordered, with a corner "BEST VALUE" badge. Monthly de-emphasised. Radio-button selectors — tap each plan to see CTA update. Currently all 3 cards look equal-weight.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">"FOUNDING MEMBER" framing</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Lifetime badge changed from "LIMITED" to "FOUNDING MEMBER" — same scarcity signal, more emotionally resonant. "Early supporter pricing" framing turns a discount into an identity.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 2200, &quot;height&quot;: 1100}}">
+class Component extends DCLogic {
+  state = {
+    scheme: 'dark',
+    storyIdx: 0,
+    selectedCats: ['nature', 'views'],
+    payPlan: 'yearly',
+  };
+
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg = dark ? '#0B1A1C' : '#F7FAF9';
+    const card = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer = dark ? '#1C3438' : '#E3F1EF';
+    const border = dark ? '#1C3438' : '#DCE8E6';
+    const text = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub = dark ? '#1C3438' : '#E3F1EF';
+    const coral = dark ? '#FF9F5A' : '#E8723D';
+    const coralSub = dark ? 'rgba(255,159,90,0.15)' : 'rgba(232,114,61,0.12)';
+    const homeInd = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+
+    // Stories
+    const stories = [
+      { text: "Most places worth seeing aren't on any map.", sub: null, pro: false, bg: 'linear-gradient(155deg,#162812 0%,#1e3a1a 30%,#142210 60%,#0a180a 100%)' },
+      { text: "The best ones get passed between people who've actually been there.", sub: null, pro: false, bg: 'linear-gradient(155deg,#0e2840 0%,#1a3a5a 30%,#122038 60%,#081420 100%)' },
+      { text: "Some gems you find. Others find you.", sub: 'Swipe through curated spots picked just for you', pro: true, bg: 'linear-gradient(155deg,#3a1a0a 0%,#4a2810 30%,#2a1a08 60%,#1a1006 100%)' },
+      { text: "Build your own circle of secrets.", sub: 'Create communities around what you love — local crews, sunset chasers', pro: true, bg: 'linear-gradient(155deg,#160a2a 0%,#220e3a 30%,#180c2e 60%,#0e0820 100%)' },
+      { text: "Going somewhere new? We'll map it out.", sub: "Tell us where you're headed — we'll surface the gems worth the detour", pro: true, bg: 'linear-gradient(155deg,#0a1a2a 0%,#102238 30%,#0a1828 60%,#060e18 100%)' },
+      { text: "Hidden Gems is where that happens.", sub: null, pro: false, bg: 'linear-gradient(155deg,#1a0e28 0%,#241438 30%,#1a102a 60%,#0e0818 100%)' },
+    ];
+    const si = this.state.storyIdx;
+    const story = stories[si];
+    const dotFill = '#EAF6F4';
+    const dotDim = 'rgba(234,246,244,0.3)';
+
+    // Categories
+    const catDefs = [
+      { id: 'nature', name: 'Nature', emoji: '🌿', bg: 'linear-gradient(155deg,#162812,#0a180a)' },
+      { id: 'views', name: 'Views', emoji: '👁', bg: 'linear-gradient(155deg,#0e2840,#081420)' },
+      { id: 'sport', name: 'Sport', emoji: '🚴', bg: 'linear-gradient(155deg,#1a3a4a,#0a2030)' },
+      { id: 'social', name: 'Social', emoji: '🍺', bg: 'linear-gradient(155deg,#3a2a18,#201208)' },
+      { id: 'urban', name: 'Urban', emoji: '🎨', bg: 'linear-gradient(155deg,#1a1a3a,#0a0a20)' },
+      { id: 'culture', name: 'Culture', emoji: '🏛', bg: 'linear-gradient(155deg,#3a2010,#1a1008)' },
+      { id: 'food', name: 'Food', emoji: '🍜', bg: 'linear-gradient(155deg,#3a1a18,#200a0a)' },
+      { id: 'beach', name: 'Beach', emoji: '🏖', bg: 'linear-gradient(155deg,#1a3a38,#0a2028)' },
+    ];
+    const cats = catDefs.map(c => {
+      const sel = this.state.selectedCats.includes(c.id);
+      return {
+        ...c,
+        selected: sel,
+        cardBorder: sel ? `3px solid ${accent}` : '0.5px solid rgba(255,255,255,0.08)',
+        toggle: () => this.setState(s => ({
+          selectedCats: s.selectedCats.includes(c.id)
+            ? s.selectedCats.filter(x => x !== c.id)
+            : [...s.selectedCats, c.id]
+        })),
+      };
+    });
+    const catCount = this.state.selectedCats.length;
+
+    // Paywall
+    const pp = this.state.payPlan;
+    const ctaBg = pp === 'lifetime' ? coral : accent;
+
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, accentText: '#0A1F1C', coral, coralSub, homeInd, dark,
+      toggleScheme: () => this.setState(s => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+
+      // Story
+      storyBg: story.bg,
+      storyText: story.text,
+      storySub: story.sub || '',
+      storyPro: story.pro,
+      storyHasSub: !!story.sub,
+      prevStory: () => this.setState(s => ({ storyIdx: Math.max(0, s.storyIdx - 1) })),
+      nextStory: () => this.setState(s => ({ storyIdx: Math.min(5, s.storyIdx + 1) })),
+      prevOpacity: si > 0 ? '1' : '0.3',
+      d0: si >= 0 ? dotFill : dotDim,
+      d1: si >= 1 ? dotFill : dotDim,
+      d2: si >= 2 ? dotFill : dotDim,
+      d3: si >= 3 ? dotFill : dotDim,
+      d4: si >= 4 ? dotFill : dotDim,
+      d5: si >= 5 ? dotFill : dotDim,
+
+      // Categories
+      cats,
+      catCount,
+      catCountLabel: catCount > 0 ? ` (${catCount})` : '',
+      continueBg: catCount > 0 ? accent : bgTer,
+      continueColor: catCount > 0 ? '#0A1F1C' : textSec,
+      continueBorder: catCount > 0 ? 'none' : `0.5px solid ${border}`,
+
+      // Paywall
+      setMonthly: () => this.setState({ payPlan: 'monthly' }),
+      setYearly: () => this.setState({ payPlan: 'yearly' }),
+      setLifetime: () => this.setState({ payPlan: 'lifetime' }),
+      isMonthly: pp === 'monthly',
+      isYearly: pp === 'yearly',
+      isLifetime: pp === 'lifetime',
+      monthlyCardBg: pp === 'monthly' ? accentSub : card,
+      yearlyCardBg: pp === 'yearly' ? accentSub : card,
+      lifetimeCardBg: pp === 'lifetime' ? coralSub : card,
+      monthlyBorder: pp === 'monthly' ? `1.5px solid ${accent}` : `0.5px solid ${border}`,
+      yearlyBorder: pp === 'yearly' ? `2px solid ${accent}` : `1px solid ${accent}`,
+      lifetimeBorder: pp === 'lifetime' ? `1.5px solid ${coral}` : `0.5px solid ${coral}`,
+      monthlyRadioColor: pp === 'monthly' ? accent : textTer,
+      yearlyRadioColor: pp === 'yearly' ? accent : textTer,
+      lifetimeRadioColor: pp === 'lifetime' ? coral : textTer,
+      ctaBg,
+      ctaText: pp === 'monthly' ? 'Start Monthly' : pp === 'yearly' ? 'Start Yearly — Save 37%' : 'Claim Founding Member Deal',
+    };
+  }
+}
+</script>
+</body>
+</html>

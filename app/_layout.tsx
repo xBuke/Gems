@@ -6,10 +6,11 @@ import { ThemeProvider, useTheme } from '@/lib/ThemeContext';
 import { startTracking, stopTracking } from '@/lib/locationTracker';
 import { darkTheme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import * as NavigationBar from 'expo-navigation-bar';
 import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function OnboardingGate() {
@@ -41,11 +42,23 @@ function OnboardingGate() {
   return null;
 }
 
+function ThemeEffects() {
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    void NavigationBar.setBackgroundColorAsync(theme.background);
+  }, [theme.background]);
+
+  return null;
+}
+
 function RootNavigator() {
   const { theme } = useTheme();
 
   return (
     <>
+      <ThemeEffects />
       <OnboardingGate />
       <Stack
         screenOptions={{

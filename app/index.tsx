@@ -1,5 +1,6 @@
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { SegmentedPill } from '@/components/SegmentedPill';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
@@ -13,6 +14,7 @@ import { PENDING_PREFS_KEY } from '@/lib/onboarding';
 import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticSelection } from '@/lib/haptics';
 import { getMysteryGemOfTheWeek } from '@/lib/mysteryGem';
@@ -1108,7 +1110,7 @@ export default function DiscoverScreen() {
             <View
               style={[
                 styles.mysteryPlaceholderGradient,
-                { backgroundColor: theme.backgroundTertiary },
+                { backgroundColor: theme.bgTertiary },
               ]}
             />
           </View>
@@ -1121,6 +1123,9 @@ export default function DiscoverScreen() {
         <View style={styles.mysteryBottom}>
           <Text style={styles.mysteryTitle} numberOfLines={2}>
             {mysteryGem.title}
+          </Text>
+          <Text style={styles.mysteryCoords}>
+            {formatCoordinates(mysteryGem.latitude, mysteryGem.longitude)}
           </Text>
           <View style={styles.mysteryMetaRow}>
             <Ionicons name="heart" size={11} color="rgba(255,255,255,0.85)" />
@@ -1139,39 +1144,41 @@ export default function DiscoverScreen() {
 
       {filteredGemOfTheDay && (
         <>
-          <Text style={styles.sectionTitle}>Gem of the Day</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Gem of the Day</Text>
+            <Ionicons name="arrow-forward" size={16} color={theme.accent} />
+          </View>
           <TouchableOpacity
-            style={styles.heroCard}
+            style={styles.gemOfDayCard}
             onPress={() => router.push('/gem/' + filteredGemOfTheDay.id)}
             activeOpacity={0.85}>
             {filteredGemOfTheDay.image_url ? (
               <Image
                 source={{ uri: filteredGemOfTheDay.image_url }}
-                style={styles.heroImage}
+                style={styles.gemOfDayImage}
                 contentFit="cover"
                 transition={200}
                 cachePolicy="memory-disk"
               />
             ) : (
-              <View style={[styles.heroImage, styles.heroImagePlaceholder]} />
+              <View style={[styles.gemOfDayImage, styles.gemOfDayImagePlaceholder]} />
             )}
-            <View style={styles.heroOverlay} />
-            <View style={styles.heroLabel}>
-              <Text style={styles.heroLabelText}>GEM OF THE DAY</Text>
-            </View>
-            <View style={styles.heroBottom}>
-              <View style={styles.heroBottomText}>
-                <Text style={styles.heroTitle} numberOfLines={2}>
-                  {filteredGemOfTheDay.title}
-                </Text>
-                <Text style={styles.heroMeta}>
-                  {filteredGemOfTheDay.category}
-                  {getGemDistance(filteredGemOfTheDay) != null
-                    ? ` · ${formatDistanceKm(getGemDistance(filteredGemOfTheDay)!)}`
-                    : ''}
-                </Text>
+            <View style={styles.gemOfDayContent}>
+              <View style={styles.gemOfDayLabel}>
+                <Text style={styles.gemOfDayLabelText}>GEM OF THE DAY</Text>
               </View>
-              <Ionicons name="arrow-forward" size={20} color={theme.text} />
+              <Text style={styles.gemOfDayTitle} numberOfLines={1}>
+                {filteredGemOfTheDay.title}
+              </Text>
+              <Text style={styles.gemOfDayCoords}>
+                {formatCoordinates(filteredGemOfTheDay.latitude, filteredGemOfTheDay.longitude)}
+              </Text>
+              <Text style={styles.gemOfDayMeta}>
+                {filteredGemOfTheDay.category}
+                {getGemDistance(filteredGemOfTheDay) != null
+                  ? ` · ${formatDistanceKm(getGemDistance(filteredGemOfTheDay)!)}`
+                  : ''}
+              </Text>
             </View>
           </TouchableOpacity>
         </>
@@ -1369,6 +1376,17 @@ export default function DiscoverScreen() {
         showsHorizontalScrollIndicator={false}
         style={{ marginBottom: 8 }}
         contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}>
+        {initialLoading ? (
+          <>
+            {[80, 100, 90, 85].map((width, i) => (
+              <View key={i} style={{ width, marginRight: 10 }}>
+                <SkeletonCard height={36} borderRadius={20} />
+              </View>
+            ))}
+          </>
+        ) : null}
+        {!initialLoading && (
+        <>
         <TouchableOpacity
           style={{
             paddingHorizontal: 18,
@@ -1470,6 +1488,8 @@ export default function DiscoverScreen() {
             </TouchableOpacity>
           );
         })}
+        </>
+        )}
       </ScrollView>
 
       {activeMainCategory && !activeCustomCategory && (
@@ -1521,24 +1541,20 @@ export default function DiscoverScreen() {
         </View>
       )}
 
-      <View style={styles.feedTabContainer}>
-        <TouchableOpacity
-          style={[styles.feedTab, feedTab === 'forYou' && styles.feedTabActive]}
-          onPress={() => setFeedTab('forYou')}
-          activeOpacity={0.8}>
-          <Text style={[styles.feedTabText, feedTab === 'forYou' && styles.feedTabTextActive]}>
-            For You
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.feedTab, feedTab === 'following' && styles.feedTabActive]}
-          onPress={() => setFeedTab('following')}
-          activeOpacity={0.8}>
-          <Text
-            style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
-            Following
-          </Text>
-        </TouchableOpacity>
+      <View style={{ marginBottom: 16 }}>
+        <SegmentedPill
+          tabs={[
+            { key: 'forYou', label: 'For You' },
+            { key: 'following', label: 'Following' },
+          ]}
+          activeKey={feedTab}
+          onChange={(key) => {
+            hapticSelection();
+            setFeedTab(key as FeedTab);
+          }}
+          theme={theme}
+          width={226}
+        />
       </View>
 
       {feedError && <ErrorBanner message={feedError} onRetry={handleRetryFeed} />}
@@ -1709,28 +1725,31 @@ const createStyles = (theme: Theme) =>
   },
   feedTabContainer: {
     flexDirection: 'row',
+    alignSelf: 'center',
+    width: 226,
     backgroundColor: theme.card,
-    borderRadius: 10,
-    padding: 4,
-    marginHorizontal: 20,
+    borderRadius: 24,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    padding: 3,
     marginBottom: 16,
   },
   feedTab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 9,
+    borderRadius: 20,
   },
   feedTabActive: {
     backgroundColor: theme.accent,
   },
   feedTabText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: theme.textSecondary,
   },
   feedTabTextActive: {
-    color: theme.background,
+    color: theme.accentText,
     fontWeight: '600',
   },
   scrollContent: {
@@ -1743,9 +1762,15 @@ const createStyles = (theme: Theme) =>
     color: theme.text,
     marginBottom: 12,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   mysteryCard: {
     width: '100%',
-    height: 160,
+    height: 190,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 16,
@@ -1802,8 +1827,14 @@ const createStyles = (theme: Theme) =>
   },
   mysteryTitle: {
     fontFamily: 'SpaceGrotesk-Bold',
-    fontSize: 18,
+    fontSize: 21,
     color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  mysteryCoords: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 10,
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   mysteryMetaRow: {
@@ -1816,67 +1847,55 @@ const createStyles = (theme: Theme) =>
     fontSize: 11,
     color: 'rgba(255,255,255,0.85)',
   },
-  heroCard: {
-    width: '100%',
-    height: 180,
-    borderRadius: 16,
+  gemOfDayCard: {
+    flexDirection: 'row',
+    height: 110,
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+    borderRadius: 14,
     overflow: 'hidden',
     marginBottom: 24,
-    position: 'relative',
   },
-  heroImage: {
-    width: '100%',
+  gemOfDayImage: {
+    width: 86,
     height: '100%',
   },
-  heroImagePlaceholder: {
-    backgroundColor: theme.backgroundTertiary,
+  gemOfDayImagePlaceholder: {
+    backgroundColor: theme.bgTertiary,
   },
-  heroOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 120,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  gemOfDayContent: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    gap: 3,
   },
-  heroLabel: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
+  gemOfDayLabel: {
+    alignSelf: 'flex-start',
     backgroundColor: theme.coral,
-    borderRadius: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
   },
-  heroLabelText: {
-    fontSize: 10,
+  gemOfDayLabelText: {
+    fontSize: 9,
     fontFamily: 'SpaceGrotesk-Bold',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
-  heroBottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  heroBottomText: {
-    flex: 1,
-    marginRight: 12,
-  },
-  heroTitle: {
-    fontSize: 20,
+  gemOfDayTitle: {
+    fontSize: 14,
     fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
-    marginBottom: 4,
   },
-  heroMeta: {
-    fontSize: 12,
+  gemOfDayCoords: {
     fontFamily: 'SpaceMono-Regular',
+    fontSize: 10,
+    color: theme.textSecondary,
+  },
+  gemOfDayMeta: {
+    fontSize: 11,
     color: theme.textSecondary,
   },
   trendingRow: {
@@ -1900,7 +1919,7 @@ const createStyles = (theme: Theme) =>
   },
   trendingImage: {
     height: 130,
-    backgroundColor: theme.backgroundTertiary,
+    backgroundColor: theme.bgTertiary,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     overflow: 'hidden',
@@ -1910,7 +1929,7 @@ const createStyles = (theme: Theme) =>
     height: '100%',
   },
   trendingImagePlaceholder: {
-    backgroundColor: theme.backgroundTertiary,
+    backgroundColor: theme.bgTertiary,
   },
   trendingBody: {
     flex: 1,
@@ -1986,7 +2005,7 @@ const createStyles = (theme: Theme) =>
     borderBottomLeftRadius: 12,
   },
   listCardImagePlaceholder: {
-    backgroundColor: theme.backgroundTertiary,
+    backgroundColor: theme.bgTertiary,
   },
   listCardContent: {
     flex: 1,
@@ -2002,7 +2021,7 @@ const createStyles = (theme: Theme) =>
   },
   listCategoryBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderWidth: 0.5,
     borderColor: theme.accent,
     paddingVertical: 2,
@@ -2066,7 +2085,7 @@ const createStyles = (theme: Theme) =>
   listCategoryBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: theme.accent,
+    color: theme.textSecondary,
   },
   listCardTitle: {
     fontSize: 14,
@@ -2192,7 +2211,7 @@ const createStyles = (theme: Theme) =>
     color: theme.textTertiary,
   },
   tabLabelActive: {
-    color: theme.accent,
+    color: theme.textSecondary,
     fontWeight: '600',
   },
 });

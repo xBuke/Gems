@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
 import { fetchVisibleCustomCategories, type CustomCategory } from '@/lib/customCategories';
+import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import {
   applyCommunityGemFilter,
@@ -106,8 +107,7 @@ export default function MapScreen() {
   const [placingMode, setPlacingMode] = useState(false);
   const [tapLocation, setTapLocation] = useState<TapLocation | null>(null);
   const [tapLocationName, setTapLocationName] = useState<string | null>(null);
-  const [showMyLocation, setShowMyLocation] = useState(true);
-  const hasShownLocationHiddenAlert = useRef(false);
+  const showMyLocation = true;
 
   useEffect(() => {
     if (placeMode === 'true') {
@@ -342,20 +342,6 @@ export default function MapScreen() {
     setMapTypeIndex((prev) => (prev + 1) % MAP_TYPES.length);
   };
 
-  const toggleShowMyLocation = () => {
-    setShowMyLocation((prev) => {
-      const next = !prev;
-      if (!next && !hasShownLocationHiddenAlert.current) {
-        hasShownLocationHiddenAlert.current = true;
-        Alert.alert(
-          'Location hidden',
-          'Your location dot is now hidden. Tap again to show it.',
-        );
-      }
-      return next;
-    });
-  };
-
   // Center-map button stays enabled when dot is hidden — only you see the map pan.
 
   const handleAddGemHere = async () => {
@@ -431,7 +417,7 @@ export default function MapScreen() {
   const selectedGemLocationLabel = selectedGem
     ? [
         selectedLocationName ??
-          `${selectedGem.latitude.toFixed(4)}, ${selectedGem.longitude.toFixed(4)}`,
+          formatCoordinates(selectedGem.latitude, selectedGem.longitude),
         selectedGemDistance,
       ]
         .filter(Boolean)
@@ -453,9 +439,7 @@ export default function MapScreen() {
 
   const tapLocationLabel =
     tapLocationName ??
-    (tapLocation
-      ? `${tapLocation.latitude.toFixed(4)}, ${tapLocation.longitude.toFixed(4)}`
-      : '');
+    (tapLocation ? formatCoordinates(tapLocation.latitude, tapLocation.longitude) : '');
 
   return (
     <View style={styles.container}>
@@ -503,18 +487,6 @@ export default function MapScreen() {
 
       <TouchableOpacity style={styles.layerButton} onPress={cycleMapType} activeOpacity={0.8}>
         <Text style={styles.layerButtonText}>{currentMapType.label}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.locationDotToggle}
-        onPress={toggleShowMyLocation}
-        activeOpacity={0.8}>
-        <Ionicons
-          name={showMyLocation ? 'locate' : 'locate-outline'}
-          size={20}
-          color={showMyLocation ? theme.accent : theme.textTertiary}
-          style={showMyLocation ? undefined : { opacity: 0.55 }}
-        />
       </TouchableOpacity>
 
       {gemsLoading && (
@@ -800,7 +772,7 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     backButton: {
       position: 'absolute',
-      top: 50,
+      top: 68,
       left: 16,
       width: 44,
       height: 44,
@@ -813,7 +785,7 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     layerButton: {
       position: 'absolute',
-      top: 50,
+      top: 68,
       right: 16,
       backgroundColor: overlay,
       borderWidth: 0.5,
@@ -844,14 +816,14 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     filterContainer: {
       position: 'absolute',
-      top: 100,
+      top: 122,
       left: 0,
       right: 0,
     },
     placeButton: {
       position: 'absolute',
-      top: 50,
-      right: 130,
+      top: 68,
+      right: 92,
       backgroundColor: overlay,
       borderWidth: 0.5,
       borderColor: theme.border,
@@ -907,14 +879,14 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     myLocationButton: {
       position: 'absolute',
-      bottom: 40,
-      right: 16,
+      top: 68,
+      left: 68,
       width: 44,
       height: 44,
       borderRadius: 22,
       backgroundColor: overlay,
-      borderWidth: 0.5,
-      borderColor: theme.border,
+      borderWidth: 1,
+      borderColor: theme.accent + '80',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -948,7 +920,7 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     cancelButton: {
       flex: 1,
-      backgroundColor: theme.backgroundTertiary,
+      backgroundColor: theme.bgTertiary,
       borderWidth: 0.5,
       borderColor: theme.border,
       borderRadius: 10,
@@ -987,7 +959,7 @@ const createStyles = (theme: Theme, overlay: string) =>
       height: 140,
       borderRadius: 12,
       marginBottom: 12,
-      backgroundColor: theme.backgroundTertiary,
+      backgroundColor: theme.bgTertiary,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1004,7 +976,7 @@ const createStyles = (theme: Theme, overlay: string) =>
       marginBottom: 8,
     },
     sheetCategoryBadge: {
-      backgroundColor: theme.accentSubtle,
+      backgroundColor: theme.accentSub,
       borderWidth: 0.5,
       borderColor: theme.accent,
       paddingVertical: 4,
@@ -1014,7 +986,7 @@ const createStyles = (theme: Theme, overlay: string) =>
     sheetCategoryBadgeText: {
       fontSize: 11,
       fontWeight: '600',
-      color: theme.accent,
+      color: theme.textSecondary,
     },
     sheetVerifiedBadge: {
       flexDirection: 'row',
@@ -1034,7 +1006,7 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     sheetLocation: {
       fontFamily: 'SpaceMono-Regular',
-      fontSize: 12,
+      fontSize: 10,
       color: theme.textSecondary,
       marginBottom: 12,
     },

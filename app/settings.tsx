@@ -1,4 +1,6 @@
 import { stopTracking } from '@/lib/locationTracker';
+import { getExplorerLevelIndex } from '@/lib/gamification';
+import { checkIsPremium } from '@/lib/paywall';
 import { SUPABASE_URL, supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -57,7 +59,11 @@ function SettingItem({
       <Text style={[styles.settingLabel, { color: danger ? theme.danger : theme.text }, { flex: 1 }]}>
         {label}
       </Text>
-      {value ? <Text style={[styles.settingValue, { color: theme.textTertiary }]}>{value}</Text> : null}
+      {value ? (
+        <Text style={[styles.settingValue, { color: theme.textTertiary }]} numberOfLines={1}>
+          {value}
+        </Text>
+      ) : null}
       {rightElement}
       {showChevron ? <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} /> : null}
     </View>
@@ -74,8 +80,16 @@ function SettingItem({
   return content;
 }
 
-function SectionHeader({ title, theme }: { title: string; theme: Theme }) {
-  return <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>{title}</Text>;
+function SectionHeader({ title, theme, danger }: { title: string; theme: Theme; danger?: boolean }) {
+  return (
+    <Text
+      style={[
+        styles.sectionHeader,
+        { color: danger ? theme.danger : theme.textTertiary },
+      ]}>
+      {title}
+    </Text>
+  );
 }
 
 export default function SettingsScreen() {
@@ -91,6 +105,9 @@ export default function SettingsScreen() {
   const [promptMode, setPromptMode] = useState<'username' | 'password' | null>(null);
   const [promptValue, setPromptValue] = useState('');
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
+  const [explorerLevelIndex, setExplorerLevelIndex] = useState(1);
+  const [streakPoints, setStreakPoints] = useState(0);
 
   const languageLabel = language === 'hr' ? 'Hrvatski' : 'English';
 
@@ -109,15 +126,21 @@ export default function SettingsScreen() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username, home_town, is_private, language, is_admin')
+      .select('username, home_town, is_private, language, is_admin, streak_points')
       .eq('id', user.id)
       .single();
+
+    const premium = await checkIsPremium();
+    setIsPremium(premium);
 
     if (profile) {
       setUsername(profile.username ?? '');
       setHomeTown(profile.home_town ?? '');
       setIsPrivate(profile.is_private ?? false);
       setIsAdmin(profile.is_admin ?? false);
+      const points = profile.streak_points ?? 0;
+      setStreakPoints(points);
+      setExplorerLevelIndex(getExplorerLevelIndex(points));
       if (profile.language) {
         setLanguage(profile.language);
         await AsyncStorage.setItem(LANGUAGE_KEY, profile.language);
@@ -372,6 +395,51 @@ export default function SettingsScreen() {
         </View>
       ) : (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View
+          style={[
+            styles.premiumBanner,
+            {
+              backgroundColor: isPremium ? theme.accentSub : theme.card,
+              borderColor: isPremium ? theme.accent : theme.coral,
+            },
+          ]}>
+          <View style={styles.premiumBannerLeft}>
+            <View>
+              {isPremium ? (
+                <>
+                  <Text style={[styles.premiumBannerLevel, { color: theme.textSecondary }]}>
+                    EXPLORER LV. {explorerLevelIndex}
+                  </Text>
+                  <Text style={[styles.premiumBannerTitle, { color: theme.text }]}>
+                    Premium Active
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.premiumBannerTitle, { color: theme.text }]}>
+                    Upgrade to Premium
+                  </Text>
+                  <Text style={[styles.premiumBannerSubtitle, { color: theme.textSecondary }]}>
+                    Unlock swipe, communities, trip planner & more
+                  </Text>
+                </>
+              )}
+            </View>
+          </View>
+          {isPremium ? (
+            <TouchableOpacity
+              style={[styles.manageButton, { backgroundColor: theme.accent }]}
+              onPress={() => router.push('/paywall')}
+              activeOpacity={0.8}>
+              <Text style={[styles.manageButtonText, { color: theme.accentText }]}>Manage</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => router.push('/paywall')} activeOpacity={0.8}>
+              <Ionicons name="chevron-forward" size={16} color={theme.coral} />
+            </TouchableOpacity>
+          )}
+        </View>
+
         <SectionHeader title="Account" theme={theme} />
         <View style={styles.sectionGroup}>
           <SettingItem
@@ -482,8 +550,8 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <SectionHeader title="Danger Zone" theme={theme} />
-        <View style={styles.sectionGroup}>
+        <SectionHeader title="Danger Zone" theme={theme} danger />
+        <View style={[styles.sectionGroup, styles.dangerSection]}>
           <SettingItem
             icon="log-out-outline"
             label="Log Out"
@@ -590,16 +658,60 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 32,
   },
-  sectionHeader: {
-    fontSize: 12,
-    fontWeight: '500',
+  premiumBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 14,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  premiumBannerLeft: {
+    flex: 1,
+  },
+  premiumBannerLevel: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 9,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    marginBottom: 3,
+  },
+  premiumBannerTitle: {
+    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 14,
+  },
+  premiumBannerSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  manageButton: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  manageButtonText: {
+    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 12,
+  },
+  sectionHeader: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
     paddingHorizontal: 16,
-    paddingBottom: 8,
-    marginTop: 8,
+    paddingTop: 10,
+    paddingBottom: 5,
   },
   sectionGroup: {
+    overflow: 'hidden',
+  },
+  dangerSection: {
+    backgroundColor: 'rgba(255, 68, 68, 0.06)',
+    borderRadius: 12,
+    marginHorizontal: 16,
     overflow: 'hidden',
   },
   settingItem: {
@@ -613,7 +725,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   settingValue: {
-    fontSize: 14,
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 12,
+    maxWidth: 140,
   },
   promptOverlay: {
     flex: 1,

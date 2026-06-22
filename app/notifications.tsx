@@ -1,5 +1,6 @@
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { hapticLight, hapticSuccess } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -27,6 +28,11 @@ type Notification = {
   created_at: string;
   sender: { username: string; avatar_url: string | null } | null;
   gem: { title: string; image_url: string | null } | null;
+};
+
+type NotificationSection = {
+  title: string;
+  data: Notification[];
 };
 
 const getTypeConfig = (theme: Theme) =>
@@ -82,6 +88,37 @@ const timeAgo = (dateString: string) => {
   return `${Math.floor(diff / 86400)}d ago`;
 };
 
+const getDateGroupLabel = (dateString: string): string => {
+  const now = new Date();
+  const date = new Date(dateString);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDiff = Math.floor((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
+
+  if (dayDiff === 0) return 'TODAY';
+  if (dayDiff === 1) return 'YESTERDAY';
+  if (dayDiff < 7) return `${dayDiff} DAYS AGO`;
+  if (dayDiff < 14) return '1 WEEK AGO';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase();
+};
+
+const groupNotifications = (items: Notification[]): NotificationSection[] => {
+  const filtered = items.filter((item) => item.type !== 'rating');
+  const sections: NotificationSection[] = [];
+
+  for (const item of filtered) {
+    const label = getDateGroupLabel(item.created_at);
+    const last = sections[sections.length - 1];
+    if (last?.title === label) {
+      last.data.push(item);
+    } else {
+      sections.push({ title: label, data: [item] });
+    }
+  }
+
+  return sections;
+};
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
@@ -89,6 +126,8 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const sections = useMemo(() => groupNotifications(notifications), [notifications]);
 
   const fetchNotifications = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -172,13 +211,17 @@ export default function NotificationsScreen() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  const markAsRead = async (notification: Notification) => {
+    if (notification.read) return;
+
+    await supabase.from('notifications').update({ read: true }).eq('id', notification.id);
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)),
+    );
+  };
+
   const handleNotificationPress = async (notification: Notification) => {
-    if (!notification.read) {
-      await supabase.from('notifications').update({ read: true }).eq('id', notification.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)),
-      );
-    }
+    await markAsRead(notification);
 
     if (notification.type === 'message') {
       router.push({
@@ -188,8 +231,10 @@ export default function NotificationsScreen() {
           username: notification.sender?.username,
         },
       });
-    } else if (notification.type === 'follow' || notification.type === 'follow_request') {
-      router.push('/profile');
+    } else if (notification.type === 'follow') {
+      router.push({ pathname: '/profile', params: { userId: notification.sender_id } });
+    } else if (notification.type === 'follow_request') {
+      return;
     } else if (
       notification.type === 'like' ||
       notification.type === 'comment' ||
@@ -199,6 +244,37 @@ export default function NotificationsScreen() {
         router.push('/gem/' + notification.gem_id);
       }
     }
+  };
+
+  const handleAcceptRequest = async (notification: Notification) => {
+    if (!currentUserId) return;
+
+    const { error } = await supabase
+      .from('follows')
+      .update({ status: 'accepted' })
+      .eq('follower_id', notification.sender_id)
+      .eq('following_id', currentUserId);
+
+    if (!error) {
+      hapticSuccess();
+      await markAsRead(notification);
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+    }
+  };
+
+  const handleDeclineRequest = async (notification: Notification) => {
+    if (!currentUserId) return;
+
+    hapticLight();
+
+    await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', notification.sender_id)
+      .eq('following_id', currentUserId);
+
+    await markAsRead(notification);
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
   };
 
   const renderRightThumbnail = (item: Notification) => {
@@ -233,18 +309,23 @@ export default function NotificationsScreen() {
     );
   };
 
-  const renderNotification = ({ item }: { item: Notification }) => {
+  const renderNotification = (item: Notification) => {
     if (item.type === 'rating') return null;
 
     const typeConfig = getTypeConfig(theme);
     const config = typeConfig[item.type];
     const username = item.sender?.username ?? 'Someone';
+    const isFollowRequest = item.type === 'follow_request';
 
     return (
       <TouchableOpacity
-        style={[styles.notificationItem, item.read ? styles.notificationRead : styles.notificationUnread]}
+        style={[
+          styles.notificationItem,
+          item.read ? styles.notificationRead : styles.notificationUnread,
+        ]}
         onPress={() => handleNotificationPress(item)}
-        activeOpacity={0.7}>
+        activeOpacity={isFollowRequest ? 1 : 0.7}
+        disabled={isFollowRequest}>
         <View style={[styles.iconCircle, { backgroundColor: config.bgColor }]}>
           <Ionicons name={config.icon} size={18} color={config.iconColor} />
         </View>
@@ -254,7 +335,22 @@ export default function NotificationsScreen() {
             <Text style={styles.actionText}> {config.actionText}</Text>
           </View>
           <Text style={styles.notificationTime}>{timeAgo(item.created_at)}</Text>
-          {!item.read && <View style={styles.unreadDot} />}
+          {isFollowRequest && (
+            <View style={styles.followRequestActions}>
+              <TouchableOpacity
+                style={styles.declineButton}
+                onPress={() => handleDeclineRequest(item)}
+                activeOpacity={0.8}>
+                <Text style={styles.declineButtonText}>Decline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.acceptButton}
+                onPress={() => handleAcceptRequest(item)}
+                activeOpacity={0.8}>
+                <Text style={styles.acceptButtonText}>Accept ✓</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
         {renderRightThumbnail(item)}
       </TouchableOpacity>
@@ -285,9 +381,16 @@ export default function NotificationsScreen() {
         </View>
       ) : (
         <FlatList
-          data={notifications}
-          keyExtractor={(item) => item.id}
-          renderItem={renderNotification}
+          data={sections}
+          keyExtractor={(section) => section.title}
+          renderItem={({ item: section }) => (
+            <View>
+              <Text style={styles.dateHeader}>{section.title}</Text>
+              {section.data.map((notification) => (
+                <View key={notification.id}>{renderNotification(notification)}</View>
+              ))}
+            </View>
+          )}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -348,6 +451,15 @@ const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
       textAlign: 'center',
     },
+    dateHeader: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      color: theme.textTertiary,
+      letterSpacing: 2,
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 8,
+    },
     notificationItem: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -359,9 +471,13 @@ const createStyles = (theme: Theme) =>
     },
     notificationUnread: {
       backgroundColor: theme.card,
+      borderLeftWidth: 3,
+      borderLeftColor: theme.accent,
     },
     notificationRead: {
       backgroundColor: theme.background,
+      borderLeftWidth: 3,
+      borderLeftColor: 'transparent',
     },
     iconCircle: {
       width: 40,
@@ -372,7 +488,6 @@ const createStyles = (theme: Theme) =>
     },
     notificationContent: {
       flex: 1,
-      position: 'relative',
     },
     notificationTextRow: {
       flexDirection: 'row',
@@ -388,18 +503,40 @@ const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
     },
     notificationTime: {
-      fontSize: 12,
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
       color: theme.textTertiary,
       marginTop: 3,
     },
-    unreadDot: {
-      position: 'absolute',
-      top: 0,
-      right: 0,
-      width: 6,
-      height: 6,
-      borderRadius: 3,
+    followRequestActions: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 10,
+    },
+    acceptButton: {
+      flex: 1,
       backgroundColor: theme.accent,
+      borderRadius: 8,
+      paddingVertical: 7,
+      alignItems: 'center',
+    },
+    acceptButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.accentText,
+    },
+    declineButton: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      paddingVertical: 7,
+      alignItems: 'center',
+    },
+    declineButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
     },
     gemThumbnail: {
       width: 52,
@@ -412,7 +549,7 @@ const createStyles = (theme: Theme) =>
       height: 52,
       borderRadius: 8,
       overflow: 'hidden',
-      backgroundColor: theme.backgroundTertiary,
+      backgroundColor: theme.bgTertiary,
       alignItems: 'center',
       justifyContent: 'center',
     },

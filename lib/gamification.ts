@@ -18,6 +18,11 @@ export const getNextLevel = (points: number) => {
   return EXPLORER_LEVELS.find((level) => level.minPoints > points) || null;
 };
 
+export const getExplorerLevelIndex = (points: number) =>
+  EXPLORER_LEVELS.findIndex((l, i) =>
+    points >= l.minPoints && (EXPLORER_LEVELS[i + 1]?.minPoints ?? Infinity) > points,
+  ) + 1;
+
 export const MASTERY_TIERS = [
   { name: 'Novice', minVisits: 0 },
   { name: 'Explorer', minVisits: 3 },

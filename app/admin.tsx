@@ -69,6 +69,72 @@ type CommunityRow = {
   memberCount: number;
 };
 
+type ReportWithLabel = Report & {
+  targetLabel?: string | null;
+};
+
+const REPORT_TYPE_ICONS: Record<Report['target_type'], string> = {
+  gem: '📍',
+  user: '👤',
+  comment: '💬',
+  message: '✉️',
+};
+
+const REPORT_TYPE_COLORS: Record<Report['target_type'], string> = {
+  gem: 'rgba(255,68,68,0.12)',
+  user: 'rgba(83,74,183,0.12)',
+  comment: 'rgba(45,212,191,0.12)',
+  message: 'rgba(255,159,90,0.12)',
+};
+
+async function enrichReports(rows: Report[]): Promise<ReportWithLabel[]> {
+  if (rows.length === 0) return [];
+
+  const gemIds = rows.filter((r) => r.target_type === 'gem').map((r) => r.target_id);
+  const userIds = rows.filter((r) => r.target_type === 'user').map((r) => r.target_id);
+
+  const gemTitles: Record<string, string> = {};
+  const usernames: Record<string, string> = {};
+
+  if (gemIds.length > 0) {
+    const { data: gems } = await supabase.from('gems').select('id, title').in('id', gemIds);
+    for (const gem of gems ?? []) gemTitles[gem.id] = gem.title;
+  }
+
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', userIds);
+    for (const profile of profiles ?? []) {
+      usernames[profile.id] = profile.username ?? profile.id;
+    }
+  }
+
+  return rows.map((report) => {
+    let targetLabel: string | null = null;
+    if (report.target_type === 'gem') targetLabel = gemTitles[report.target_id] ?? null;
+    if (report.target_type === 'user') targetLabel = usernames[report.target_id] ?? null;
+    return { ...report, targetLabel };
+  });
+}
+
+function reportHeadline(report: ReportWithLabel) {
+  const typeLabel =
+    report.target_type === 'gem'
+      ? 'Gem'
+      : report.target_type === 'user'
+        ? 'User'
+        : report.target_type === 'comment'
+          ? 'Comment'
+          : 'Message';
+
+  if (report.targetLabel) {
+    return `${typeLabel} reported: "${report.targetLabel}"`;
+  }
+  return `${typeLabel} reported`;
+}
+
 const TABS: { key: AdminTab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'users', label: 'Users' },
@@ -88,11 +154,72 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
-function StatCard({ label, value, theme }: { label: string; value: string | number; theme: Theme }) {
+function formatTimeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatDate(iso);
+}
+
+function AdminStatCard({
+  label,
+  value,
+  subtext,
+  variant = 'default',
+  subtextTone = 'accent',
+  theme,
+  cardStyles,
+}: {
+  label: string;
+  value: string | number;
+  subtext?: string;
+  variant?: 'default' | 'danger';
+  subtextTone?: 'accent' | 'secondary' | 'danger';
+  theme: Theme;
+  cardStyles: ReturnType<typeof createStyles>;
+}) {
+  const isDanger = variant === 'danger';
+  const subtextColor =
+    subtextTone === 'danger'
+      ? theme.danger
+      : subtextTone === 'secondary'
+        ? theme.textSecondary
+        : theme.accent;
+
   return (
-    <View style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <Text style={[styles.statValue, { color: theme.accent }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{label}</Text>
+    <View
+      style={[
+        cardStyles.statCard,
+        isDanger
+          ? {
+              backgroundColor: 'rgba(255,68,68,0.08)',
+              borderColor: 'rgba(255,68,68,0.3)',
+              borderWidth: 1,
+            }
+          : { backgroundColor: theme.card, borderColor: theme.border },
+      ]}>
+      <Text
+        style={[
+          cardStyles.statLabel,
+          { color: isDanger ? theme.danger : theme.textTertiary },
+        ]}>
+        {label.toUpperCase()}
+      </Text>
+      <Text
+        style={[
+          cardStyles.statValue,
+          { color: isDanger ? theme.danger : theme.text },
+        ]}>
+        {value}
+      </Text>
+      {subtext ? (
+        <Text style={[cardStyles.statSubtext, { color: subtextColor }]}>{subtext}</Text>
+      ) : null}
     </View>
   );
 }
@@ -108,13 +235,15 @@ export default function AdminScreen() {
 
   const [stats, setStats] = useState<Record<string, number>>({});
   const [statsLoading, setStatsLoading] = useState(false);
+  const [pendingQueue, setPendingQueue] = useState<ReportWithLabel[]>([]);
+  const [recentSignups, setRecentSignups] = useState<Profile[]>([]);
 
   const [users, setUsers] = useState<Profile[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
 
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<ReportWithLabel[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportFilter, setReportFilter] = useState<ReportFilter>('all');
 
@@ -158,6 +287,9 @@ export default function AdminScreen() {
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekAgoIso = weekAgo.toISOString();
 
     const [
       totalUsers,
@@ -167,6 +299,10 @@ export default function AdminScreen() {
       totalCommunities,
       pendingReports,
       dau,
+      newUsersWeek,
+      newGemsWeek,
+      pendingReportsData,
+      recentUsersData,
     ] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_premium', true),
@@ -175,12 +311,29 @@ export default function AdminScreen() {
       supabase.from('communities').select('*', { count: 'exact', head: true }),
       supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('last_active_date', today),
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', weekAgoIso),
+      supabase.from('gems').select('*', { count: 'exact', head: true }).gte('created_at', weekAgoIso),
+      supabase
+        .from('reports')
+        .select('*, reporter:profiles!reports_reporter_id_fkey(username)')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5),
     ]);
 
     const lifetimeCount = lifetimeUsers.count ?? 0;
+    const totalUserCount = totalUsers.count ?? 0;
 
     setStats({
-      totalUsers: totalUsers.count ?? 0,
+      totalUsers: totalUserCount,
       premiumUsers: premiumUsers.count ?? 0,
       lifetimeUsers: lifetimeCount,
       totalGems: totalGems.count ?? 0,
@@ -188,7 +341,12 @@ export default function AdminScreen() {
       pendingReports: pendingReports.count ?? 0,
       dau: dau.count ?? 0,
       lifetimeSlotsRemaining: Math.max(0, 1000 - lifetimeCount),
+      newUsersWeek: newUsersWeek.count ?? 0,
+      newGemsWeek: newGemsWeek.count ?? 0,
     });
+
+    setPendingQueue(await enrichReports((pendingReportsData.data as Report[]) ?? []));
+    setRecentSignups((recentUsersData.data as Profile[]) ?? []);
     setStatsLoading(false);
   }, []);
 
@@ -207,9 +365,9 @@ export default function AdminScreen() {
     setReportsLoading(true);
     const { data } = await supabase
       .from('reports')
-      .select('*')
+      .select('*, reporter:profiles!reports_reporter_id_fkey(username)')
       .order('created_at', { ascending: false });
-    setReports((data as Report[]) ?? []);
+    setReports(await enrichReports((data as Report[]) ?? []));
     setReportsLoading(false);
   }, []);
 
@@ -338,6 +496,11 @@ export default function AdminScreen() {
       return;
     }
     setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status } : r)));
+    setPendingQueue((prev) => prev.filter((r) => r.id !== reportId));
+    setStats((prev) => ({
+      ...prev,
+      pendingReports: Math.max(0, (prev.pendingReports ?? 0) - 1),
+    }));
   };
 
   const handleViewTarget = async (report: Report) => {
@@ -405,24 +568,155 @@ export default function AdminScreen() {
   };
 
   const renderOverview = () => {
-    const items = [
-      { label: 'Total Users', value: stats.totalUsers ?? 0 },
-      { label: 'Premium Users', value: stats.premiumUsers ?? 0 },
-      { label: 'Lifetime Users', value: stats.lifetimeUsers ?? 0 },
-      { label: 'Total Gems', value: stats.totalGems ?? 0 },
-      { label: 'Total Communities', value: stats.totalCommunities ?? 0 },
-      { label: 'Pending Reports', value: stats.pendingReports ?? 0 },
-      { label: 'DAU Estimate', value: stats.dau ?? 0 },
-      { label: 'Lifetime Slots Left', value: stats.lifetimeSlotsRemaining ?? 0 },
-    ];
+    const totalUsers = stats.totalUsers ?? 0;
 
     return (
-      <View style={styles.statsGrid}>
-        {items.map((item) => (
-          <View key={item.label} style={styles.statCardWrap}>
-            <StatCard label={item.label} value={item.value} theme={theme} />
+      <View style={styles.overviewContent}>
+        <View style={styles.statsGrid}>
+          <View style={styles.statCardWrap}>
+            <AdminStatCard
+              label="Users"
+              value={totalUsers}
+              subtext={`+${stats.newUsersWeek ?? 0} this week`}
+              theme={theme}
+              cardStyles={styles}
+            />
           </View>
-        ))}
+          <View style={styles.statCardWrap}>
+            <AdminStatCard
+              label="Gems"
+              value={stats.totalGems ?? 0}
+              subtext={`+${stats.newGemsWeek ?? 0} this week`}
+              theme={theme}
+              cardStyles={styles}
+            />
+          </View>
+          <View style={styles.statCardWrap}>
+            <AdminStatCard
+              label="Active Today"
+              value={stats.dau ?? 0}
+              subtext={`of ${totalUsers} users`}
+              subtextTone="secondary"
+              theme={theme}
+              cardStyles={styles}
+            />
+          </View>
+          <View style={styles.statCardWrap}>
+            <AdminStatCard
+              label="Reports"
+              value={stats.pendingReports ?? 0}
+              subtext="Needs review"
+              variant="danger"
+              subtextTone="danger"
+              theme={theme}
+              cardStyles={styles}
+            />
+          </View>
+        </View>
+
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>PENDING REPORTS</Text>
+          {(stats.pendingReports ?? 0) > 0 ? (
+            <TouchableOpacity onPress={() => setActiveTab('reports')} activeOpacity={0.7}>
+              <Text style={[styles.sectionLink, { color: theme.accent }]}>View all</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {pendingQueue.length === 0 ? (
+          <Text style={[styles.emptySectionText, { color: theme.textSecondary }]}>
+            No pending reports
+          </Text>
+        ) : (
+          pendingQueue.map((item) => (
+            <View
+              key={item.id}
+              style={[styles.queueCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View
+                style={[
+                  styles.queueIcon,
+                  { backgroundColor: REPORT_TYPE_COLORS[item.target_type] },
+                ]}>
+                <Text style={styles.queueIconText}>{REPORT_TYPE_ICONS[item.target_type]}</Text>
+              </View>
+              <View style={styles.queueBody}>
+                <Text style={[styles.queueTitle, { color: theme.text }]} numberOfLines={2}>
+                  {reportHeadline(item)}
+                </Text>
+                <Text style={[styles.queueMeta, { color: theme.textSecondary }]}>
+                  {item.reason} · {formatTimeAgo(item.created_at)}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.reviewButton, { backgroundColor: theme.danger }]}
+                onPress={() => handleViewTarget(item)}
+                activeOpacity={0.8}>
+                <Text style={styles.reviewButtonText}>Review</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced, { color: theme.textTertiary }]}>
+          RECENT SIGNUPS
+        </Text>
+
+        {recentSignups.length === 0 ? (
+          <Text style={[styles.emptySectionText, { color: theme.textSecondary }]}>No recent signups</Text>
+        ) : (
+          <View style={[styles.signupList, { borderColor: theme.border }]}>
+            {recentSignups.map((user, index) => {
+              const initial = (user.username ?? '?').charAt(0).toUpperCase();
+              const avatarColor = index % 2 === 0 ? theme.accent : theme.coral;
+
+              return (
+                <TouchableOpacity
+                  key={user.id}
+                  style={[
+                    styles.signupRow,
+                    { backgroundColor: theme.card, borderBottomColor: theme.border },
+                    index === recentSignups.length - 1 && styles.signupRowLast,
+                  ]}
+                  onPress={() => {
+                    setActiveTab('users');
+                    setExpandedUserId(user.id);
+                  }}
+                  activeOpacity={0.7}>
+                  <View style={[styles.signupAvatar, { backgroundColor: avatarColor }]}>
+                    <Text
+                      style={[
+                        styles.signupAvatarText,
+                        { color: index % 2 === 0 ? theme.accentText : '#FFFFFF' },
+                      ]}>
+                      {initial}
+                    </Text>
+                  </View>
+                  <Text style={[styles.signupUsername, { color: theme.text }]} numberOfLines={1}>
+                    @{user.username ?? 'unknown'}
+                  </Text>
+                  <Text style={[styles.signupTime, { color: theme.textTertiary }]}>
+                    {formatTimeAgo(user.created_at)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        <View style={styles.secondaryStatsRow}>
+          <View style={[styles.secondaryStatPill, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.secondaryStatLabel, { color: theme.textTertiary }]}>PREMIUM</Text>
+            <Text style={[styles.secondaryStatValue, { color: theme.text }]}>{stats.premiumUsers ?? 0}</Text>
+          </View>
+          <View style={[styles.secondaryStatPill, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.secondaryStatLabel, { color: theme.textTertiary }]}>COMMUNITIES</Text>
+            <Text style={[styles.secondaryStatValue, { color: theme.text }]}>{stats.totalCommunities ?? 0}</Text>
+          </View>
+          <View style={[styles.secondaryStatPill, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.secondaryStatLabel, { color: theme.textTertiary }]}>LIFETIME</Text>
+            <Text style={[styles.secondaryStatValue, { color: theme.text }]}>{stats.lifetimeUsers ?? 0}</Text>
+          </View>
+        </View>
       </View>
     );
   };
@@ -437,7 +731,7 @@ export default function AdminScreen() {
           onPress={() => setExpandedUserId(expanded ? null : item.id)}
           activeOpacity={0.7}
           style={styles.userRow}>
-          <View style={[styles.avatar, { backgroundColor: theme.accentSubtle }]}>
+          <View style={[styles.avatar, { backgroundColor: theme.accentSub }]}>
             <Text style={[styles.avatarText, { color: theme.accent }]}>{initial}</Text>
           </View>
           <View style={styles.userInfo}>
@@ -446,8 +740,8 @@ export default function AdminScreen() {
                 {item.username ?? 'Unknown'}
               </Text>
               {item.is_premium ? (
-                <View style={[styles.badge, { backgroundColor: theme.accentSubtle }]}>
-                  <Text style={[styles.badgeText, { color: theme.accent }]}>Premium</Text>
+                <View style={[styles.badge, { backgroundColor: theme.accentSub }]}>
+                  <Text style={[styles.badgeText, { color: theme.textSecondary }]}>Premium</Text>
                 </View>
               ) : null}
               {item.is_admin ? (
@@ -499,7 +793,7 @@ export default function AdminScreen() {
             ) : null}
             <View style={styles.actionRow}>
               <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: theme.accentSubtle }]}
+                style={[styles.actionBtn, { backgroundColor: theme.accentSub }]}
                 onPress={() => handleTogglePremium(item)}
                 activeOpacity={0.8}>
                 <Text style={[styles.actionBtnText, { color: theme.accent }]}>
@@ -507,7 +801,7 @@ export default function AdminScreen() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: theme.accentSubtle }]}
+                style={[styles.actionBtn, { backgroundColor: theme.accentSub }]}
                 onPress={() => handleToggleAdmin(item)}
                 activeOpacity={0.8}>
                 <Text style={[styles.actionBtnText, { color: theme.accent }]}>
@@ -529,45 +823,60 @@ export default function AdminScreen() {
     );
   };
 
-  const renderReportRow = ({ item }: { item: Report }) => (
+  const renderReportRow = ({ item }: { item: ReportWithLabel }) => (
     <View style={[styles.card, styles.reportCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <View style={styles.reportHeader}>
-        <View style={[styles.typeBadge, { backgroundColor: theme.accentSubtle }]}>
-          <Text style={[styles.typeBadgeText, { color: theme.accent }]}>{item.target_type}</Text>
+      <View style={styles.queueCard}>
+        <View
+          style={[
+            styles.queueIcon,
+            { backgroundColor: REPORT_TYPE_COLORS[item.target_type] },
+          ]}>
+          <Text style={styles.queueIconText}>{REPORT_TYPE_ICONS[item.target_type]}</Text>
         </View>
-        <Text style={[styles.rowMeta, { color: theme.textTertiary }]}>{formatDate(item.created_at)}</Text>
-      </View>
-      <Text style={[styles.rowTitle, { color: theme.text }]}>{item.reason}</Text>
-      <Text style={[styles.rowSub, { color: theme.textSecondary }]}>
-        by @{item.reporter?.username ?? 'unknown'} · {item.status}
-      </Text>
-      {item.details ? (
-        <Text style={[styles.detailText, { color: theme.textSecondary }]}>{item.details}</Text>
-      ) : null}
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: theme.accentSubtle }]}
-          onPress={() => handleViewTarget(item)}
-          activeOpacity={0.8}>
-          <Text style={[styles.actionBtnText, { color: theme.accent }]}>View Target</Text>
-        </TouchableOpacity>
+        <View style={styles.queueBody}>
+          <Text style={[styles.queueTitle, { color: theme.text }]} numberOfLines={2}>
+            {reportHeadline(item)}
+          </Text>
+          <Text style={[styles.queueMeta, { color: theme.textSecondary }]}>
+            {item.reason} · {formatTimeAgo(item.created_at)}
+          </Text>
+          {item.details ? (
+            <Text style={[styles.detailText, { color: theme.textSecondary }]} numberOfLines={2}>
+              {item.details}
+            </Text>
+          ) : null}
+        </View>
         {item.status === 'pending' ? (
-          <>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: theme.accentSubtle }]}
-              onPress={() => handleReportStatus(item.id, 'resolved')}
-              activeOpacity={0.8}>
-              <Text style={[styles.actionBtnText, { color: theme.accent }]}>Resolve</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: theme.accentSubtle }]}
-              onPress={() => handleReportStatus(item.id, 'dismissed')}
-              activeOpacity={0.8}>
-              <Text style={[styles.actionBtnText, { color: theme.accent }]}>Dismiss</Text>
-            </TouchableOpacity>
-          </>
-        ) : null}
+          <TouchableOpacity
+            style={[styles.reviewButton, { backgroundColor: theme.danger }]}
+            onPress={() => handleViewTarget(item)}
+            activeOpacity={0.8}>
+            <Text style={styles.reviewButtonText}>Review</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.doneBadge, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.doneBadgeText, { color: theme.textSecondary }]}>
+              {item.status === 'resolved' ? 'Done' : 'Dismissed'}
+            </Text>
+          </View>
+        )}
       </View>
+      {item.status === 'pending' ? (
+        <View style={[styles.reportActions, { borderTopColor: theme.border }]}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: theme.accentSub }]}
+            onPress={() => handleReportStatus(item.id, 'resolved')}
+            activeOpacity={0.8}>
+            <Text style={[styles.actionBtnText, { color: theme.accent }]}>Resolve</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: theme.accentSub }]}
+            onPress={() => handleReportStatus(item.id, 'dismissed')}
+            activeOpacity={0.8}>
+            <Text style={[styles.actionBtnText, { color: theme.accent }]}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -838,7 +1147,12 @@ export default function AdminScreen() {
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Admin Dashboard</Text>
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Admin</Text>
+          <View style={[styles.internalBadge, { backgroundColor: theme.accentSub, borderColor: theme.accent }]}>
+            <Text style={[styles.internalBadgeText, { color: theme.textSecondary }]}>🛡 INTERNAL</Text>
+          </View>
+        </View>
         <View style={styles.headerSide} />
       </View>
 
@@ -869,25 +1183,8 @@ export default function AdminScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  statCard: {
-    borderRadius: 12,
-    borderWidth: 0.5,
-    padding: 14,
-  },
-  statValue: {
-    fontFamily: 'SpaceMono-Regular',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  statLabel: {
-    fontSize: 11,
-    marginTop: 4,
-  },
-});
-
-function createStyles(theme: Theme) {
-  return StyleSheet.create({
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
     container: {
       flex: 1,
     },
@@ -899,12 +1196,29 @@ function createStyles(theme: Theme) {
       paddingVertical: 12,
     },
     headerSide: {
-      width: 22,
+      width: 28,
       alignItems: 'center',
+    },
+    headerCenter: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
     },
     headerTitle: {
       fontSize: 17,
       fontFamily: 'SpaceGrotesk-Bold',
+    },
+    internalBadge: {
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    internalBadgeText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
     },
     tabBar: {
       flexDirection: 'row',
@@ -934,13 +1248,171 @@ function createStyles(theme: Theme) {
       paddingBottom: 32,
       gap: 10,
     },
+    overviewContent: {
+      gap: 10,
+    },
     statsGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 10,
     },
+    statCard: {
+      borderRadius: 14,
+      borderWidth: 0.5,
+      padding: 14,
+    },
     statCardWrap: {
       width: '48%',
+    },
+    statLabel: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 9,
+      letterSpacing: 1.5,
+      marginBottom: 6,
+    },
+    statValue: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 28,
+      fontWeight: '700',
+      lineHeight: 28,
+    },
+    statSubtext: {
+      fontSize: 11,
+      marginTop: 4,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 6,
+    },
+    sectionLabel: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 9,
+      letterSpacing: 2,
+    },
+    sectionLabelSpaced: {
+      marginTop: 8,
+      marginBottom: 2,
+    },
+    sectionLink: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    emptySectionText: {
+      fontSize: 13,
+      marginBottom: 4,
+    },
+    queueCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      borderRadius: 12,
+      borderWidth: 0.5,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
+    queueIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    queueIconText: {
+      fontSize: 16,
+    },
+    queueBody: {
+      flex: 1,
+      gap: 2,
+    },
+    queueTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    queueMeta: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+    },
+    reviewButton: {
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    reviewButtonText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    doneBadge: {
+      borderRadius: 8,
+      borderWidth: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    doneBadgeText: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    signupList: {
+      borderRadius: 12,
+      borderWidth: 0.5,
+      overflow: 'hidden',
+    },
+    signupRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderBottomWidth: 0.5,
+    },
+    signupRowLast: {
+      borderBottomWidth: 0,
+    },
+    signupAvatar: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    signupAvatarText: {
+      fontSize: 12,
+      fontWeight: '700',
+      fontFamily: 'SpaceGrotesk-Bold',
+    },
+    signupUsername: {
+      flex: 1,
+      fontSize: 13,
+    },
+    signupTime: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+    },
+    secondaryStatsRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 6,
+    },
+    secondaryStatPill: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 0.5,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    secondaryStatLabel: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 8,
+      letterSpacing: 1,
+      marginBottom: 4,
+    },
+    secondaryStatValue: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 16,
+      fontWeight: '700',
     },
     tabLoading: {
       flex: 1,
@@ -1063,23 +1535,15 @@ function createStyles(theme: Theme) {
       fontWeight: '600',
     },
     reportCard: {
-      padding: 12,
-      gap: 6,
+      gap: 0,
     },
-    reportHeader: {
+    reportActions: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    typeBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 6,
-    },
-    typeBadgeText: {
-      fontSize: 11,
-      fontWeight: '600',
-      textTransform: 'capitalize',
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingBottom: 12,
+      paddingTop: 4,
+      borderTopWidth: 0.5,
     },
     gemRow: {
       flexDirection: 'row',
@@ -1107,4 +1571,3 @@ function createStyles(theme: Theme) {
       fontSize: 14,
     },
   });
-}

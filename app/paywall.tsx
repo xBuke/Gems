@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,16 +16,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const FEATURES = [
-  'Unlimited gem drops',
-  'Hidden Gems exclusive category',
-  'Gem Swipe — discover faster',
-  'Create your own communities',
-  'Custom categories for your interests',
-  'Trip Planner for any destination',
-  'Private pins for friends only',
-  'No ads',
-];
+type PayPlan = 'monthly' | 'yearly' | 'lifetime';
+
+const DISCOVER_FEATURES = [
+  { emoji: '🃏', label: 'Gem Swipe' },
+  { emoji: '🗺', label: 'Trip Planner' },
+  { emoji: '💎', label: 'Hidden Gems cat.' },
+] as const;
+
+const CREATE_FEATURES = [
+  { emoji: '👥', label: 'Communities' },
+  { emoji: '🏷', label: 'Custom cats.' },
+  { emoji: '🔒', label: 'Private pins' },
+] as const;
 
 const checkLifetimeSlotsRemaining = async () => {
   const { count } = await supabase
@@ -61,32 +65,109 @@ const PREMIUM_COMING_SOON_MESSAGE =
 const LIFETIME_COMING_SOON_MESSAGE =
   'In-app payments are launching soon as we prepare for our official release. Lifetime deal slots are reserved in order of signup once payments launch. Want us to notify you the moment Premium goes live?';
 
+function FeatureChip({
+  emoji,
+  label,
+  color,
+  backgroundColor,
+}: {
+  emoji: string;
+  label: string;
+  color: string;
+  backgroundColor: string;
+}) {
+  return (
+    <View style={[chipStyles.chip, { backgroundColor }]}>
+      <Text style={chipStyles.emoji}>{emoji}</Text>
+      <Text style={[chipStyles.label, { color }]}>{label}</Text>
+    </View>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  emoji: {
+    fontSize: 12,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
+
+function PlanRadio({ selected, color }: { selected: boolean; color: string }) {
+  return (
+    <View style={[radioStyles.outer, { borderColor: color }]}>
+      {selected ? <View style={[radioStyles.inner, { backgroundColor: color }]} /> : null}
+    </View>
+  );
+}
+
+const radioStyles = StyleSheet.create({
+  outer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+});
+
 export default function PaywallScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [lifetimeSlotsLeft, setLifetimeSlotsLeft] = useState<number | null>(null);
+  const [payPlan, setPayPlan] = useState<PayPlan>('yearly');
 
   useEffect(() => {
     checkLifetimeSlotsRemaining().then(setLifetimeSlotsLeft);
   }, []);
 
-  const handleLifetimePurchase = () => {
-    Alert.alert(
-      'Confirm Lifetime Purchase',
-      'This is a one-time purchase with no refunds. Confirm?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: () => showPremiumComingSoonAlert(LIFETIME_COMING_SOON_MESSAGE),
-        },
-      ],
-    );
-  };
-
   const showLifetimeCard = lifetimeSlotsLeft !== null && lifetimeSlotsLeft > 0;
   const lifetimeSlotsUsed = lifetimeSlotsLeft !== null ? 1000 - lifetimeSlotsLeft : 0;
+
+  const ctaText =
+    payPlan === 'monthly'
+      ? 'Start Monthly'
+      : payPlan === 'yearly'
+        ? 'Start Yearly — Save 37%'
+        : 'Claim Founding Member Deal';
+
+  const handlePurchase = () => {
+    if (payPlan === 'lifetime') {
+      Alert.alert(
+        'Confirm Lifetime Purchase',
+        'This is a one-time purchase with no refunds. Confirm?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Confirm',
+            onPress: () => showPremiumComingSoonAlert(LIFETIME_COMING_SOON_MESSAGE),
+          },
+        ],
+      );
+      return;
+    }
+    showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE);
+  };
+
+  const isMonthly = payPlan === 'monthly';
+  const isYearly = payPlan === 'yearly';
+  const isLifetime = payPlan === 'lifetime';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -94,93 +175,147 @@ export default function PaywallScreen() {
         style={styles.closeButton}
         onPress={() => router.back()}
         activeOpacity={0.7}>
-        <Ionicons name="close" size={24} color={theme.textSecondary} />
+        <Ionicons name="close" size={18} color={theme.textSecondary} />
       </TouchableOpacity>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Ionicons name="diamond" size={64} color={theme.coral} style={styles.diamondIcon} />
-
-        <Text style={styles.title}>Hidden Gems Premium</Text>
-        <Text style={styles.subtitle}>Unlock the full explorer experience</Text>
-
-        <View style={styles.featuresList}>
-          {FEATURES.map((feature) => (
-            <View key={feature} style={styles.featureRow}>
-              <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
+        <View style={styles.heroSection}>
+          <View style={styles.diamondGlow}>
+            <View style={styles.diamondGlowRing} />
+            <Text style={styles.diamondEmoji}>💎</Text>
+          </View>
+          <Text style={styles.title}>Hidden Gems Premium</Text>
+          <Text style={styles.subtitle}>Unlock the full explorer experience</Text>
         </View>
 
-        <View style={styles.pricingCards}>
-          <View style={styles.pricingCard}>
-            <Text style={styles.tierLabel}>Monthly</Text>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceAmount}>5.99€</Text>
-              <Text style={styles.pricePeriod}>/month</Text>
-            </View>
-            <PressableScale
-              style={styles.monthlyButton}
-              onPress={() => showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE)}>
-              <Text style={styles.monthlyButtonText}>Start Monthly</Text>
-            </PressableScale>
+        <View style={styles.featureGroup}>
+          <Text style={styles.groupLabelAccent}>Discover More</Text>
+          <View style={styles.chipRow}>
+            {DISCOVER_FEATURES.map((f) => (
+              <FeatureChip
+                key={f.label}
+                emoji={f.emoji}
+                label={f.label}
+                color={theme.accent}
+                backgroundColor={theme.accentSub}
+              />
+            ))}
           </View>
-
-          <View style={styles.pricingCardFeatured}>
-            <View style={styles.badgeAccent}>
-              <Text style={styles.badgeText}>BEST VALUE</Text>
-            </View>
-            <Text style={styles.tierLabel}>Yearly</Text>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceAmount}>44.99€</Text>
-              <Text style={styles.pricePeriod}>/year · 3.75€/mo</Text>
-            </View>
-            <Text style={styles.saveLabel}>Save 37%</Text>
-            <PressableScale
-              style={styles.yearlyButton}
-              onPress={() => showPremiumComingSoonAlert(PREMIUM_COMING_SOON_MESSAGE)}>
-              <Text style={styles.yearlyButtonText}>Start Yearly</Text>
-            </PressableScale>
-          </View>
-
-          {showLifetimeCard && (
-            <View style={styles.pricingCardLifetime}>
-              <View style={styles.badgeCoral}>
-                <Text style={styles.badgeText}>LIMITED</Text>
-              </View>
-              <Text style={styles.tierLabel}>Lifetime</Text>
-              <View style={styles.priceRow}>
-                <Text style={styles.priceAmount}>119€</Text>
-                <Text style={styles.pricePeriod}>one-time payment</Text>
-              </View>
-              <View style={styles.slotsProgressTrack}>
-                <View
-                  style={[
-                    styles.slotsProgressFill,
-                    { width: `${(lifetimeSlotsUsed / 1000) * 100}%` },
-                  ]}
-                />
-              </View>
-              <Text style={styles.slotsText}>
-                {lifetimeSlotsLeft} of 1000 spots left
-              </Text>
-              <Text style={styles.lifetimeFinePrint}>
-                No refunds. Early supporter pricing — won't be offered again.
-              </Text>
-              <PressableScale
-                style={styles.lifetimeButton}
-                onPress={handleLifetimePurchase}>
-                <Text style={styles.lifetimeButtonText}>Claim Lifetime Deal</Text>
-              </PressableScale>
-            </View>
-          )}
         </View>
 
-        <PressableScale style={styles.laterButton} onPress={() => router.back()}>
-          <Text style={styles.laterButtonText}>Maybe later</Text>
+        <View style={styles.featureGroup}>
+          <Text style={styles.groupLabelCoral}>Create + Share</Text>
+          <View style={styles.chipRow}>
+            {CREATE_FEATURES.map((f) => (
+              <FeatureChip
+                key={f.label}
+                emoji={f.emoji}
+                label={f.label}
+                color={theme.coral}
+                backgroundColor={theme.coralSubtle}
+              />
+            ))}
+          </View>
+        </View>
+
+        <Pressable
+          style={[
+            styles.planCard,
+            {
+              backgroundColor: isMonthly ? theme.accentSub : theme.card,
+              borderColor: isMonthly ? theme.accent : theme.border,
+              borderWidth: isMonthly ? 1.5 : 0.5,
+            },
+          ]}
+          onPress={() => setPayPlan('monthly')}>
+          <View style={styles.planInfo}>
+            <Text style={styles.planLabel}>Monthly</Text>
+            <Text style={styles.planPrice}>
+              5.99<Text style={styles.planPriceUnit}>€/mo</Text>
+            </Text>
+          </View>
+          <PlanRadio selected={isMonthly} color={isMonthly ? theme.accent : theme.textTertiary} />
+        </Pressable>
+
+        <Pressable
+          style={[
+            styles.planCard,
+            styles.planCardYearly,
+            {
+              backgroundColor: isYearly ? theme.accentSub : theme.card,
+              borderColor: theme.accent,
+              borderWidth: isYearly ? 2 : 1,
+            },
+          ]}
+          onPress={() => setPayPlan('yearly')}>
+          <View style={styles.bestValueBadge}>
+            <Text style={styles.bestValueText}>BEST VALUE</Text>
+          </View>
+          <View style={styles.planInfo}>
+            <Text style={styles.planLabel}>Yearly</Text>
+            <Text style={styles.planPriceLarge}>
+              44.99<Text style={styles.planPriceUnit}>€/yr</Text>
+            </Text>
+            <Text style={styles.saveLine}>3.75€/mo · Save 37%</Text>
+          </View>
+          <PlanRadio selected={isYearly} color={isYearly ? theme.accent : theme.textTertiary} />
+        </Pressable>
+
+        {showLifetimeCard && (
+          <Pressable
+            style={[
+              styles.planCard,
+              styles.planCardLifetime,
+              {
+                backgroundColor: isLifetime ? theme.coralSubtle : theme.card,
+                borderColor: theme.coral,
+                borderWidth: isLifetime ? 1.5 : 0.5,
+              },
+            ]}
+            onPress={() => setPayPlan('lifetime')}>
+            <View style={styles.lifetimeHeader}>
+              <View style={styles.planInfo}>
+                <View style={styles.lifetimeLabelRow}>
+                  <Text style={styles.planLabel}>Lifetime</Text>
+                  <View style={styles.foundingBadge}>
+                    <Text style={styles.foundingBadgeText}>FOUNDING MEMBER</Text>
+                  </View>
+                </View>
+                <Text style={styles.planPrice}>
+                  119<Text style={styles.planPriceUnit}>€</Text>
+                </Text>
+              </View>
+              <PlanRadio
+                selected={isLifetime}
+                color={isLifetime ? theme.coral : theme.textTertiary}
+              />
+            </View>
+            <View style={styles.slotsProgressTrack}>
+              <View
+                style={[
+                  styles.slotsProgressFill,
+                  { width: `${(lifetimeSlotsUsed / 1000) * 100}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.slotsText}>
+              {lifetimeSlotsLeft} of 1000 founding spots left
+            </Text>
+          </Pressable>
+        )}
+
+        <PressableScale
+          style={[
+            styles.ctaButton,
+            { backgroundColor: isLifetime ? theme.coral : theme.accent },
+          ]}
+          onPress={handlePurchase}>
+          <Text style={styles.ctaButtonText}>{ctaText}</Text>
         </PressableScale>
+
+        <Text style={styles.footerNote}>Cancel anytime · Secure payment</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -194,169 +329,183 @@ const createStyles = (theme: Theme) =>
     },
     closeButton: {
       position: 'absolute',
-      top: 16,
-      right: 16,
+      top: 12,
+      right: 18,
       zIndex: 10,
-      padding: 8,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.bgTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     scrollContent: {
-      paddingHorizontal: 16,
+      paddingHorizontal: 20,
+      paddingTop: 16,
       paddingBottom: 32,
-      alignItems: 'center',
     },
-    diamondIcon: {
-      marginTop: 60,
+    heroSection: {
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    diamondGlow: {
+      position: 'relative',
+      marginBottom: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 96,
+      height: 96,
+    },
+    diamondGlowRing: {
+      position: 'absolute',
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: theme.coralSubtle,
+      opacity: 0.9,
+    },
+    diamondEmoji: {
+      fontSize: 56,
+      zIndex: 1,
     },
     title: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 24,
       color: theme.text,
-      fontSize: 28,
-      fontWeight: '700',
-      marginTop: 16,
+      marginBottom: 4,
       textAlign: 'center',
     },
     subtitle: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
       color: theme.textSecondary,
-      fontSize: 16,
+      letterSpacing: 0.3,
       textAlign: 'center',
-      marginTop: 8,
-    },
-    featuresList: {
-      alignSelf: 'stretch',
-      marginTop: 32,
-      paddingHorizontal: 8,
-    },
-    featureRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
       marginBottom: 16,
     },
-    featureText: {
-      color: theme.text,
-      fontSize: 15,
-      flex: 1,
-    },
-    pricingCards: {
-      alignSelf: 'stretch',
-      marginTop: 32,
-      gap: 12,
-    },
-    pricingCard: {
+    featureGroup: {
+      width: '100%',
       backgroundColor: theme.card,
-      borderRadius: 16,
-      borderWidth: 1,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 12,
+      borderWidth: 0.5,
       borderColor: theme.border,
-      padding: 20,
-      paddingTop: 24,
     },
-    pricingCardFeatured: {
-      backgroundColor: theme.card,
-      borderRadius: 16,
-      borderWidth: 2,
-      borderColor: theme.accent,
-      padding: 20,
-      paddingTop: 28,
-      shadowColor: theme.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    pricingCardLifetime: {
-      backgroundColor: theme.card,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: theme.coral,
-      padding: 20,
-      paddingTop: 28,
-    },
-    badgeAccent: {
-      position: 'absolute',
-      top: -10,
-      alignSelf: 'center',
-      left: '50%',
-      marginLeft: -48,
-      backgroundColor: theme.accent,
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 10,
-    },
-    badgeCoral: {
-      position: 'absolute',
-      top: -10,
-      alignSelf: 'center',
-      left: '50%',
-      marginLeft: -36,
-      backgroundColor: theme.coral,
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 10,
-    },
-    badgeText: {
-      color: '#FFFFFF',
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.5,
-    },
-    tierLabel: {
+    groupLabelAccent: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 9,
       color: theme.textSecondary,
-      fontSize: 14,
-      fontWeight: '600',
+      letterSpacing: 1.5,
+      textTransform: 'uppercase',
       marginBottom: 8,
     },
-    priceRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: 6,
-      flexWrap: 'wrap',
-    },
-    priceAmount: {
-      color: theme.text,
-      fontFamily: 'SpaceGrotesk-Bold',
-      fontSize: 28,
-    },
-    pricePeriod: {
-      color: theme.textSecondary,
-      fontSize: 13,
-    },
-    saveLabel: {
+    groupLabelCoral: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 9,
       color: theme.coral,
-      fontSize: 12,
-      fontWeight: '600',
-      marginTop: 6,
+      letterSpacing: 1.5,
+      textTransform: 'uppercase',
+      marginBottom: 8,
     },
-    monthlyButton: {
-      marginTop: 16,
-      backgroundColor: theme.card,
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    planCard: {
+      width: '100%',
       borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.accent,
-      padding: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginBottom: 8,
+      flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
+      overflow: 'hidden',
     },
-    monthlyButtonText: {
-      color: theme.accent,
-      fontSize: 16,
-      fontWeight: '700',
+    planCardYearly: {
+      paddingVertical: 14,
     },
-    yearlyButton: {
-      marginTop: 16,
+    planCardLifetime: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    },
+    bestValueBadge: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
       backgroundColor: theme.accent,
-      borderRadius: 12,
-      padding: 14,
-      alignItems: 'center',
+      borderBottomLeftRadius: 10,
+      borderTopRightRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
     },
-    yearlyButtonText: {
-      color: '#FFFFFF',
-      fontSize: 16,
+    bestValueText: {
+      fontSize: 10,
       fontWeight: '700',
+      color: theme.accentText,
+    },
+    planInfo: {
+      flex: 1,
+    },
+    planLabel: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginBottom: 2,
+    },
+    planPrice: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 20,
+      color: theme.text,
+    },
+    planPriceLarge: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 24,
+      color: theme.text,
+    },
+    planPriceUnit: {
+      fontSize: 13,
+      fontWeight: '500',
+    },
+    saveLine: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    lifetimeHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: '100%',
+      marginBottom: 8,
+    },
+    lifetimeLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 2,
+    },
+    foundingBadge: {
+      backgroundColor: theme.coral,
+      borderRadius: 6,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    foundingBadgeText: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: '#FFFFFF',
     },
     slotsProgressTrack: {
       height: 4,
-      backgroundColor: theme.border,
+      backgroundColor: theme.bgTertiary,
       borderRadius: 2,
-      marginTop: 12,
       overflow: 'hidden',
+      width: '100%',
+      marginBottom: 4,
     },
     slotsProgressFill: {
       height: '100%',
@@ -365,35 +514,25 @@ const createStyles = (theme: Theme) =>
     },
     slotsText: {
       fontFamily: 'SpaceMono-Regular',
-      fontSize: 11,
-      color: theme.textSecondary,
-      marginTop: 6,
-    },
-    lifetimeFinePrint: {
-      color: theme.textTertiary,
       fontSize: 10,
-      marginTop: 8,
-      lineHeight: 14,
+      color: theme.textSecondary,
     },
-    lifetimeButton: {
-      marginTop: 16,
-      backgroundColor: theme.coral,
+    ctaButton: {
       borderRadius: 12,
-      padding: 14,
+      padding: 16,
       alignItems: 'center',
+      marginTop: 4,
+      marginBottom: 8,
     },
-    lifetimeButtonText: {
-      color: '#FFFFFF',
+    ctaButtonText: {
       fontSize: 16,
       fontWeight: '700',
+      color: theme.accentText,
     },
-    laterButton: {
-      marginTop: 16,
-      padding: 8,
-    },
-    laterButtonText: {
+    footerNote: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
       color: theme.textTertiary,
-      fontSize: 14,
       textAlign: 'center',
     },
   });

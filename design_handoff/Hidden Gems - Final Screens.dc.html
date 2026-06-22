@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; } button { cursor: pointer; }</style>
+</helmet>
+
+<div style="min-width:100%; width:max-content; min-height:100vh; background:#D8D3CB; padding:48px; box-sizing:border-box">
+
+  <div style="margin-bottom:44px; display:flex; justify-content:space-between; align-items:flex-start">
+    <div>
+      <div style="font-family:'Space Mono',monospace; font-size:10px; color:#2DD4BF; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px">Design Review — Final Screens</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; color:#1A1A1A; line-height:1.1; margin-bottom:10px">Trip Planner,<br>Settings + Admin</div>
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:#5B7472; line-height:1.6; max-width:520px">The utility layer — screens that keep the app trustworthy and premium-feeling. Completing the full 19-screen audit.</div>
+    </div>
+    <button onClick="{{toggleScheme}}" style="background:#1A1A1A; color:#EAF6F4; border:none; border-radius:20px; padding:10px 20px; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; margin-top:6px">{{schemeLabel}}</button>
+  </div>
+
+  <div style="display:flex; gap:28px; align-items:flex-start">
+
+    <!-- ═══ COL 1: TRIP PLANNER ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">01 — Premium</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Trip Planner</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 16px 14px">
+              <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:{{text}}">Trip Planner</span>
+              <div style="width:22px"></div>
+            </div>
+
+            <div style="padding:0 16px">
+              <!-- IMPROVED: SpaceMono field label -->
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:6px">Where are you going?</div>
+              <!-- City input with icon -->
+              <div style="background:{{card}}; border:1px solid {{accent}}; border-radius:12px; height:48px; display:flex; align-items:center; padding:0 14px; gap:10px; margin-bottom:14px">
+                <span style="font-size:16px; flex:none">📍</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Split, Croatia</span>
+                <span style="font-size:14px; color:{{textTer}}">✕</span>
+              </div>
+
+              <!-- IMPROVED: SpaceMono radius label -->
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px">Search radius</div>
+              <div style="display:flex; gap:8px; margin-bottom:14px; overflow:hidden">
+                <button onClick="{{setR10}}" style="background:{{r10Bg}}; color:{{r10Txt}}; border:1px solid {{r10Brd}}; border-radius:20px; padding:7px 14px; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; flex:none">10 km</button>
+                <button onClick="{{setR25}}" style="background:{{r25Bg}}; color:{{r25Txt}}; border:1px solid {{r25Brd}}; border-radius:20px; padding:7px 14px; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; flex:none">25 km</button>
+                <button onClick="{{setR50}}" style="background:{{r50Bg}}; color:{{r50Txt}}; border:1px solid {{r50Brd}}; border-radius:20px; padding:7px 14px; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; flex:none">50 km</button>
+                <button onClick="{{setR100}}" style="background:{{r100Bg}}; color:{{r100Txt}}; border:1px solid {{r100Brd}}; border-radius:20px; padding:7px 14px; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; flex:none">100 km</button>
+              </div>
+
+              <!-- IMPROVED: SpaceMono categories label -->
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px">Interested in</div>
+              <div style="display:flex; gap:7px; margin-bottom:16px; overflow:hidden">
+                <div style="background:#1D9E75; border-radius:20px; padding:7px 12px; display:flex; align-items:center; gap:5px; flex:none">
+                  <span style="font-size:12px">🌿</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#fff">Nature</span>
+                </div>
+                <div style="background:#185FA5; border-radius:20px; padding:7px 12px; display:flex; align-items:center; gap:5px; flex:none">
+                  <span style="font-size:12px">👁</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#fff">Views</span>
+                </div>
+                <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:20px; padding:7px 12px; display:flex; align-items:center; gap:5px; flex:none">
+                  <span style="font-size:12px">🚴</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{text}}">Sport</span>
+                </div>
+                <div style="background:{{card}}; border:0.5px solid {{border}}; border-radius:20px; padding:7px 12px; display:flex; align-items:center; gap:5px; flex:none">
+                  <span style="font-size:12px">🍺</span><span style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:{{text}}">Social</span>
+                </div>
+              </div>
+
+              <div style="background:{{accent}}; border-radius:12px; padding:15px; text-align:center; margin-bottom:18px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:{{accentText}}">Search</span>
+              </div>
+
+              <!-- IMPROVED: Results header in SpaceMono teal -->
+              <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px">7 gems near Split, Croatia</div>
+
+              <!-- Result cards -->
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <div style="display:flex; height:80px; background:{{card}}; border-radius:12px; overflow:hidden; border:0.5px solid {{border}}">
+                  <div style="width:80px; background:linear-gradient(155deg,#1e5a40,#0e2820); flex:none"></div>
+                  <div style="padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; flex:1">
+                    <div>
+                      <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:8px; padding:2px 7px; display:inline-flex; margin-bottom:3px">
+                        <span style="font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:600; color:{{accent}}">Nature</span>
+                      </div>
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{text}}">Jezera Viewpoint</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px">
+                      <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">♥ 4</span>
+                      <span style="color:{{textTer}}; font-size:10px">|</span>
+                      <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">4.2 km</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex; height:80px; background:{{card}}; border-radius:12px; overflow:hidden; border:0.5px solid {{border}}">
+                  <div style="width:80px; background:linear-gradient(155deg,#0e2840,#081420); flex:none"></div>
+                  <div style="padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; flex:1">
+                    <div>
+                      <div style="background:{{accentSub}}; border:0.5px solid {{accent}}; border-radius:8px; padding:2px 7px; display:inline-flex; margin-bottom:3px">
+                        <span style="font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:600; color:{{accent}}">Views</span>
+                      </div>
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{text}}">Brela Sea Cave</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px">
+                      <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">♥ 11</span>
+                      <span style="color:{{textTer}}; font-size:10px">|</span>
+                      <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">12.8 km</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex; height:80px; background:{{card}}; border-radius:12px; overflow:hidden; border:0.5px solid {{border}}">
+                  <div style="width:80px; background:linear-gradient(155deg,#2a4820,#162810); flex:none"></div>
+                  <div style="padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; flex:1">
+                    <div>
+                      <div style="background:rgba(45,140,186,0.15); border:0.5px solid #2D8BBA; border-radius:8px; padding:2px 7px; display:inline-flex; margin-bottom:3px">
+                        <span style="font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:600; color:#2D8BBA">Sport</span>
+                      </div>
+                      <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; color:{{text}}">Biokovo Peak</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px">
+                      <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">♥ 3</span>
+                      <span style="color:{{textTer}}; font-size:10px">|</span>
+                      <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textSec}}">18.3 km</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono field labels</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">All 3 field labels now use SpaceMono uppercase. Currently plain <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">fontSize:14, fontWeight:'600'</span> sans-serif. Tap radius pills above to switch — they already use SpaceMono, keep that.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Results header in SpaceMono teal</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">"7 GEMS NEAR SPLIT, CROATIA" as SpaceMono 10px teal label replaces plain grey <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">resultsSummary</span> style. One line change in <span style="font-family:'Space Mono',monospace; background:rgba(0,0,0,0.07); padding:0 4px; border-radius:3px">resultsSummary</span>.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Location pin prefix on city input</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">📍 icon before the city name + accent border when a city is locked in. Gives confirmation that the destination is set before the user taps Search.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 2: SETTINGS ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF9F5A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">02 — Settings</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Settings</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 16px 10px">
+              <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px"></div>
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600; color:{{text}}">Settings</span>
+              <div style="width:22px"></div>
+            </div>
+
+            <!-- IMPROVED: Premium status banner -->
+            <div style="margin:0 16px 6px; background:{{accentSub}}; border:1px solid {{accent}}; border-radius:14px; padding:11px 14px; display:flex; align-items:center; justify-content:space-between">
+              <div>
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{accent}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px">Explorer Lv. 2</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:{{text}}">Premium Active</div>
+              </div>
+              <div style="background:{{accent}}; border-radius:8px; padding:6px 12px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:{{accentText}}">Manage</span>
+              </div>
+            </div>
+
+            <!-- IMPROVED: SpaceMono section labels -->
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:2px; text-transform:uppercase; padding:10px 16px 5px">Account</div>
+            <div style="border-top:0.5px solid {{border}}">
+              <div style="display:flex; align-items:center; padding:13px 16px; border-bottom:0.5px solid {{border}}; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">👤</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Username</span>
+                <span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textTer}}">@buke</span>
+                <span style="color:{{textTer}}; font-size:14px">›</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:13px 16px; border-bottom:0.5px solid {{border}}; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">🏠</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Home Town</span>
+                <span style="font-family:'Space Mono',monospace; font-size:11px; color:{{textTer}}">Grad Ploče</span>
+                <span style="color:{{textTer}}; font-size:14px">›</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:13px 16px; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">🔒</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Change Password</span>
+                <span style="color:{{textTer}}; font-size:14px">›</span>
+              </div>
+            </div>
+
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:2px; text-transform:uppercase; padding:10px 16px 5px">Privacy</div>
+            <div style="border-top:0.5px solid {{border}}">
+              <div style="display:flex; align-items:center; padding:13px 16px; border-bottom:0.5px solid {{border}}; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">👁</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Private Profile</span>
+                <!-- CSS toggle -->
+                <div onClick="{{togglePrivacy}}" style="width:44px; height:26px; border-radius:13px; background:{{privacyToggleBg}}; position:relative; cursor:pointer; transition:background 0.2s; flex:none">
+                  <div style="width:22px; height:22px; border-radius:11px; background:#fff; position:absolute; top:2px; left:{{privacyToggleLeft}}; transition:left 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.25)"></div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; padding:13px 16px; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">🚫</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Blocked Users</span>
+                <span style="color:{{textTer}}; font-size:14px">›</span>
+              </div>
+            </div>
+
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:2px; text-transform:uppercase; padding:10px 16px 5px">Appearance</div>
+            <div style="border-top:0.5px solid {{border}}">
+              <div style="display:flex; align-items:center; padding:13px 16px; border-bottom:0.5px solid {{border}}; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">🌙</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Dark Mode</span>
+                <!-- Connected to global scheme toggle -->
+                <div onClick="{{toggleScheme}}" style="width:44px; height:26px; border-radius:13px; background:{{darkToggleBg}}; position:relative; cursor:pointer; transition:background 0.2s; flex:none">
+                  <div style="width:22px; height:22px; border-radius:11px; background:#fff; position:absolute; top:2px; left:{{darkToggleLeft}}; transition:left 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.25)"></div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; padding:13px 16px; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">🌐</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Language</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{textTer}}">English</span>
+                <span style="color:{{textTer}}; font-size:14px">›</span>
+              </div>
+            </div>
+
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:2px; text-transform:uppercase; padding:10px 16px 5px">About</div>
+            <div style="border-top:0.5px solid {{border}}">
+              <div style="display:flex; align-items:center; padding:13px 16px; border-bottom:0.5px solid {{border}}; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">ℹ</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Version</span>
+                <span style="font-family:'Space Mono',monospace; font-size:12px; color:{{textTer}}">v1.0.0</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:13px 16px; background:{{card}}; gap:12px">
+                <span style="font-size:18px; color:{{textSec}}">⭐</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:{{text}}; flex:1">Rate Hidden Gems</span>
+                <span style="color:{{textTer}}; font-size:14px">›</span>
+              </div>
+            </div>
+
+            <!-- IMPROVED: Danger Zone with visual distinction -->
+            <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF4444; letter-spacing:2px; text-transform:uppercase; padding:10px 16px 5px">Danger Zone</div>
+            <div style="border-top:0.5px solid rgba(255,68,68,0.2)">
+              <div style="display:flex; align-items:center; padding:13px 16px; border-bottom:0.5px solid rgba(255,68,68,0.15); background:rgba(255,68,68,0.04); gap:12px">
+                <span style="font-size:18px">🚪</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:#FF4444; flex:1">Log Out</span>
+              </div>
+              <div style="display:flex; align-items:center; padding:13px 16px; background:rgba(255,68,68,0.04); gap:12px">
+                <span style="font-size:18px">🗑</span>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; color:#FF4444; flex:1">Delete Account</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">SpaceMono section headers</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Section headers ("ACCOUNT", "PRIVACY"…) changed to SpaceMono. Current style is plain sans-serif — the only place in the app where section labels aren't monospace. One font change, consistent system.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Premium status card</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Settings currently has no subscription awareness. "Explorer Lv. 2 · Premium Active" banner at top surfaces tier and level — or shows "Upgrade" for free users. Reduces confusion about what's included.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#FF9F5A; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Dark mode toggle → connected live</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">The toggle above is wired — tap it to switch all phones to light/dark mode simultaneously. Danger Zone gets a subtle red-tinted background to visually distinguish it from normal settings rows.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COL 3: ADMIN DASHBOARD ═══ -->
+    <div style="flex:none; width:390px; display:flex; flex-direction:column; gap:18px">
+      <div>
+        <div style="font-family:'Space Mono',monospace; font-size:9px; color:#2DD4BF; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px">03 — Internal</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:#1A1A1A">Admin Dashboard</div>
+      </div>
+
+      <div style="width:390px; background:#1C1C1E; border-radius:50px; padding:11px; box-shadow:inset 0 0 0 0.5px rgba(255,255,255,0.07), 0 40px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.5)">
+        <div style="background:{{bg}}; border-radius:40px; overflow:hidden; position:relative">
+          <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:122px; height:34px; background:#000; border-radius:17px; z-index:10"></div>
+          <div style="height:59px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 9px">
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:{{text}}; letter-spacing:-0.3px">9:41</span>
+            <div style="display:flex; align-items:center; gap:5px">
+              <div style="display:flex; align-items:flex-end; gap:1.5px; height:11px">
+                <div style="width:3px; height:4px; background:{{text}}; border-radius:1px; opacity:0.4"></div>
+                <div style="width:3px; height:6px; background:{{text}}; border-radius:1px; opacity:0.6"></div>
+                <div style="width:3px; height:9px; background:{{text}}; border-radius:1px; opacity:0.8"></div>
+                <div style="width:3px; height:11px; background:{{text}}; border-radius:1px"></div>
+              </div>
+              <div style="width:22px; height:11px; border:1.5px solid {{text}}; border-radius:3px; padding:1.5px">
+                <div style="background:{{text}}; height:100%; width:72%; border-radius:1px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:700px; overflow:hidden">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 16px 12px">
+              <div style="width:9px; height:9px; border-left:2px solid {{text}}; border-bottom:2px solid {{text}}; transform:rotate(45deg); margin-left:4px"></div>
+              <div style="display:flex; align-items:center; gap:7px">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; color:{{text}}">Admin</span>
+                <div style="background:{{accentSub}}; border:1px solid {{accent}}; border-radius:8px; padding:2px 7px">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{accent}}">🛡 INTERNAL</span>
+                </div>
+              </div>
+              <div style="width:22px"></div>
+            </div>
+
+            <!-- Stats grid -->
+            <div style="padding:0 16px 14px; display:grid; grid-template-columns:1fr 1fr; gap:10px">
+              <div style="background:{{card}}; border-radius:14px; padding:14px; border:0.5px solid {{border}}">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px">Users</div>
+                <div style="font-family:'Space Mono',monospace; font-size:28px; font-weight:700; color:{{text}}; line-height:1">247</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{accent}}; margin-top:4px">+12 this week</div>
+              </div>
+              <div style="background:{{card}}; border-radius:14px; padding:14px; border:0.5px solid {{border}}">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px">Gems</div>
+                <div style="font-family:'Space Mono',monospace; font-size:28px; font-weight:700; color:{{text}}; line-height:1">1,082</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{accent}}; margin-top:4px">+34 this week</div>
+              </div>
+              <div style="background:{{card}}; border-radius:14px; padding:14px; border:0.5px solid {{border}}">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px">Active Today</div>
+                <div style="font-family:'Space Mono',monospace; font-size:28px; font-weight:700; color:{{text}}; line-height:1">38</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}; margin-top:4px">of 247 users</div>
+              </div>
+              <div style="background:rgba(255,68,68,0.08); border-radius:14px; padding:14px; border:1px solid rgba(255,68,68,0.3)">
+                <div style="font-family:'Space Mono',monospace; font-size:9px; color:#FF4444; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px">Reports</div>
+                <div style="font-family:'Space Mono',monospace; font-size:28px; font-weight:700; color:#FF4444; line-height:1">4</div>
+                <div style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:#FF4444; margin-top:4px">Needs review</div>
+              </div>
+            </div>
+
+            <!-- Pending reports -->
+            <div style="padding:0 16px">
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px">Pending Reports</div>
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <div style="background:{{card}}; border-radius:12px; padding:12px 14px; border:0.5px solid {{border}}; display:flex; align-items:center; gap:10px">
+                  <div style="width:36px; height:36px; border-radius:18px; background:rgba(255,68,68,0.12); display:flex; align-items:center; justify-content:center; flex:none; font-size:16px">📍</div>
+                  <div style="flex:1">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}; margin-bottom:1px">Gem reported: "Party Spot"</div>
+                    <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">Inappropriate content · 2h ago</div>
+                  </div>
+                  <div style="background:#FF4444; border-radius:8px; padding:4px 10px; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:700; color:#fff">Review</span>
+                  </div>
+                </div>
+                <div style="background:{{card}}; border-radius:12px; padding:12px 14px; border:0.5px solid {{border}}; display:flex; align-items:center; gap:10px">
+                  <div style="width:36px; height:36px; border-radius:18px; background:rgba(83,74,183,0.12); display:flex; align-items:center; justify-content:center; flex:none; font-size:16px">👤</div>
+                  <div style="flex:1">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}; margin-bottom:1px">User reported: test_spammer</div>
+                    <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">Spam · 5h ago</div>
+                  </div>
+                  <div style="background:#FF4444; border-radius:8px; padding:4px 10px; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:700; color:#fff">Review</span>
+                  </div>
+                </div>
+                <div style="background:{{card}}; border-radius:12px; padding:12px 14px; border:0.5px solid {{border}}; display:flex; align-items:center; gap:10px">
+                  <div style="width:36px; height:36px; border-radius:18px; background:rgba(255,68,68,0.12); display:flex; align-items:center; justify-content:center; flex:none; font-size:16px">📍</div>
+                  <div style="flex:1">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:{{text}}; margin-bottom:1px">Gem reported: "Private Drive"</div>
+                    <div style="font-family:'Space Mono',monospace; font-size:10px; color:{{textSec}}">Private location · 1d ago</div>
+                  </div>
+                  <div style="background:{{card}}; border:1px solid {{border}}; border-radius:8px; padding:4px 10px; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:11px; color:{{textSec}}">Done</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recent signups -->
+              <div style="font-family:'Space Mono',monospace; font-size:9px; color:{{textTer}}; letter-spacing:2px; text-transform:uppercase; margin:14px 0 8px">Recent Signups</div>
+              <div style="display:flex; flex-direction:column; gap:0; border-radius:12px; overflow:hidden; border:0.5px solid {{border}}">
+                <div style="display:flex; align-items:center; padding:10px 14px; background:{{card}}; border-bottom:0.5px solid {{border}}; gap:10px">
+                  <div style="width:30px; height:30px; border-radius:15px; background:{{accent}}; display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:{{accentText}}">M</span>
+                  </div>
+                  <div style="flex:1">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">@marko_hr</div>
+                  </div>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">2h ago</span>
+                </div>
+                <div style="display:flex; align-items:center; padding:10px 14px; background:{{card}}; gap:10px">
+                  <div style="width:30px; height:30px; border-radius:15px; background:{{coral}}; display:flex; align-items:center; justify-content:center; flex:none">
+                    <span style="font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700; color:#fff">S</span>
+                  </div>
+                  <div style="flex:1">
+                    <div style="font-family:'Space Grotesk',sans-serif; font-size:13px; color:{{text}}">@sea_walker</div>
+                  </div>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:{{textTer}}">4h ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:34px; background:{{bg}}; display:flex; align-items:center; justify-content:center">
+            <div style="width:134px; height:5px; background:{{homeInd}}; border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F5F1EB; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:13px">
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">1</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Stats in SpaceMono</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Users / Gems / Active / Reports counters in SpaceMono monospace — consistent with how all numeric data is treated across the app. The red Reports card with border creates instant priority visibility.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">2</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">Pending reports queue</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Reports surfaced as a priority list with inline Review/Done CTAs. Currently the admin screen is a scrollable list — the most urgent items should be front and center, not buried.</div></div>
+        </div>
+        <div style="display:flex; gap:10px">
+          <div style="width:22px; height:22px; border-radius:50%; background:#2DD4BF; display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px"><span style="font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#0A1F1C">3</span></div>
+          <div><div style="font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#1A1A1A; margin-bottom:2px">🛡 INTERNAL badge</div><div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:#5B7472; line-height:1.5">Visible "🛡 INTERNAL" label in the header — obvious reminder that this screen is admin-only. Reduces risk of accidentally sharing a screenshot of admin data in public channels.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1400, &quot;height&quot;: 1100}}">
+class Component extends DCLogic {
+  state = {
+    scheme: 'dark',
+    selectedRadius: 50,
+    privacyOn: false,
+  };
+
+  renderVals() {
+    const dark = this.state.scheme === 'dark';
+    const bg = dark ? '#0B1A1C' : '#F7FAF9';
+    const card = dark ? '#142B2E' : '#FFFFFF';
+    const bgTer = dark ? '#1C3438' : '#E3F1EF';
+    const border = dark ? '#1C3438' : '#DCE8E6';
+    const text = dark ? '#EAF6F4' : '#0B1A1C';
+    const textSec = dark ? '#7FA8A8' : '#5B7472';
+    const textTer = dark ? '#5C8484' : '#8FA3A1';
+    const accent = dark ? '#2DD4BF' : '#0F9488';
+    const accentSub = dark ? '#1C3438' : '#E3F1EF';
+    const coral = dark ? '#FF9F5A' : '#E8723D';
+    const coralSub = dark ? 'rgba(255,159,90,0.15)' : 'rgba(232,114,61,0.12)';
+    const homeInd = dark ? 'rgba(234,246,244,0.2)' : 'rgba(11,26,28,0.18)';
+
+    const r = this.state.selectedRadius;
+    const rStyle = (v) => ({
+      bg: r === v ? accent : card,
+      txt: r === v ? '#0A1F1C' : text,
+      brd: r === v ? accent : border,
+    });
+    const r10 = rStyle(10), r25 = rStyle(25), r50 = rStyle(50), r100 = rStyle(100), r200 = rStyle(200);
+
+    const priv = this.state.privacyOn;
+
+    return {
+      bg, card, bgTer, border, text, textSec, textTer,
+      accent, accentSub, accentText: '#0A1F1C', coral, coralSub, homeInd, dark,
+      toggleScheme: () => this.setState(s => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
+      schemeLabel: dark ? '☀ Light' : '◑ Dark',
+
+      // Radius pills
+      r10Bg: r10.bg, r10Txt: r10.txt, r10Brd: r10.brd,
+      r25Bg: r25.bg, r25Txt: r25.txt, r25Brd: r25.brd,
+      r50Bg: r50.bg, r50Txt: r50.txt, r50Brd: r50.brd,
+      r100Bg: r100.bg, r100Txt: r100.txt, r100Brd: r100.brd,
+      r200Bg: r200.bg, r200Txt: r200.txt, r200Brd: r200.brd,
+      setR10: () => this.setState({ selectedRadius: 10 }),
+      setR25: () => this.setState({ selectedRadius: 25 }),
+      setR50: () => this.setState({ selectedRadius: 50 }),
+      setR100: () => this.setState({ selectedRadius: 100 }),
+      setR200: () => this.setState({ selectedRadius: 200 }),
+
+      // Settings toggles
+      togglePrivacy: () => this.setState(s => ({ privacyOn: !s.privacyOn })),
+      privacyToggleBg: priv ? accent : bgTer,
+      privacyToggleLeft: priv ? '20px' : '2px',
+      darkToggleBg: dark ? accent : bgTer,
+      darkToggleLeft: dark ? '20px' : '2px',
+    };
+  }
+}
+</script>
+</body>
+</html>

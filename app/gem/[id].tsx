@@ -6,6 +6,7 @@ import {
 import { blockUser, getMyBlockedUsers } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/lib/haptics';
 import { addStreakBonus } from '@/lib/streak';
@@ -34,7 +35,6 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const COMMENT_BLUE = '#185FA5';
 const LOCAL_PICK_COLOR = '#7F77DD';
 const PIONEER_COLOR = '#FFD700';
 
@@ -662,6 +662,10 @@ export default function GemDetailScreen() {
             <Text style={styles.heroTitle} numberOfLines={2} ellipsizeMode="tail">
               {gem.title}
             </Text>
+            <Text style={styles.heroCoords}>
+              {formatCoordinates(gem.latitude, gem.longitude)}
+              {locationName ? ` · ${locationName}` : ''}
+            </Text>
           </View>
         </View>
 
@@ -702,13 +706,6 @@ export default function GemDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color={theme.accent} />
-            <Text style={styles.locationText}>
-              {locationName ?? `${gem.latitude.toFixed(4)}, ${gem.longitude.toFixed(4)}`}
-            </Text>
-          </View>
-
           {gem.best_time ? (
             <View style={styles.bestTimeRow}>
               <Ionicons name="time-outline" size={14} color={theme.coral} />
@@ -719,16 +716,18 @@ export default function GemDetailScreen() {
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Ionicons name="heart" size={16} color={theme.danger} />
-              <Text style={styles.statCount}>{likeCount}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons name="location" size={16} color={theme.accent} />
               <Text style={styles.statCount}>{visitCount}</Text>
+              <Text style={styles.statLabel}>Visits</Text>
             </View>
+            <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Ionicons name="chatbubble-outline" size={16} color={COMMENT_BLUE} />
+              <Text style={styles.statCount}>{likeCount}</Text>
+              <Text style={styles.statLabel}>Likes</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
               <Text style={styles.statCount}>{comments.length}</Text>
+              <Text style={styles.statLabel}>Comments</Text>
             </View>
           </View>
 
@@ -754,7 +753,7 @@ export default function GemDetailScreen() {
 
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.navigateButton} onPress={openMaps} activeOpacity={0.8}>
-              <Ionicons name="navigate" size={18} color={theme.background} />
+              <Ionicons name="navigate" size={18} color={theme.accent} />
               <Text style={styles.navigateButtonText}>Navigate</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -762,12 +761,17 @@ export default function GemDetailScreen() {
               onPress={handleBeenHere}
               disabled={visitVerified}
               activeOpacity={0.8}>
+              <Ionicons
+                name={visitVerified ? 'checkmark-circle' : 'location'}
+                size={18}
+                color={theme.accentText}
+              />
               <Text
                 style={[
                   styles.beenHereButtonText,
                   visitVerified && styles.beenHereButtonTextVerified,
                 ]}>
-                {visitVerified ? 'Visit verified! ✓' : "I've been here"}
+                {visitVerified ? 'Visit verified! ✓' : 'Check In'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -940,7 +944,7 @@ const createStyles = (theme: Theme) =>
   },
   hero: {
     height: 320,
-    backgroundColor: theme.backgroundTertiary,
+    backgroundColor: theme.bgTertiary,
     position: 'relative',
   },
   heroImage: {
@@ -951,7 +955,7 @@ const createStyles = (theme: Theme) =>
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.backgroundTertiary,
+    backgroundColor: theme.bgTertiary,
   },
   heroOverlay: {
     position: 'absolute',
@@ -967,7 +971,7 @@ const createStyles = (theme: Theme) =>
     marginBottom: 8,
   },
   categoryBadge: {
-    backgroundColor: theme.accentSubtle,
+    backgroundColor: theme.accentSub,
     borderWidth: 0.5,
     borderColor: theme.accent,
     paddingVertical: 4,
@@ -977,7 +981,7 @@ const createStyles = (theme: Theme) =>
   categoryBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: theme.accent,
+    color: theme.textSecondary,
   },
   verifiedBadge: {
     flexDirection: 'row',
@@ -1045,6 +1049,13 @@ const createStyles = (theme: Theme) =>
     fontSize: 22,
     fontFamily: 'SpaceGrotesk-Bold',
   },
+  heroCoords: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 11,
+    color: theme.textSecondary,
+    marginTop: 4,
+    marginBottom: 12,
+  },
   content: {
     padding: 16,
     paddingBottom: 100,
@@ -1106,7 +1117,7 @@ const createStyles = (theme: Theme) =>
   },
   locationText: {
     color: theme.textSecondary,
-    fontSize: 13,
+    fontSize: 10,
     fontFamily: 'SpaceMono-Regular',
   },
   bestTimeRow: {
@@ -1129,20 +1140,32 @@ const createStyles = (theme: Theme) =>
     alignItems: 'center',
     justifyContent: 'space-around',
     backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
     borderRadius: 12,
-    padding: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     marginVertical: 12,
   },
   statItem: {
-    flexDirection: 'row',
+    flex: 1,
     alignItems: 'center',
-    gap: 6,
+    gap: 2,
+  },
+  statDivider: {
+    width: 0.5,
+    height: 28,
+    backgroundColor: theme.border,
   },
   statCount: {
     color: theme.text,
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'SpaceMono-Regular',
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: theme.textSecondary,
   },
   descriptionWrap: {
     marginBottom: 16,
@@ -1169,35 +1192,37 @@ const createStyles = (theme: Theme) =>
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: theme.accent,
-    borderRadius: 10,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.accent,
+    borderRadius: 12,
     paddingVertical: 14,
   },
   navigateButtonText: {
-    color: theme.background,
+    color: theme.accent,
     fontSize: 14,
     fontWeight: '600',
   },
   beenHereButton: {
     flex: 1,
-    backgroundColor: theme.card,
-    borderWidth: 0.5,
-    borderColor: theme.accent,
-    borderRadius: 10,
-    paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.accent,
+    borderRadius: 12,
+    paddingVertical: 14,
   },
   beenHereButtonVerified: {
-    opacity: 0.7,
+    opacity: 0.85,
   },
   beenHereButtonText: {
-    color: theme.accent,
+    color: theme.accentText,
     fontSize: 14,
     fontWeight: '600',
   },
   beenHereButtonTextVerified: {
-    color: theme.accent,
+    color: theme.accentText,
   },
   commentsTitle: {
     color: theme.text,

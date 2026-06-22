@@ -1,5 +1,6 @@
 import { EmptyState } from '@/components/EmptyState'
 import { PressableScale } from '@/components/PressableScale'
+import { SegmentedPill } from '@/components/SegmentedPill'
 import {
   canJoinMoreCommunities,
   fetchCommunities,
@@ -224,31 +225,21 @@ export default function CommunitiesScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Communities</Text>
         <PressableScale onPress={handleCreatePress} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.createButton}>
-          {isPremium ? (
-            <Text style={styles.createButtonText}>+ Create</Text>
-          ) : (
-            <Ionicons name="lock-closed" size={20} color={theme.textSecondary} />
-          )}
+          <Text style={styles.createButtonText}>+ Create 💎</Text>
         </PressableScale>
       </View>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'discover' && styles.tabActive]}
-          onPress={() => setActiveTab('discover')}
-          activeOpacity={0.8}>
-          <Text style={[styles.tabText, activeTab === 'discover' && styles.tabTextActive]}>
-            Discover
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'mine' && styles.tabActive]}
-          onPress={() => setActiveTab('mine')}
-          activeOpacity={0.8}>
-          <Text style={[styles.tabText, activeTab === 'mine' && styles.tabTextActive]}>
-            My Communities
-          </Text>
-        </TouchableOpacity>
+      <View style={{ marginBottom: 14 }}>
+        <SegmentedPill
+          tabs={[
+            { key: 'discover', label: 'Discover' },
+            { key: 'mine', label: `Mine (${myCommunities.length})` },
+          ]}
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as 'discover' | 'mine')}
+          theme={theme}
+          width={250}
+        />
       </View>
 
       {loading ? (
@@ -321,28 +312,31 @@ const createStyles = (theme: Theme) =>
     },
     tabContainer: {
       flexDirection: 'row',
+      alignSelf: 'center',
+      width: 250,
       backgroundColor: theme.card,
-      borderRadius: 10,
-      padding: 4,
-      marginHorizontal: 16,
+      borderRadius: 24,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      padding: 3,
       marginBottom: 16,
     },
     tab: {
       flex: 1,
       alignItems: 'center',
-      paddingVertical: 8,
-      borderRadius: 8,
+      paddingVertical: 9,
+      borderRadius: 20,
     },
     tabActive: {
       backgroundColor: theme.accent,
     },
     tabText: {
-      fontSize: 14,
-      fontWeight: '500',
+      fontSize: 13,
+      fontWeight: '600',
       color: theme.textSecondary,
     },
     tabTextActive: {
-      color: theme.background,
+      color: theme.accentText,
       fontWeight: '600',
     },
     listContent: {
@@ -412,7 +406,7 @@ const createStyles = (theme: Theme) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 3,
-      backgroundColor: theme.accentSubtle,
+      backgroundColor: theme.accentSub,
       borderRadius: 10,
       paddingHorizontal: 8,
       paddingVertical: 3,
@@ -420,7 +414,7 @@ const createStyles = (theme: Theme) =>
     },
     locationTagText: {
       fontSize: 11,
-      color: theme.accent,
+      color: theme.textSecondary,
       fontWeight: '500',
     },
     joinButton: {
