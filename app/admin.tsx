@@ -184,12 +184,11 @@ function AdminStatCard({
   cardStyles: ReturnType<typeof createStyles>;
 }) {
   const isDanger = variant === 'danger';
-  const subtextColor =
-    subtextTone === 'danger'
-      ? theme.danger
-      : subtextTone === 'secondary'
-        ? theme.textSecondary
-        : theme.accent;
+  const subtextColor = isDanger
+    ? theme.danger
+    : subtextTone === 'secondary'
+      ? theme.textSecondary
+      : theme.accent;
 
   return (
     <View
@@ -208,7 +207,7 @@ function AdminStatCard({
           cardStyles.statLabel,
           { color: isDanger ? theme.danger : theme.textTertiary },
         ]}>
-        {label.toUpperCase()}
+        {label}
       </Text>
       <Text
         style={[
@@ -606,8 +605,7 @@ export default function AdminScreen() {
               label="Reports"
               value={stats.pendingReports ?? 0}
               subtext="Needs review"
-              variant="danger"
-              subtextTone="danger"
+              variant={(stats.pendingReports ?? 0) > 0 ? 'danger' : 'default'}
               theme={theme}
               cardStyles={styles}
             />
@@ -1150,7 +1148,7 @@ export default function AdminScreen() {
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>Admin</Text>
           <View style={[styles.internalBadge, { backgroundColor: theme.accentSub, borderColor: theme.accent }]}>
-            <Text style={[styles.internalBadgeText, { color: theme.textSecondary }]}>🛡 INTERNAL</Text>
+            <Text style={[styles.internalBadgeText, { color: theme.accent }]}>🛡 INTERNAL</Text>
           </View>
         </View>
         <View style={styles.headerSide} />
@@ -1268,15 +1266,16 @@ const createStyles = (theme: Theme) =>
       fontFamily: 'SpaceMono-Regular',
       fontSize: 9,
       letterSpacing: 1.5,
+      textTransform: 'uppercase',
       marginBottom: 6,
     },
     statValue: {
-      fontFamily: 'SpaceMono-Regular',
+      fontFamily: 'SpaceMono-Bold',
       fontSize: 28,
-      fontWeight: '700',
       lineHeight: 28,
     },
     statSubtext: {
+      fontFamily: 'SpaceGrotesk-Regular',
       fontSize: 11,
       marginTop: 4,
     },
