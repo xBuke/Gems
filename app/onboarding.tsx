@@ -1,5 +1,6 @@
 import { searchCities } from '@/lib/cityAutocomplete'
 import { CATEGORIES } from '@/lib/categories'
+import { getCurrentCoordinates } from '@/lib/currentLocation'
 import { formatCoordinates } from '@/lib/coordinates'
 import {
   ONBOARDING_SEEN_KEY,
@@ -32,6 +33,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg'
 
 const TOTAL_STEPS = 13
 const STORY_STEP_COUNT = 6
@@ -83,18 +85,22 @@ const STORY_STEPS: StoryStepDef[] = [
   },
 ]
 
+const WARM_CATEGORY_GRADIENT = ['#3D2817', '#1F1410'] as const
+const COOL_CATEGORY_GRADIENT = ['#16332E', '#0D1F1C'] as const
+const NEUTRAL_CATEGORY_GRADIENT = ['#2A2A2E', '#16161A'] as const
+
 const CATEGORY_GRADIENTS: Record<string, readonly [string, string]> = {
-  nature: ['#162812', '#0a180a'],
-  views: ['#0e2840', '#081420'],
-  sport: ['#1a3a4a', '#0a2030'],
-  social: ['#3a2a18', '#201208'],
-  urban: ['#1a1a3a', '#0a0a20'],
-  culture: ['#3a2010', '#1a1008'],
-  chill: ['#1a3a38', '#0a2028'],
-  couples: ['#3a1a18', '#200a0a'],
-  pets: ['#2a2818', '#181008'],
-  family: ['#1a3a4a', '#0a2030'],
-  hidden: ['#3a2a10', '#1a1808'],
+  social: WARM_CATEGORY_GRADIENT,
+  couples: WARM_CATEGORY_GRADIENT,
+  pets: WARM_CATEGORY_GRADIENT,
+  nature: COOL_CATEGORY_GRADIENT,
+  views: COOL_CATEGORY_GRADIENT,
+  sport: COOL_CATEGORY_GRADIENT,
+  chill: COOL_CATEGORY_GRADIENT,
+  family: COOL_CATEGORY_GRADIENT,
+  urban: NEUTRAL_CATEGORY_GRADIENT,
+  culture: NEUTRAL_CATEGORY_GRADIENT,
+  hidden: NEUTRAL_CATEGORY_GRADIENT,
 }
 
 const STORY_OVERLAY_COLORS = [
@@ -111,88 +117,93 @@ function CompassHero({ accent, accentSub, coral, background }: {
   background: string
 }) {
   return (
-    <View
-      style={{
-        width: 96,
-        height: 96,
-        borderRadius: 48,
-        borderWidth: 2.5,
-        borderColor: accent,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 24,
-        shadowColor: accent,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        backgroundColor: background,
-      }}>
+    <View style={{ marginBottom: 24, alignItems: 'center' }}>
       <View
         style={{
-          position: 'absolute',
-          width: 120,
-          height: 120,
-          borderRadius: 60,
-          backgroundColor: accentSub,
-          opacity: 0.5,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: '50%',
-          marginLeft: -1.5,
-          width: 3,
-          height: 24,
-          backgroundColor: coral,
-          borderRadius: 2,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 10,
-          left: '50%',
-          marginLeft: -1.5,
-          width: 3,
-          height: 24,
-          backgroundColor: accent,
-          borderRadius: 2,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          right: 10,
-          top: '50%',
-          marginTop: -1.5,
-          height: 3,
-          width: 24,
-          backgroundColor: accent,
-          borderRadius: 2,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          left: 10,
-          top: '50%',
-          marginTop: -1.5,
-          height: 3,
-          width: 24,
-          backgroundColor: accent,
-          borderRadius: 2,
-        }}
-      />
-      <View
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: 5,
-          backgroundColor: accent,
-        }}
-      />
+          padding: 24,
+          borderRadius: 72,
+          backgroundColor: background,
+        }}>
+        <View
+          style={{
+            padding: 12,
+            borderRadius: 60,
+            backgroundColor: accentSub,
+          }}>
+          <View
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: 48,
+              borderWidth: 2.5,
+              borderColor: accent,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: background,
+            }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 10,
+                left: '50%',
+                marginLeft: -1.5,
+                width: 3,
+                height: 24,
+                backgroundColor: coral,
+                borderTopLeftRadius: 2,
+                borderTopRightRadius: 2,
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 10,
+                left: '50%',
+                marginLeft: -1.5,
+                width: 3,
+                height: 24,
+                backgroundColor: accent,
+                borderBottomLeftRadius: 2,
+                borderBottomRightRadius: 2,
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                right: 10,
+                top: '50%',
+                marginTop: -1.5,
+                height: 3,
+                width: 24,
+                backgroundColor: accent,
+                borderTopRightRadius: 2,
+                borderBottomRightRadius: 2,
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                left: 10,
+                top: '50%',
+                marginTop: -1.5,
+                height: 3,
+                width: 24,
+                backgroundColor: accent,
+                borderTopLeftRadius: 2,
+                borderBottomLeftRadius: 2,
+              }}
+            />
+            <View
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: accent,
+              }}
+            />
+          </View>
+        </View>
+      </View>
     </View>
   )
 }
@@ -208,6 +219,40 @@ const TRIAL_FEATURES = [
   'Hidden Gems cat.',
 ] as const
 
+const TRIAL_HERO_GRADIENT_RAD = ((160 - 90) * Math.PI) / 180
+const TRIAL_HERO_GRADIENT_START = {
+  x: 0.5 - Math.cos(TRIAL_HERO_GRADIENT_RAD) * 0.5,
+  y: 0.5 - Math.sin(TRIAL_HERO_GRADIENT_RAD) * 0.5,
+}
+const TRIAL_HERO_GRADIENT_END = {
+  x: 0.5 + Math.cos(TRIAL_HERO_GRADIENT_RAD) * 0.5,
+  y: 0.5 + Math.sin(TRIAL_HERO_GRADIENT_RAD) * 0.5,
+}
+
+function TrialHeroGlow() {
+  return (
+    <View style={trialHeroGlowStyle} pointerEvents="none">
+      <Svg width={200} height={200}>
+        <Defs>
+          <RadialGradient id="trialHeroGlow" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="rgba(45,212,191,0.18)" />
+            <Stop offset="70%" stopColor="rgba(45,212,191,0)" />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="200" height="200" fill="url(#trialHeroGlow)" />
+      </Svg>
+    </View>
+  )
+}
+
+const trialHeroGlowStyle = {
+  position: 'absolute' as const,
+  top: -20,
+  alignSelf: 'center' as const,
+  width: 200,
+  height: 200,
+}
+
 function TrialCompass({ accent, coral }: { accent: string; coral: string }) {
   return (
     <View
@@ -219,6 +264,7 @@ function TrialCompass({ accent, coral }: { accent: string; coral: string }) {
         borderColor: accent,
         alignItems: 'center',
         justifyContent: 'center',
+        zIndex: 1,
       }}>
       <View
         style={{
@@ -309,6 +355,10 @@ export default function OnboardingScreen() {
   const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [prefsSaved, setPrefsSaved] = useState(false)
+  const [welcomeGpsCoords, setWelcomeGpsCoords] = useState<{
+    latitude: number
+    longitude: number
+  } | null>(null)
 
   const fadeAnim = useRef(new Animated.Value(1)).current
   const pulseAnim = useRef(new Animated.Value(1)).current
@@ -444,6 +494,22 @@ export default function OnboardingScreen() {
       }
     }
     detectHomeTown()
+  }, [step])
+
+  useEffect(() => {
+    if (step !== 12) return
+
+    let cancelled = false
+    const loadWelcomeCoords = async () => {
+      const coords = await getCurrentCoordinates()
+      if (!cancelled && coords) {
+        setWelcomeGpsCoords(coords)
+      }
+    }
+    loadWelcomeCoords()
+    return () => {
+      cancelled = true
+    }
   }, [step])
 
   useEffect(() => {
@@ -583,9 +649,7 @@ export default function OnboardingScreen() {
     const story = STORY_STEPS[index]
     const gem =
       trendingGems.length > 0 ? trendingGems[index % trendingGems.length] : undefined
-    const lat = gem?.latitude ?? story.fallbackCoords[0]
-    const lng = gem?.longitude ?? story.fallbackCoords[1]
-    const coordLabel = formatCoordinates(lat, lng)
+    const coordLabel = formatCoordinates(story.fallbackCoords[0], story.fallbackCoords[1])
 
     return (
       <View style={styles.storyContainer}>
@@ -612,6 +676,8 @@ export default function OnboardingScreen() {
         <LinearGradient
           colors={[...STORY_OVERLAY_COLORS]}
           locations={[0, 0.3, 0.55, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
 
@@ -661,7 +727,7 @@ export default function OnboardingScreen() {
   const renderCategoryCard = (cat: (typeof CATEGORIES)[number]) => {
     const gem = categoryGems[cat.id]
     const selected = selectedCategories.includes(cat.id)
-    const gradient = CATEGORY_GRADIENTS[cat.id] ?? [cat.color, '#0a0a0a']
+    const gradient = CATEGORY_GRADIENTS[cat.id] ?? NEUTRAL_CATEGORY_GRADIENT
 
     return (
       <TouchableOpacity
@@ -779,11 +845,9 @@ export default function OnboardingScreen() {
         <View style={styles.prefsContainer}>
           <View style={styles.prefsTitleRow}>
             <Text style={styles.prefsTitle}>What calls to you?</Text>
-            {selectedCategories.length > 0 && (
-              <View style={styles.prefsCountBadge}>
-                <Text style={styles.prefsCountText}>{selectedCategories.length}</Text>
-              </View>
-            )}
+            <View style={styles.prefsCountBadge}>
+              <Text style={styles.prefsCountText}>{selectedCategories.length}</Text>
+            </View>
           </View>
           <Text style={styles.prefsSubtitle}>Pick as many as you like</Text>
           <ScrollView
@@ -795,12 +859,16 @@ export default function OnboardingScreen() {
           <TouchableOpacity
             style={[
               styles.continueButton,
-              selectedCategories.length === 0 && styles.continueButtonDisabled,
+              selectedCategories.length === 0 && styles.categoryContinueButtonDisabled,
             ]}
             disabled={selectedCategories.length === 0}
             onPress={() => animateStepChange(7)}
-            activeOpacity={0.8}>
-            <Text style={styles.continueButtonText}>
+            activeOpacity={selectedCategories.length === 0 ? 1 : 0.8}>
+            <Text
+              style={[
+                styles.continueButtonText,
+                selectedCategories.length === 0 && styles.categoryContinueButtonTextDisabled,
+              ]}>
               {selectedCategories.length > 0
                 ? `Continue (${selectedCategories.length})`
                 : 'Continue'}
@@ -913,10 +981,10 @@ export default function OnboardingScreen() {
           <LinearGradient
             colors={['#0B2E2B', '#142B2E', '#1C3438']}
             locations={[0, 0.4, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            start={TRIAL_HERO_GRADIENT_START}
+            end={TRIAL_HERO_GRADIENT_END}
             style={styles.trialHero}>
-            <View style={styles.trialHeroGlow} />
+            <TrialHeroGlow />
             <TrialCompass accent={theme.accent} coral={theme.coral} />
             <View style={styles.trialFreeBadge}>
               <Text style={styles.trialFreeBadgeText}>3 DAYS FREE</Text>
@@ -935,7 +1003,7 @@ export default function OnboardingScreen() {
               {TRIAL_FEATURES.map((feature) => (
                 <View key={feature} style={styles.trialFeatureItem}>
                   <View style={styles.trialFeatureCheck}>
-                    <Text style={[styles.trialFeatureCheckMark, { color: theme.textSecondary }]}>
+                    <Text style={[styles.trialFeatureCheckMark, { color: theme.accent }]}>
                       ✓
                     </Text>
                   </View>
@@ -965,11 +1033,9 @@ export default function OnboardingScreen() {
         />
         <Text style={styles.welcomeLabel}>WELCOME, EXPLORER</Text>
         <Text style={styles.finalHeadline}>Your adventure starts here.</Text>
-        {(homeLat != null && homeLng != null) || (homeTown.trim().length > 0) ? (
+        {welcomeGpsCoords ? (
           <Text style={styles.welcomeCoords}>
-            {homeLat != null && homeLng != null
-              ? formatCoordinates(homeLat, homeLng)
-              : homeTown.trim().toUpperCase()}
+            {formatCoordinates(welcomeGpsCoords.latitude, welcomeGpsCoords.longitude)}
           </Text>
         ) : null}
         <Text style={styles.finalSubtitle}>
@@ -995,12 +1061,12 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {showStoryDots && (
         <View style={styles.storyDots}>
-          {Array.from({ length: STORY_STEP_COUNT }).map((_, i) => (
+          {Array.from({ length: STORY_STEPS.length }).map((_, i) => (
             <View
               key={i}
               style={[
                 styles.storyDot,
-                { backgroundColor: i <= step ? '#EAF6F4' : 'rgba(234,246,244,0.3)' },
+                { backgroundColor: i === step ? '#EAF6F4' : 'rgba(255,255,255,0.3)' },
               ]}
             />
           ))}
@@ -1032,7 +1098,7 @@ const createStyles = (theme: Theme) =>
     },
     storyDots: {
       position: 'absolute',
-      top: 56,
+      top: 68,
       left: 0,
       right: 0,
       flexDirection: 'row',
@@ -1175,10 +1241,9 @@ const createStyles = (theme: Theme) =>
       paddingVertical: 3,
     },
     prefsCountText: {
-      fontFamily: 'SpaceMono-Regular',
+      fontFamily: 'SpaceMono-Bold',
       fontSize: 11,
-      fontWeight: '700',
-      color: theme.textSecondary,
+      color: theme.accent,
     },
     categoryScroll: {
       flex: 1,
@@ -1264,10 +1329,18 @@ const createStyles = (theme: Theme) =>
       backgroundColor: theme.border,
       opacity: 0.6,
     },
+    categoryContinueButtonDisabled: {
+      backgroundColor: theme.bgTertiary,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+    },
     continueButtonText: {
       color: theme.accentText,
       fontSize: 16,
       fontWeight: '700',
+    },
+    categoryContinueButtonTextDisabled: {
+      color: theme.textTertiary,
     },
     homeTownInputWrap: {
       paddingHorizontal: 16,
@@ -1415,18 +1488,12 @@ const createStyles = (theme: Theme) =>
     },
     trialHero: {
       height: 140,
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 10,
       overflow: 'hidden',
-    },
-    trialHeroGlow: {
-      position: 'absolute',
-      top: -20,
-      width: 200,
-      height: 200,
-      borderRadius: 100,
-      backgroundColor: 'rgba(45,212,191,0.18)',
+      position: 'relative',
     },
     trialFreeBadge: {
       backgroundColor: theme.coral,
@@ -1436,10 +1503,9 @@ const createStyles = (theme: Theme) =>
       zIndex: 1,
     },
     trialFreeBadgeText: {
-      fontFamily: 'SpaceMono-Regular',
+      fontFamily: 'SpaceMono-Bold',
       fontSize: 12,
-      fontWeight: '700',
-      color: theme.accentText,
+      color: '#0A1F1C',
       letterSpacing: 1,
     },
     trialBody: {
@@ -1464,12 +1530,12 @@ const createStyles = (theme: Theme) =>
     trialFeatureGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      justifyContent: 'space-between',
+      columnGap: 16,
       rowGap: 8,
       marginBottom: 20,
     },
     trialFeatureItem: {
-      width: '48%',
+      width: (SCREEN_WIDTH - 40 - 16) / 2,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 7,
@@ -1491,6 +1557,7 @@ const createStyles = (theme: Theme) =>
     },
     trialFeatureText: {
       flex: 1,
+      fontFamily: 'SpaceGrotesk-Regular',
       fontSize: 13,
       color: theme.text,
     },
@@ -1515,7 +1582,7 @@ const createStyles = (theme: Theme) =>
     welcomeLabel: {
       fontFamily: 'SpaceMono-Regular',
       fontSize: 10,
-      color: theme.textSecondary,
+      color: theme.accent,
       letterSpacing: 2,
       textTransform: 'uppercase',
       marginBottom: 10,
@@ -1531,14 +1598,15 @@ const createStyles = (theme: Theme) =>
     welcomeCoords: {
       fontFamily: 'SpaceMono-Regular',
       fontSize: 11,
-      color: theme.textSecondary,
+      color: theme.accent,
       marginBottom: 8,
     },
     finalSubtitle: {
+      fontFamily: 'SpaceGrotesk-Regular',
       fontSize: 13,
       color: theme.textSecondary,
       textAlign: 'center',
-      lineHeight: 20,
+      lineHeight: 21,
       marginBottom: 36,
       maxWidth: 280,
     },

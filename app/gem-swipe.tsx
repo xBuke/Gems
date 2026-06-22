@@ -75,12 +75,13 @@ type SwipeCardProps = {
   gem: Gem;
   distanceMeters: number | null;
   theme: Theme;
+  isDark: boolean;
   onSwipeComplete: (action: 'save' | 'skip') => void;
   triggerRef: React.MutableRefObject<((action: 'save' | 'skip') => void) | null>;
   promoteOnMount?: boolean;
 };
 
-function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef, promoteOnMount }: SwipeCardProps) {
+function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, triggerRef, promoteOnMount }: SwipeCardProps) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const isAnimating = useSharedValue(false);
@@ -209,7 +210,11 @@ function SwipeCard({ gem, distanceMeters, theme, onSwipeComplete, triggerRef, pr
 
         <View style={cardStyles.bottomText}>
           <Text style={cardStyles.cardTitle}>{gem.title}</Text>
-          <Text style={cardStyles.cardMeta}>
+          <Text
+            style={[
+              cardStyles.cardMeta,
+              { color: isDark ? 'rgba(234,246,244,0.75)' : 'rgba(11,26,28,0.75)' },
+            ]}>
             @{username}
             {' · '}
             {formatCoordinates(gem.latitude, gem.longitude)}
@@ -289,8 +294,7 @@ const cardStyles = StyleSheet.create({
   },
   cardMeta: {
     fontFamily: 'SpaceMono-Regular',
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 11,
   },
   saveStamp: {
     position: 'absolute',
@@ -326,7 +330,7 @@ const cardStyles = StyleSheet.create({
 
 export default function GemSwipeScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [checkingPremium, setCheckingPremium] = useState(true);
@@ -581,7 +585,7 @@ export default function GemSwipeScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <>
+        <View style={styles.deckArea}>
           <View style={styles.deckContainer}>
             {nextGem && (
               <View style={[cardStyles.card, styles.nextCard]}>
@@ -605,6 +609,7 @@ export default function GemSwipeScreen() {
                 gem={currentGem}
                 distanceMeters={getGemDistance(currentGem)}
                 theme={theme}
+                isDark={isDark}
                 onSwipeComplete={handleSwipeAction}
                 triggerRef={swipeTriggerRef}
                 promoteOnMount={hasSwiped}
@@ -624,10 +629,10 @@ export default function GemSwipeScreen() {
               <Ionicons name="close" size={28} color={theme.danger} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionButtonSmall, { backgroundColor: theme.card, borderColor: theme.border }]}
+              style={[styles.viewDetailButton, { backgroundColor: theme.card, borderColor: theme.border }]}
               onPress={() => currentGem && router.push('/gem/' + currentGem.id)}
               activeOpacity={0.8}>
-              <Ionicons name="diamond" size={20} color={theme.coral} />
+              <Text style={styles.viewDetailEmoji}>💎</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: theme.card, borderColor: theme.accent }]}
@@ -636,7 +641,7 @@ export default function GemSwipeScreen() {
               <Ionicons name="heart" size={28} color={theme.accent} />
             </TouchableOpacity>
           </View>
-        </>
+        </View>
       )}
 
       {renderFilterSheet()}
@@ -711,6 +716,10 @@ const createStyles = (theme: Theme) =>
       fontFamily: 'SpaceGrotesk-Bold',
       fontSize: 16,
     },
+    deckArea: {
+      flex: 1,
+      position: 'relative',
+    },
     deckContainer: {
       flex: 1,
       alignItems: 'center',
@@ -721,12 +730,14 @@ const createStyles = (theme: Theme) =>
       opacity: 0.5,
     },
     deckCounter: {
+      position: 'absolute',
+      bottom: 110,
+      left: 0,
+      right: 0,
       fontFamily: 'SpaceMono-Regular',
       fontSize: 11,
-      color: theme.textTertiary,
+      color: theme.textSecondary,
       textAlign: 'center',
-      marginBottom: 4,
-      letterSpacing: 0.5,
     },
     actionButtons: {
       flexDirection: 'row',
@@ -744,13 +755,16 @@ const createStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    actionButtonSmall: {
+    viewDetailButton: {
       width: 46,
       height: 46,
       borderRadius: 23,
       borderWidth: 1.5,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    viewDetailEmoji: {
+      fontSize: 16,
     },
     emptyTitle: {
       fontFamily: 'SpaceGrotesk-Bold',

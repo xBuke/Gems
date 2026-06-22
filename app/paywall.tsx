@@ -21,12 +21,12 @@ type PayPlan = 'monthly' | 'yearly' | 'lifetime';
 const DISCOVER_FEATURES = [
   { emoji: '🃏', label: 'Gem Swipe' },
   { emoji: '🗺', label: 'Trip Planner' },
-  { emoji: '💎', label: 'Hidden Gems cat.' },
+  { emoji: '💎', label: 'Hidden Gems category' },
 ] as const;
 
 const CREATE_FEATURES = [
   { emoji: '👥', label: 'Communities' },
-  { emoji: '🏷', label: 'Custom cats.' },
+  { emoji: '🏷', label: 'Custom categories' },
   { emoji: '🔒', label: 'Private pins' },
 ] as const;
 
@@ -97,8 +97,8 @@ const chipStyles = StyleSheet.create({
     fontSize: 12,
   },
   label: {
+    fontFamily: 'SpaceGrotesk-Regular',
     fontSize: 12,
-    fontWeight: '600',
   },
 });
 
@@ -246,7 +246,7 @@ export default function PaywallScreen() {
             {
               backgroundColor: isYearly ? theme.accentSub : theme.card,
               borderColor: theme.accent,
-              borderWidth: isYearly ? 2 : 1,
+              borderWidth: 1.5,
             },
           ]}
           onPress={() => setPayPlan('yearly')}>
@@ -270,7 +270,7 @@ export default function PaywallScreen() {
               styles.planCardLifetime,
               {
                 backgroundColor: isLifetime ? theme.coralSubtle : theme.card,
-                borderColor: theme.coral,
+                borderColor: isLifetime ? theme.coral : theme.border,
                 borderWidth: isLifetime ? 1.5 : 0.5,
               },
             ]}
@@ -396,7 +396,7 @@ const createStyles = (theme: Theme) =>
     groupLabelAccent: {
       fontFamily: 'SpaceMono-Regular',
       fontSize: 9,
-      color: theme.textSecondary,
+      color: theme.accent,
       letterSpacing: 1.5,
       textTransform: 'uppercase',
       marginBottom: 8,
@@ -427,6 +427,7 @@ const createStyles = (theme: Theme) =>
     },
     planCardYearly: {
       paddingVertical: 14,
+      paddingHorizontal: 16,
     },
     planCardLifetime: {
       flexDirection: 'column',
@@ -443,8 +444,8 @@ const createStyles = (theme: Theme) =>
       paddingVertical: 4,
     },
     bestValueText: {
+      fontFamily: 'SpaceGrotesk-Bold',
       fontSize: 10,
-      fontWeight: '700',
       color: theme.accentText,
     },
     planInfo: {
@@ -495,8 +496,8 @@ const createStyles = (theme: Theme) =>
       paddingVertical: 2,
     },
     foundingBadgeText: {
+      fontFamily: 'SpaceGrotesk-Bold',
       fontSize: 9,
-      fontWeight: '700',
       color: '#FFFFFF',
     },
     slotsProgressTrack: {
