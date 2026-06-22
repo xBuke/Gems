@@ -769,7 +769,7 @@ const createStyles = (theme: Theme) =>
     justifyContent: 'center',
     gap: 8,
     backgroundColor: theme.coral,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 12,
   },
@@ -789,7 +789,7 @@ const createStyles = (theme: Theme) =>
     borderWidth: 0.5,
     borderColor: theme.border,
     borderRadius: 14,
-    padding: 14,
+    padding: 16,
   },
   locationCardSelected: {
     borderColor: theme.accent,
@@ -875,7 +875,7 @@ const createStyles = (theme: Theme) =>
     borderWidth: 0.5,
     borderColor: theme.border,
     borderRadius: 10,
-    padding: 14,
+    padding: 16,
     marginBottom: 16,
     fontSize: 15,
     color: theme.text,
@@ -943,7 +943,7 @@ const createStyles = (theme: Theme) =>
     borderColor: theme.border,
     borderRadius: 20,
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
   subcategoryPillSelected: {
     backgroundColor: theme.accentSub,
@@ -969,7 +969,7 @@ const createStyles = (theme: Theme) =>
     borderWidth: 0.5,
     borderColor: theme.border,
     borderRadius: 20,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
   },
   tagPillSelected: {
@@ -996,7 +996,7 @@ const createStyles = (theme: Theme) =>
     borderWidth: 0.5,
     borderColor: theme.border,
     borderRadius: 20,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
   },
   bestTimePillSelected: {

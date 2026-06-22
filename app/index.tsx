@@ -1,6 +1,5 @@
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBanner } from '@/components/ErrorBanner';
-import { SegmentedPill } from '@/components/SegmentedPill';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
@@ -1380,7 +1379,7 @@ export default function DiscoverScreen() {
           <>
             {[80, 100, 90, 85].map((width, i) => (
               <View key={i} style={{ width, marginRight: 10 }}>
-                <SkeletonCard height={36} borderRadius={20} />
+                <SkeletonCard height={32} borderRadius={20} />
               </View>
             ))}
           </>
@@ -1541,20 +1540,29 @@ export default function DiscoverScreen() {
         </View>
       )}
 
-      <View style={{ marginBottom: 16 }}>
-        <SegmentedPill
-          tabs={[
-            { key: 'forYou', label: 'For You' },
-            { key: 'following', label: 'Following' },
-          ]}
-          activeKey={feedTab}
-          onChange={(key) => {
-            hapticSelection();
-            setFeedTab(key as FeedTab);
-          }}
-          theme={theme}
-          width={226}
-        />
+      <View style={styles.feedTabContainer}>
+        {(
+          [
+            { key: 'forYou' as const, label: 'For You' },
+            { key: 'following' as const, label: 'Following' },
+          ] as const
+        ).map((tab) => {
+          const isActive = feedTab === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.feedTab, isActive && styles.feedTabActive]}
+              onPress={() => {
+                hapticSelection();
+                setFeedTab(tab.key);
+              }}
+              activeOpacity={0.8}>
+              <Text style={[styles.feedTabText, isActive && styles.feedTabTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {feedError && <ErrorBanner message={feedError} onRetry={handleRetryFeed} />}
@@ -1745,7 +1753,6 @@ const createStyles = (theme: Theme) =>
   },
   feedTabText: {
     fontSize: 13,
-    fontWeight: '600',
     color: theme.textSecondary,
   },
   feedTabTextActive: {
@@ -1834,7 +1841,7 @@ const createStyles = (theme: Theme) =>
   mysteryCoords: {
     fontFamily: 'SpaceMono-Regular',
     fontSize: 10,
-    color: theme.textSecondary,
+    color: 'rgba(255,255,255,0.8)',
     marginBottom: 4,
   },
   mysteryMetaRow: {

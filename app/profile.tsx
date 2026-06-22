@@ -1248,7 +1248,7 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
               disabled={uploadingAvatar}
               style={styles.avatarWrap}>
-              <View style={styles.avatarRing}>
+              <View style={styles.avatarRingOuter}>
                 {profile?.avatar_url ? (
                   <Image
                     source={{ uri: profile.avatar_url }}
@@ -1269,7 +1269,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ) : (
             <View style={styles.avatarWrap}>
-              <View style={styles.avatarRing}>
+              <View style={styles.avatarRingOuter}>
                 {profile?.avatar_url ? (
                   <Image
                     source={{ uri: profile.avatar_url }}
@@ -1286,7 +1286,7 @@ export default function ProfileScreen() {
               </View>
             </View>
           )}
-          <Text style={styles.username}>{username}</Text>
+          <Text style={styles.username}>@{username}</Text>
           {(profile?.current_streak ?? 0) > 0 && (
             <View style={styles.streakBadge}>
               <Ionicons name="flame" size={16} color={theme.coral} />
@@ -1352,6 +1352,59 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Followers</Text>
           </TouchableOpacity>
         </View>
+
+        {isOwnProfile && (
+          <View style={styles.achievementsPreview}>
+            <View style={styles.achievementsPreviewHeader}>
+              <Text style={styles.achievementsPreviewTitle}>Achievements</Text>
+              <Text style={styles.achievementsPreviewCount}>
+                {unlockedCount} / {ACHIEVEMENTS.length}
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.achievementsPreviewRow}>
+              {ACHIEVEMENTS.map((achievement) => {
+                const isUnlocked = unlockedAchievementTypes.includes(achievement.type);
+                const badgeColor =
+                  achievement.type === 'seven_day_streak' ? theme.coral : theme.accent;
+                return (
+                  <TouchableOpacity
+                    key={achievement.type}
+                    style={styles.achievementPreviewItem}
+                    onPress={() =>
+                      Alert.alert(
+                        achievement.name,
+                        isUnlocked
+                          ? achievement.description
+                          : `${achievement.description}\n\n🔒 Not unlocked yet`,
+                      )
+                    }
+                    activeOpacity={0.7}>
+                    <View
+                      style={[
+                        styles.achievementPreviewCircle,
+                        isUnlocked
+                          ? {
+                              backgroundColor: badgeColor + '1F',
+                              borderWidth: 1.5,
+                              borderColor: badgeColor,
+                            }
+                          : styles.achievementPreviewCircleLocked,
+                      ]}>
+                      <Ionicons
+                        name={achievement.icon as keyof typeof Ionicons.glyphMap}
+                        size={16}
+                        color={isUnlocked ? badgeColor : theme.textTertiary}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {isOwnProfile && isPremium && (
           <View style={styles.categoriesSection}>
@@ -1479,42 +1532,6 @@ export default function ProfileScreen() {
                   </View>
                 );
               })}
-          </View>
-        )}
-
-        {isOwnProfile && (
-          <View style={styles.achievementsPreview}>
-            <View style={styles.achievementsPreviewHeader}>
-              <Text style={styles.achievementsPreviewTitle}>Achievements</Text>
-              <Text style={styles.achievementsPreviewCount}>
-                {unlockedCount} / {ACHIEVEMENTS.length}
-              </Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.achievementsPreviewRow}>
-              {ACHIEVEMENTS.map((achievement) => {
-                const isUnlocked = unlockedAchievementTypes.includes(achievement.type);
-                return (
-                  <View key={achievement.type} style={styles.achievementPreviewItem}>
-                    <View
-                      style={[
-                        styles.achievementPreviewCircle,
-                        isUnlocked
-                          ? styles.achievementIconCircleUnlocked
-                          : styles.achievementIconCircleLocked,
-                      ]}>
-                      <Ionicons
-                        name={achievement.icon as keyof typeof Ionicons.glyphMap}
-                        size={16}
-                        color={isUnlocked ? theme.accent : theme.textTertiary}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </ScrollView>
           </View>
         )}
 
@@ -1920,17 +1937,17 @@ const createStyles = (theme: Theme) =>
   avatarWrap: {
     position: 'relative',
   },
-  avatarRing: {
-    padding: 3,
-    borderRadius: 39,
-    borderWidth: 3,
-    borderColor: theme.coral,
-    backgroundColor: theme.background,
+  avatarRingOuter: {
+    padding: 5,
+    borderRadius: 44,
+    backgroundColor: theme.coral,
   },
   avatar: {
     width: 72,
     height: 72,
     borderRadius: 36,
+    borderWidth: 3,
+    borderColor: theme.background,
     backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1939,6 +1956,8 @@ const createStyles = (theme: Theme) =>
     width: 72,
     height: 72,
     borderRadius: 36,
+    borderWidth: 3,
+    borderColor: theme.background,
   },
   avatarCameraBadge: {
     position: 'absolute',
@@ -1957,9 +1976,10 @@ const createStyles = (theme: Theme) =>
   },
   username: {
     fontSize: 17,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'SpaceGrotesk-SemiBold',
     color: theme.text,
     marginTop: 12,
+    marginBottom: 8,
   },
   bio: {
     fontSize: 13,
@@ -1995,7 +2015,7 @@ const createStyles = (theme: Theme) =>
     borderColor: theme.border,
     borderRadius: 14,
     padding: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     marginTop: 10,
   },
   explorerLevelLabel: {
@@ -2057,7 +2077,7 @@ const createStyles = (theme: Theme) =>
   },
   achievementsPreviewTitle: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'SpaceGrotesk-SemiBold',
     color: theme.text,
   },
   achievementsPreviewCount: {
@@ -2066,7 +2086,8 @@ const createStyles = (theme: Theme) =>
     color: theme.textSecondary,
   },
   achievementsPreviewRow: {
-    gap: 10,
+    flexDirection: 'row',
+    gap: 7,
     paddingRight: 4,
   },
   achievementPreviewItem: {
@@ -2078,6 +2099,12 @@ const createStyles = (theme: Theme) =>
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  achievementPreviewCircleLocked: {
+    backgroundColor: theme.card,
+    borderWidth: 1.5,
+    borderColor: theme.border,
+    opacity: 0.35,
   },
   streakBadge: {
     flexDirection: 'row',
@@ -2111,6 +2138,7 @@ const createStyles = (theme: Theme) =>
   },
   statValue: {
     fontSize: 28,
+    lineHeight: 32,
     fontFamily: 'SpaceGrotesk-Bold',
     color: theme.text,
   },
