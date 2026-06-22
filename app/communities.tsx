@@ -224,12 +224,16 @@ export default function CommunitiesScreen() {
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Communities</Text>
-        <PressableScale onPress={handleCreatePress} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.createButton}>
-          <Text style={styles.createButtonText}>+ Create 💎</Text>
+        <PressableScale
+          onPress={handleCreatePress}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={styles.createButton}>
+          <Text style={styles.createButtonText}>+ Create</Text>
+          <Text style={styles.createButtonGem}>💎</Text>
         </PressableScale>
       </View>
 
-      <View style={{ marginBottom: 14 }}>
+      <View style={styles.pillWrapper}>
         <SegmentedPill
           tabs={[
             { key: 'discover', label: 'Discover' },
@@ -293,51 +297,35 @@ const createStyles = (theme: Theme) =>
       paddingVertical: 12,
     },
     headerSide: {
-      width: 60,
+      width: 80,
       alignItems: 'flex-start',
     },
     headerTitle: {
+      flex: 1,
       fontSize: 17,
       fontFamily: 'SpaceGrotesk-Bold',
       color: theme.text,
+      textAlign: 'center',
     },
     createButton: {
-      width: 60,
-      alignItems: 'flex-end',
+      width: 80,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 2,
     },
     createButtonText: {
-      fontSize: 14,
+      fontSize: 13,
       fontFamily: 'SpaceGrotesk-Bold',
+      fontWeight: '700',
       color: theme.accent,
     },
-    tabContainer: {
-      flexDirection: 'row',
-      alignSelf: 'center',
-      width: 250,
-      backgroundColor: theme.card,
-      borderRadius: 24,
-      borderWidth: 0.5,
-      borderColor: theme.border,
-      padding: 3,
-      marginBottom: 16,
+    createButtonGem: {
+      fontSize: 11,
     },
-    tab: {
-      flex: 1,
+    pillWrapper: {
       alignItems: 'center',
-      paddingVertical: 9,
-      borderRadius: 20,
-    },
-    tabActive: {
-      backgroundColor: theme.accent,
-    },
-    tabText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    tabTextActive: {
-      color: theme.accentText,
-      fontWeight: '600',
+      marginBottom: 14,
     },
     listContent: {
       paddingHorizontal: 16,

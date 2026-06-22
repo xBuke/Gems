@@ -36,6 +36,7 @@ export function SegmentedPill({ tabs, activeKey, onChange, theme, width = 226 }:
               style={[
                 styles.tabText,
                 { color: active ? theme.accentText : theme.textSecondary },
+                active && styles.tabTextActive,
               ]}>
               {tab.label}
             </Text>
@@ -62,6 +63,8 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 13,
-    fontFamily: 'SpaceGrotesk-Bold',
+  },
+  tabTextActive: {
+    fontWeight: '600',
   },
 });
