@@ -444,19 +444,19 @@ export default function ChatScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerCenter} onPress={goToProfile} activeOpacity={0.7}>
           <View style={styles.headerAvatarRing}>
-            <View style={styles.headerAvatar}>
-              {otherAvatarUrl ? (
-                <Image
-                  source={{ uri: otherAvatarUrl }}
-                  style={styles.headerAvatarImage}
-                  contentFit="cover"
-                  transition={200}
-                  cachePolicy="memory-disk"
-                />
-              ) : (
+            {otherAvatarUrl ? (
+              <Image
+                source={{ uri: otherAvatarUrl }}
+                style={styles.headerAvatarImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <View style={styles.headerAvatar}>
                 <Text style={styles.headerAvatarText}>{initial}</Text>
-              )}
-            </View>
+              </View>
+            )}
           </View>
           <Text style={styles.headerUsername}>{displayName}</Text>
         </TouchableOpacity>
@@ -624,16 +624,16 @@ const createStyles = (theme: Theme) =>
       gap: 8,
     },
     headerAvatarRing: {
-      borderRadius: 22.5,
-      borderWidth: 3.5,
-      borderColor: theme.coral,
-      padding: 2,
-      backgroundColor: theme.background,
+      padding: 2.5,
+      borderRadius: 21.5,
+      backgroundColor: theme.coral,
     },
     headerAvatar: {
       width: 34,
       height: 34,
       borderRadius: 17,
+      borderWidth: 2,
+      borderColor: theme.background,
       backgroundColor: theme.accent,
       alignItems: 'center',
       justifyContent: 'center',
@@ -643,6 +643,8 @@ const createStyles = (theme: Theme) =>
       width: 34,
       height: 34,
       borderRadius: 17,
+      borderWidth: 2,
+      borderColor: theme.background,
     },
     headerAvatarText: {
       fontSize: 14,
@@ -709,7 +711,7 @@ const createStyles = (theme: Theme) =>
       color: theme.accentText,
     },
     coordTextTheirs: {
-      color: theme.accent,
+      color: theme.text,
     },
     coordTextSpaced: {
       marginTop: 4,
