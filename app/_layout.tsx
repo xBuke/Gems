@@ -87,6 +87,7 @@ function RootNavigator() {
           options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen name="followers" options={{ headerShown: false }} />
+        <Stack.Screen name="user-gems" options={{ headerShown: false }} />
         <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
         <Stack.Screen
           name="paywall"

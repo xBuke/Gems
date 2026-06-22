@@ -31,7 +31,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment, type ReactNode } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -126,6 +126,9 @@ const chunk = <T,>(items: T[], size: number): T[][] => {
   }
   return rows;
 };
+
+const PROFILE_GRID_MAX_SLOTS = 9;
+const PROFILE_GRID_COLUMNS = 3;
 
 const parseGemLinkRows = (rows: GemLinkRow[] | null): Gem[] =>
   (rows ?? []).map((row) => row.gem).filter((gem): gem is Gem => gem != null);
@@ -659,7 +662,24 @@ export default function ProfileScreen() {
 
   const username = profile?.username ?? 'User';
   const initials = username.charAt(0).toUpperCase();
-  const gemRows = chunk(gems, 2);
+
+  const profileGrid = useMemo(() => {
+    const addSlotCount = isOwnProfile ? 1 : 0;
+    const availableForGems = PROFILE_GRID_MAX_SLOTS - addSlotCount;
+    const needsOverflowTile = gems.length > availableForGems;
+    const visibleGemCount = needsOverflowTile
+      ? availableForGems - 1
+      : Math.min(gems.length, availableForGems);
+    const remainingCount = gems.length - visibleGemCount;
+
+    return {
+      visibleGems: gems.slice(0, visibleGemCount),
+      remainingCount,
+      needsOverflowTile,
+    };
+  }, [gems, isOwnProfile]);
+
+  const profileId = isOwnProfile ? currentUserId : userId;
 
   const handleAvatarPicked = async (uri: string) => {
     if (!currentUserId) return;
@@ -1059,9 +1079,10 @@ export default function ProfileScreen() {
     );
   };
 
-  const renderGemCard = (gem: Gem) => (
+  const renderGemThumbnail = (gem: Gem) => (
     <TouchableOpacity
-      style={styles.gemCard}
+      key={gem.id}
+      style={styles.gemThumbnail}
       onPress={() => router.push('/gem/' + gem.id)}
       onLongPress={
         isOwnProfile
@@ -1077,33 +1098,81 @@ export default function ProfileScreen() {
           : undefined
       }
       activeOpacity={0.85}>
-      <View style={styles.gemImageArea}>
-        {gem.image_url ? (
-          <Image
-            source={{ uri: gem.image_url }}
-            style={styles.gemImage}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View style={styles.gemImagePlaceholder}>
-            <Ionicons name="location" size={28} color={theme.accent} />
-          </View>
-        )}
-        <View style={styles.gemOverlay}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>{gem.category}</Text>
-          </View>
-          <Text style={styles.gemTitle} numberOfLines={2}>
-            {gem.title}
-          </Text>
+      {gem.image_url ? (
+        <Image
+          source={{ uri: gem.image_url }}
+          style={styles.gemThumbnailImage}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+        />
+      ) : (
+        <View style={styles.gemThumbnailPlaceholder}>
+          <Ionicons name="location" size={20} color={theme.accent} />
         </View>
-      </View>
+      )}
     </TouchableOpacity>
   );
 
-  const profileId = isOwnProfile ? currentUserId : userId;
+  const renderAddGemTile = () => (
+    <TouchableOpacity
+      key="add-gem-tile"
+      style={styles.gemThumbnailAdd}
+      onPress={() => router.push('/add-gem')}
+      activeOpacity={0.85}>
+      <Ionicons name="add" size={24} color={theme.accent} />
+    </TouchableOpacity>
+  );
+
+  const renderOverflowTile = () => (
+    <TouchableOpacity
+      key="overflow-tile"
+      style={styles.gemThumbnailOverflow}
+      onPress={() =>
+        profileId &&
+        router.push({
+          pathname: '/user-gems',
+          params: { userId: profileId, username },
+        })
+      }
+      activeOpacity={0.85}>
+      <Text style={styles.gemThumbnailOverflowText}>+{profileGrid.remainingCount}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderProfileGridRow = (rowItems: ReactNode[], rowKey: string) => (
+    <View key={rowKey} style={styles.gemThumbnailRow}>
+      {rowItems}
+      {rowItems.length < PROFILE_GRID_COLUMNS
+        ? Array.from({ length: PROFILE_GRID_COLUMNS - rowItems.length }).map((_, index) => (
+            <View key={`${rowKey}-spacer-${index}`} style={styles.gemThumbnailSpacer} />
+          ))
+        : null}
+    </View>
+  );
+
+  const renderProfileGemsGrid = () => {
+    const gridItems: ReactNode[] = [];
+
+    if (isOwnProfile) {
+      gridItems.push(renderAddGemTile());
+    }
+
+    profileGrid.visibleGems.forEach((gem) => {
+      gridItems.push(renderGemThumbnail(gem));
+    });
+
+    if (profileGrid.needsOverflowTile) {
+      gridItems.push(renderOverflowTile());
+    }
+
+    const rows = chunk(gridItems, PROFILE_GRID_COLUMNS);
+    return (
+      <View style={styles.gemsGrid}>
+        {rows.map((row, index) => renderProfileGridRow(row, `profile-grid-row-${index}`))}
+      </View>
+    );
+  };
 
   const renderHorizontalGemCard = (gem: Gem) => (
     <TouchableOpacity
@@ -1338,7 +1407,10 @@ export default function ProfileScreen() {
             }
             activeOpacity={0.7}>
             <Text style={styles.statValue}>{followingCount}</Text>
-            <Text style={styles.statLabel}>Following</Text>
+            <View style={styles.statLabelRow}>
+              <Text style={styles.statLabelInRow}>Following</Text>
+              <Text style={styles.statChevron}>›</Text>
+            </View>
           </TouchableOpacity>
           <View style={styles.statDivider} />
           <TouchableOpacity
@@ -1349,7 +1421,10 @@ export default function ProfileScreen() {
             }
             activeOpacity={0.7}>
             <Text style={styles.statValue}>{followersCount}</Text>
-            <Text style={styles.statLabel}>Followers</Text>
+            <View style={styles.statLabelRow}>
+              <Text style={styles.statLabelInRow}>Followers</Text>
+              <Text style={styles.statChevron}>›</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -1458,35 +1533,45 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {!isOwnProfile && (
-          <View style={styles.actionRow}>
-            <PressableScale
-              style={
-                isFollowing
-                  ? styles.followingButton
-                  : isRequested
-                    ? styles.requestedButton
-                    : styles.followButton
-              }
-              onPress={isFollowing || isRequested ? handleUnfollow : handleFollow}
-              disabled={isRequested}>
-              <Text
+        <View style={styles.actionRow}>
+          {isOwnProfile ? (
+            <>
+              <PressableScale
+                style={styles.followButton}
+                onPress={() => router.push('/settings')}>
+                <Text style={styles.followButtonText}>Edit Profile</Text>
+              </PressableScale>
+              <View style={styles.actionRowSpacer} />
+            </>
+          ) : (
+            <>
+              <PressableScale
                 style={
                   isFollowing
-                    ? styles.followingButtonText
+                    ? styles.followingButton
                     : isRequested
-                      ? styles.requestedButtonText
-                      : styles.followButtonText
-                }>
-                {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
-              </Text>
-            </PressableScale>
-            <PressableScale style={styles.messageButton} onPress={handleSendMessage}>
-              <Ionicons name="chatbubble-outline" size={16} color={theme.accent} />
-              <Text style={styles.messageButtonText}>Message</Text>
-            </PressableScale>
-          </View>
-        )}
+                      ? styles.requestedButton
+                      : styles.followButton
+                }
+                onPress={isFollowing || isRequested ? handleUnfollow : handleFollow}
+                disabled={isRequested}>
+                <Text
+                  style={
+                    isFollowing
+                      ? styles.followingButtonText
+                      : isRequested
+                        ? styles.requestedButtonText
+                        : styles.followButtonText
+                  }>
+                  {isFollowing ? 'Following ✓' : isRequested ? 'Requested' : 'Follow'}
+                </Text>
+              </PressableScale>
+              <PressableScale style={styles.messageButton} onPress={handleSendMessage}>
+                <Text style={styles.messageButtonText}>Message</Text>
+              </PressableScale>
+            </>
+          )}
+        </View>
 
         {isOwnProfile && followRequests.length > 0 && (
           <View style={styles.followRequestsSection}>
@@ -1559,16 +1644,7 @@ export default function ProfileScreen() {
                   )}
                 </View>
               ) : (
-                <View style={styles.gemsGrid}>
-                  {gemRows.map((row) => (
-                    <View key={`row-${row.map((g) => g.id).join('-')}`} style={styles.gemRow}>
-                      {row.map((gem) => (
-                        <Fragment key={gem.id}>{renderGemCard(gem)}</Fragment>
-                      ))}
-                      {row.length === 1 ? <View style={styles.gemCardSpacer} /> : null}
-                    </View>
-                  ))}
-                </View>
+                renderProfileGemsGrid()
               )}
             </Animated.View>
           )}
@@ -2147,6 +2223,21 @@ const createStyles = (theme: Theme) =>
     color: theme.textSecondary,
     marginTop: 3,
   },
+  statLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginTop: 3,
+  },
+  statLabelInRow: {
+    fontSize: 12,
+    color: theme.textSecondary,
+  },
+  statChevron: {
+    fontFamily: 'SpaceGrotesk-Regular',
+    fontSize: 11,
+    color: theme.textTertiary,
+  },
   statDivider: {
     width: 0.5,
     height: 30,
@@ -2159,39 +2250,45 @@ const createStyles = (theme: Theme) =>
     marginHorizontal: 16,
     marginBottom: 16,
   },
+  actionRowSpacer: {
+    flex: 1,
+  },
   followButton: {
     flex: 1,
     backgroundColor: theme.accent,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
     alignItems: 'center',
   },
   followButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.background,
+    color: theme.accentText,
   },
   followingButton: {
     flex: 1,
-    backgroundColor: theme.card,
-    borderWidth: 0.5,
-    borderColor: theme.accent,
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: theme.bgTertiary,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
     alignItems: 'center',
   },
   followingButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.accent,
+    color: theme.textSecondary,
   },
   requestedButton: {
     flex: 1,
-    backgroundColor: theme.card,
-    borderWidth: 0.5,
+    backgroundColor: theme.bgTertiary,
+    borderWidth: 1,
     borderColor: theme.border,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
     alignItems: 'center',
     opacity: 0.7,
   },
@@ -2273,19 +2370,19 @@ const createStyles = (theme: Theme) =>
   },
   messageButton: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: theme.card,
-    borderWidth: 0.5,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
     borderColor: theme.border,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 20,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
   },
   messageButtonText: {
     fontSize: 14,
-    color: theme.text,
+    fontWeight: '600',
+    color: theme.textSecondary,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -2349,6 +2446,59 @@ const createStyles = (theme: Theme) =>
   },
   gemsGrid: {
     paddingHorizontal: 12,
+  },
+  gemThumbnailRow: {
+    flexDirection: 'row',
+  },
+  gemThumbnail: {
+    flex: 1,
+    aspectRatio: 1,
+    margin: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: theme.card,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+  },
+  gemThumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gemThumbnailPlaceholder: {
+    flex: 1,
+    backgroundColor: IMAGE_PLACEHOLDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gemThumbnailAdd: {
+    flex: 1,
+    aspectRatio: 1,
+    margin: 4,
+    borderRadius: 8,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gemThumbnailOverflow: {
+    flex: 1,
+    aspectRatio: 1,
+    margin: 4,
+    borderRadius: 8,
+    backgroundColor: theme.bgTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gemThumbnailOverflowText: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 11,
+    color: theme.textTertiary,
+  },
+  gemThumbnailSpacer: {
+    flex: 1,
+    margin: 4,
   },
   gemRow: {
     flexDirection: 'row',
