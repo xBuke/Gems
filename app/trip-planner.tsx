@@ -1,3 +1,4 @@
+import { SearchSpinner, TripPlannerResultsSkeleton } from '@/components/SkeletonCard';
 import { CATEGORIES } from '@/lib/categories';
 import { searchCities } from '@/lib/cityAutocomplete';
 import { getDistance } from '@/lib/distance';
@@ -386,46 +387,50 @@ export default function TripPlannerScreen() {
         </ScrollView>
 
         <TouchableOpacity
-          style={[styles.searchButton, !destName && styles.searchButtonDisabled]}
+          style={[
+            styles.searchButton,
+            searching && styles.searchButtonLoading,
+            !destName && styles.searchButtonDisabled,
+          ]}
           disabled={!destName || searching}
           onPress={handleSearch}
           activeOpacity={0.8}>
           {searching ? (
-            <ActivityIndicator size="small" color={theme.accentText} />
+            <View style={styles.searchButtonLoadingContent}>
+              <SearchSpinner color={theme.accent} />
+              <Text style={styles.searchButtonLoadingText}>Searching…</Text>
+            </View>
           ) : (
             <Text style={styles.searchButtonText}>Search</Text>
           )}
         </TouchableOpacity>
 
-        {hasSearched && (
+        {searching && (
           <View style={styles.resultsSection}>
-            {searching ? (
-              <View style={styles.searchingState}>
-                <ActivityIndicator size="large" color={theme.accent} />
-                <Text style={styles.searchingText}>Searching nearby gems...</Text>
+            <TripPlannerResultsSkeleton />
+          </View>
+        )}
+
+        {hasSearched && !searching && (
+          <View style={styles.resultsSection}>
+            <Text style={styles.resultsSummary}>
+              {results.length} GEM{results.length !== 1 ? 'S' : ''} NEAR {(destName ?? '').toUpperCase()}
+            </Text>
+
+            {results.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  No gems found in this area yet. Be the first to add one!
+                </Text>
+                <TouchableOpacity
+                  style={styles.addGemButton}
+                  onPress={() => router.push('/add-gem')}
+                  activeOpacity={0.8}>
+                  <Text style={styles.addGemButtonText}>Add a Gem</Text>
+                </TouchableOpacity>
               </View>
             ) : (
-              <>
-                <Text style={styles.resultsSummary}>
-                  {results.length} GEM{results.length !== 1 ? 'S' : ''} NEAR {(destName ?? '').toUpperCase()}
-                </Text>
-
-                {results.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyText}>
-                      No gems found in this area yet. Be the first to add one!
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.addGemButton}
-                      onPress={() => router.push('/add-gem')}
-                      activeOpacity={0.8}>
-                      <Text style={styles.addGemButtonText}>Add a Gem</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  results.map((gem) => renderGemCard(gem))
-                )}
-              </>
+              results.map((gem) => renderGemCard(gem))
             )}
           </View>
         )}
@@ -611,25 +616,26 @@ const createStyles = (theme: Theme) =>
     searchButtonDisabled: {
       opacity: 0.5,
     },
+    searchButtonLoading: {
+      backgroundColor: theme.bgTertiary,
+    },
+    searchButtonLoadingContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
     searchButtonText: {
       fontFamily: 'SpaceGrotesk-Bold',
       fontSize: 16,
       color: theme.accentText,
     },
+    searchButtonLoadingText: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 16,
+      color: theme.textSecondary,
+    },
     resultsSection: {
       marginTop: 24,
-    },
-    searchingState: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 40,
-      paddingTop: 60,
-      gap: 16,
-    },
-    searchingText: {
-      fontSize: 15,
-      color: theme.textSecondary,
-      textAlign: 'center',
     },
     resultsSummary: {
       fontFamily: 'SpaceMono-Regular',

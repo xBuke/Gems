@@ -1,6 +1,7 @@
 import { EmptyState } from '@/components/EmptyState'
 import { PressableScale } from '@/components/PressableScale'
 import { SegmentedPill } from '@/components/SegmentedPill'
+import { CommunityListSkeleton } from '@/components/SkeletonCard'
 import {
   canJoinMoreCommunities,
   fetchCommunities,
@@ -247,9 +248,7 @@ export default function CommunitiesScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.accent} />
-        </View>
+        <CommunityListSkeleton />
       ) : (
         <FlatList
           data={listData}

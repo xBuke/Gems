@@ -1,3 +1,4 @@
+import { GemSwipeDeckSkeleton } from '@/components/SkeletonCard';
 import { CATEGORIES } from '@/lib/categories';
 import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
@@ -568,10 +569,7 @@ export default function GemSwipeScreen() {
       </View>
 
       {loadingDeck ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.accent} />
-          <Text style={styles.loadingText}>Finding gems for you...</Text>
-        </View>
+        <GemSwipeDeckSkeleton cardWidth={CARD_WIDTH} cardHeight={CARD_HEIGHT} />
       ) : deck.length === 0 ? (
         <View style={styles.centered}>
           <Ionicons name="checkmark-circle-outline" size={56} color={theme.accent} />
@@ -679,12 +677,6 @@ const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       paddingHorizontal: 32,
       paddingTop: 60,
-    },
-    loadingText: {
-      fontSize: 15,
-      color: theme.textSecondary,
-      marginTop: 16,
-      textAlign: 'center',
     },
     premiumPrompt: {
       flex: 1,
