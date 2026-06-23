@@ -18,7 +18,9 @@ import { hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
 import { checkIsPremium } from '@/lib/paywall';
 import { blockUser } from '@/lib/safety';
+import { navigateToGemWithSharedTransition } from '@/lib/gemSharedTransition';
 import { goBackOrTab, useTabRootBackHandler, useTabStackGesture } from '@/lib/navigationMotion';
+import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { useToast } from '@/lib/ToastContext';
@@ -128,6 +130,72 @@ const chunk = <T,>(items: T[], size: number): T[][] => {
   }
   return rows;
 };
+
+type ProfileGemThumbnailProps = {
+  gem: Gem;
+  styles: ReturnType<typeof createStyles>;
+  theme: Theme;
+  isOwnProfile: boolean;
+  onDelete: (gemId: string, imageUrl: string | null) => void;
+  router: ReturnType<typeof useRouter>;
+  reduceMotion: boolean;
+};
+
+function ProfileGemThumbnail({
+  gem,
+  styles,
+  theme,
+  isOwnProfile,
+  onDelete,
+  router,
+  reduceMotion,
+}: ProfileGemThumbnailProps) {
+  const imageRef = useRef<View>(null);
+  const titleRef = useRef<View>(null);
+
+  return (
+    <TouchableOpacity
+      style={styles.gemThumbnail}
+      onPress={() =>
+        navigateToGemWithSharedTransition(router, gem, { imageRef, titleRef }, reduceMotion)
+      }
+      onLongPress={
+        isOwnProfile
+          ? () =>
+              Alert.alert('Delete Gem', gem.title + ' will be deleted permanently.', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => onDelete(gem.id, gem.image_url),
+                },
+              ])
+          : undefined
+      }
+      activeOpacity={0.85}>
+      <View ref={imageRef} style={styles.gemThumbnailImageWrap} collapsable={false}>
+        {gem.image_url ? (
+          <Image
+            source={{ uri: gem.image_url }}
+            style={styles.gemThumbnailImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <View style={styles.gemThumbnailPlaceholder}>
+            <Ionicons name="location" size={20} color={theme.accent} />
+          </View>
+        )}
+      </View>
+      <View ref={titleRef} style={styles.gemThumbnailMeasureTitle} collapsable={false} pointerEvents="none">
+        <Text style={styles.gemThumbnailMeasureTitleText} numberOfLines={1}>
+          {gem.title}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 const PROFILE_GRID_MAX_SLOTS = 9;
 const PROFILE_GRID_COLUMNS = 3;
@@ -253,6 +321,7 @@ export default function ProfileScreen() {
   const { showToast } = useToast();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
+  const reduceMotion = useReduceMotion();
   const { userId } = useLocalSearchParams<{ userId?: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [gems, setGems] = useState<Gem[]>([]);
@@ -1103,38 +1172,16 @@ export default function ProfileScreen() {
   };
 
   const renderGemThumbnail = (gem: Gem) => (
-    <TouchableOpacity
+    <ProfileGemThumbnail
       key={gem.id}
-      style={styles.gemThumbnail}
-      onPress={() => router.push('/gem/' + gem.id)}
-      onLongPress={
-        isOwnProfile
-          ? () =>
-              Alert.alert('Delete Gem', gem.title + ' will be deleted permanently.', [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete',
-                  style: 'destructive',
-                  onPress: () => handleDeleteGem(gem.id, gem.image_url),
-                },
-              ])
-          : undefined
-      }
-      activeOpacity={0.85}>
-      {gem.image_url ? (
-        <Image
-          source={{ uri: gem.image_url }}
-          style={styles.gemThumbnailImage}
-          contentFit="cover"
-          transition={200}
-          cachePolicy="memory-disk"
-        />
-      ) : (
-        <View style={styles.gemThumbnailPlaceholder}>
-          <Ionicons name="location" size={20} color={theme.accent} />
-        </View>
-      )}
-    </TouchableOpacity>
+      gem={gem}
+      styles={styles}
+      theme={theme}
+      isOwnProfile={isOwnProfile}
+      onDelete={handleDeleteGem}
+      router={router}
+      reduceMotion={reduceMotion}
+    />
   );
 
   const renderAddGemTile = () => (
@@ -2483,9 +2530,24 @@ const createStyles = (theme: Theme) =>
     borderWidth: 0.5,
     borderColor: theme.border,
   },
+  gemThumbnailImageWrap: {
+    ...StyleSheet.absoluteFillObject,
+  },
   gemThumbnailImage: {
     width: '100%',
     height: '100%',
+  },
+  gemThumbnailMeasureTitle: {
+    position: 'absolute',
+    left: 4,
+    right: 4,
+    bottom: 4,
+    opacity: 0,
+  },
+  gemThumbnailMeasureTitleText: {
+    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 12,
+    color: theme.text,
   },
   gemThumbnailPlaceholder: {
     flex: 1,

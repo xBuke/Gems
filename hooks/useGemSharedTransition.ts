@@ -11,11 +11,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { View } from 'react-native';
 import { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-type DestinationLayouts = {
-  image: ElementLayout;
-  title: ElementLayout;
-};
-
 function interpolateLayout(from: ElementLayout, to: ElementLayout, progress: number): ElementLayout {
   'worklet';
   return {
@@ -28,8 +23,10 @@ function interpolateLayout(from: ElementLayout, to: ElementLayout, progress: num
 
 export function useGemSharedTransition(active: boolean) {
   const originRef = useRef<GemSharedTransitionOrigin | null>(null);
+  const pendingBackCallbackRef = useRef<(() => void) | null>(null);
   const imageDestRef = useRef<View>(null);
   const titleDestRef = useRef<View>(null);
+  const [transitionOrigin, setTransitionOrigin] = useState<GemSharedTransitionOrigin | null>(null);
   const [isAnimating, setIsAnimating] = useState(active);
   const [showFlyingLayer, setShowFlyingLayer] = useState(active);
   const progress = useSharedValue(active ? 0 : 1);
@@ -40,8 +37,26 @@ export function useGemSharedTransition(active: boolean) {
 
   useEffect(() => {
     if (!active) return;
-    originRef.current = getPendingGemTransitionOrigin();
+    const origin = getPendingGemTransitionOrigin();
+    originRef.current = origin;
+    setTransitionOrigin(origin);
   }, [active]);
+
+  useEffect(() => {
+    if (!active) return;
+    return () => {
+      pendingBackCallbackRef.current = null;
+      clearPendingGemTransitionOrigin();
+    };
+  }, [active]);
+
+  // Pop the route only after React has unmounted the flying overlay.
+  useEffect(() => {
+    if (showFlyingLayer || !pendingBackCallbackRef.current) return;
+    const callback = pendingBackCallbackRef.current;
+    pendingBackCallbackRef.current = null;
+    callback();
+  }, [showFlyingLayer]);
 
   const finishForwardAnimation = useCallback(() => {
     setIsAnimating(false);
@@ -135,10 +150,13 @@ export function useGemSharedTransition(active: boolean) {
       const origin = originRef.current ?? getPendingGemTransitionOrigin();
       if (!origin || !destImage.value || !destTitle.value) {
         clearPendingGemTransitionOrigin();
+        setTransitionOrigin(null);
+        setShowFlyingLayer(false);
         onComplete();
         return;
       }
 
+      setTransitionOrigin(origin);
       setShowFlyingLayer(true);
       setIsAnimating(true);
       originImage.value = origin.image;
@@ -154,9 +172,9 @@ export function useGemSharedTransition(active: boolean) {
           if (finished) {
             runOnJS(() => {
               clearPendingGemTransitionOrigin();
-              setIsAnimating(false);
+              pendingBackCallbackRef.current = onComplete;
+              setTransitionOrigin(null);
               setShowFlyingLayer(false);
-              onComplete();
             })();
           }
         },
@@ -172,7 +190,7 @@ export function useGemSharedTransition(active: boolean) {
     showFlyingLayer,
     flyingImageStyle,
     flyingTitleStyle,
-    origin: originRef.current,
+    origin: transitionOrigin,
     runBackTransition,
   };
 }

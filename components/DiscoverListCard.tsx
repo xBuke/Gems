@@ -1,4 +1,4 @@
-import { navigateToGemFromDiscover } from '@/lib/gemSharedTransition';
+import { navigateToGemWithSharedTransition } from '@/lib/gemSharedTransition';
 import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -60,7 +60,7 @@ export function DiscoverListCard({
   const username = gem.profiles?.username ?? 'unknown';
 
   const handlePress = () => {
-    navigateToGemFromDiscover(router, gem, { imageRef, titleRef }, reduceMotion);
+    navigateToGemWithSharedTransition(router, gem, { imageRef, titleRef }, reduceMotion);
   };
 
   return (

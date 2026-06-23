@@ -176,11 +176,14 @@ export default function GemDetailScreen() {
 
   const handleBack = useCallback(() => {
     if (useSharedTransition && !reduceMotion) {
-      runBackTransition(() => goBackOrTab(router, 'index'));
+      runBackTransition(() => {
+        navigation.setOptions({ animation: 'slide_from_right' });
+        goBackOrTab(router, 'index');
+      });
       return;
     }
     goBackOrTab(router, 'index');
-  }, [reduceMotion, router, runBackTransition, useSharedTransition]);
+  }, [navigation, reduceMotion, router, runBackTransition, useSharedTransition]);
 
   useEffect(() => {
     if (!useSharedTransition || reduceMotion) return;

@@ -12,6 +12,8 @@ import {
 } from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
 import { hapticLight, hapticMedium } from '@/lib/haptics';
+import { navigateToGemWithSharedTransition, type GemTransitionRefs } from '@/lib/gemSharedTransition';
+import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useToast } from '@/lib/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/ThemeContext';
@@ -20,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -86,9 +88,10 @@ type SwipeCardProps = {
   onSwipeComplete: (action: 'save' | 'skip') => void;
   triggerRef: React.MutableRefObject<((action: 'save' | 'skip') => void) | null>;
   promoteOnMount?: boolean;
+  transitionRefs?: GemTransitionRefs;
 };
 
-function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, triggerRef, promoteOnMount }: SwipeCardProps) {
+function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, triggerRef, promoteOnMount, transitionRefs }: SwipeCardProps) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const isAnimating = useSharedValue(false);
@@ -188,17 +191,22 @@ function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, trigge
   return (
     <GestureDetector gesture={panGesture}>
       <Reanimated.View style={[cardStyles.card, cardStyle]}>
-        {gem.image_url ? (
-          <Image
-            source={{ uri: gem.image_url }}
-            style={cardStyles.cardImage}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View style={[cardStyles.cardImage, { backgroundColor: theme.bgTertiary }]} />
-        )}
+        <View
+          ref={transitionRefs?.imageRef as RefObject<View> | undefined}
+          style={cardStyles.cardImageMeasure}
+          collapsable={false}>
+          {gem.image_url ? (
+            <Image
+              source={{ uri: gem.image_url }}
+              style={cardStyles.cardImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View style={[cardStyles.cardImage, { backgroundColor: theme.bgTertiary }]} />
+          )}
+        </View>
 
         <View style={cardStyles.gradient} />
 
@@ -216,7 +224,9 @@ function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, trigge
         )}
 
         <View style={cardStyles.bottomText}>
-          <Text style={cardStyles.cardTitle}>{gem.title}</Text>
+          <View ref={transitionRefs?.titleRef as RefObject<View> | undefined} collapsable={false}>
+            <Text style={cardStyles.cardTitle}>{gem.title}</Text>
+          </View>
           <Text
             style={[
               cardStyles.cardMeta,
@@ -248,6 +258,10 @@ const cardStyles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     position: 'absolute',
+  },
+  cardImageMeasure: {
+    width: '100%',
+    height: '100%',
   },
   cardImage: {
     width: '100%',
@@ -337,6 +351,7 @@ const cardStyles = StyleSheet.create({
 
 export default function GemSwipeScreen() {
   const router = useRouter();
+  const reduceMotion = useReduceMotion();
   const { theme, isDark } = useTheme();
   const { showToast } = useToast();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -355,6 +370,8 @@ export default function GemSwipeScreen() {
   const [weeklyNewCount, setWeeklyNewCount] = useState<number | null>(null);
 
   const swipeTriggerRef = useRef<((action: 'save' | 'skip') => void) | null>(null);
+  const swipeImageRef = useRef<View>(null);
+  const swipeTitleRef = useRef<View>(null);
   const processingRef = useRef(false);
   const [hasSwiped, setHasSwiped] = useState(false);
 
@@ -731,6 +748,7 @@ export default function GemSwipeScreen() {
                 onSwipeComplete={handleSwipeAction}
                 triggerRef={swipeTriggerRef}
                 promoteOnMount={hasSwiped}
+                transitionRefs={{ imageRef: swipeImageRef, titleRef: swipeTitleRef }}
               />
             )}
           </View>
@@ -748,7 +766,15 @@ export default function GemSwipeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.viewDetailButton, { backgroundColor: theme.card, borderColor: theme.border }]}
-              onPress={() => currentGem && router.push('/gem/' + currentGem.id)}
+              onPress={() =>
+                currentGem &&
+                navigateToGemWithSharedTransition(
+                  router,
+                  currentGem,
+                  { imageRef: swipeImageRef, titleRef: swipeTitleRef },
+                  reduceMotion,
+                )
+              }
               activeOpacity={0.8}>
               <Text style={styles.viewDetailEmoji}>💎</Text>
             </TouchableOpacity>

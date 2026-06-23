@@ -10,7 +10,9 @@ import {
 } from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
 import { hapticLight, hapticSelection } from '@/lib/haptics';
+import { navigateToGemWithSharedTransition } from '@/lib/gemSharedTransition';
 import { goBackOrTab, useTabRootBackHandler, useTabStackGesture } from '@/lib/navigationMotion';
+import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -89,6 +91,9 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const sheetImageRef = useRef<View>(null);
+  const sheetTitleRef = useRef<View>(null);
+  const reduceMotion = useReduceMotion();
   const regionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchedRegionRef = useRef<Region | null>(null);
   const snapPoints = useMemo(() => ['25%', '60%'], []);
@@ -698,21 +703,25 @@ export default function MapScreen() {
           <BottomSheetView style={styles.bottomSheetContent}>
             {selectedGem && (
               <>
-                {selectedGem.image_url ? (
-                  <Image
-                    source={{ uri: selectedGem.image_url }}
-                    style={styles.sheetImage}
-                    contentFit="cover"
-                    transition={200}
-                    cachePolicy="memory-disk"
-                  />
-                ) : (
-                  <View style={styles.sheetImagePlaceholder}>
-                    <Ionicons name="location-outline" size={40} color={theme.accent} />
-                  </View>
-                )}
+                <View ref={sheetImageRef} style={styles.sheetImageWrap} collapsable={false}>
+                  {selectedGem.image_url ? (
+                    <Image
+                      source={{ uri: selectedGem.image_url }}
+                      style={styles.sheetImage}
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                    />
+                  ) : (
+                    <View style={styles.sheetImagePlaceholder}>
+                      <Ionicons name="location-outline" size={40} color={theme.accent} />
+                    </View>
+                  )}
+                </View>
 
-                <Text style={styles.sheetTitle}>{selectedGem.title}</Text>
+                <View ref={sheetTitleRef} collapsable={false}>
+                  <Text style={styles.sheetTitle}>{selectedGem.title}</Text>
+                </View>
 
                 <View style={styles.sheetBadgeRow}>
                   <View style={styles.sheetCategoryBadge}>
@@ -741,7 +750,18 @@ export default function MapScreen() {
 
                 <TouchableOpacity
                   style={styles.viewDetailsButton}
-                  onPress={() => router.push('/gem/' + selectedGem.id)}
+                  onPress={() =>
+                    navigateToGemWithSharedTransition(
+                      router,
+                      {
+                        id: selectedGem.id,
+                        title: selectedGem.title,
+                        image_url: selectedGem.image_url ?? null,
+                      },
+                      { imageRef: sheetImageRef, titleRef: sheetTitleRef },
+                      reduceMotion,
+                    )
+                  }
                   activeOpacity={0.8}>
                   <Text style={styles.viewDetailsButtonText}>View Full Details</Text>
                 </TouchableOpacity>
@@ -948,17 +968,20 @@ const createStyles = (theme: Theme, overlay: string) =>
       flex: 1,
       padding: 16,
     },
+    sheetImageWrap: {
+      width: '100%',
+      height: 140,
+      marginBottom: 12,
+    },
     sheetImage: {
       width: '100%',
       height: 140,
       borderRadius: 12,
-      marginBottom: 12,
     },
     sheetImagePlaceholder: {
       width: '100%',
       height: 140,
       borderRadius: 12,
-      marginBottom: 12,
       backgroundColor: theme.bgTertiary,
       alignItems: 'center',
       justifyContent: 'center',

@@ -47,21 +47,21 @@ export function measureElementLayout(ref: MeasurableRef): Promise<ElementLayout 
   });
 }
 
-type DiscoverGem = {
+export type GemTransitionTarget = {
   id: string;
   title: string;
   image_url: string | null;
 };
 
-type DiscoverGemRefs = {
+export type GemTransitionRefs = {
   imageRef: MeasurableRef;
   titleRef: MeasurableRef;
 };
 
-export async function navigateToGemFromDiscover(
+export async function navigateToGemWithSharedTransition(
   router: Router,
-  gem: DiscoverGem,
-  refs: DiscoverGemRefs,
+  gem: GemTransitionTarget,
+  refs: GemTransitionRefs,
   reduceMotion: boolean,
 ) {
   if (reduceMotion) {
@@ -94,6 +94,9 @@ export async function navigateToGemFromDiscover(
     params: { id: gem.id, st: '1' },
   });
 }
+
+/** @deprecated Use navigateToGemWithSharedTransition */
+export const navigateToGemFromDiscover = navigateToGemWithSharedTransition;
 
 export function shouldRunGemSharedTransition(
   gemId: string | undefined,

@@ -5,6 +5,8 @@ import { searchCities } from '@/lib/cityAutocomplete';
 import { getDistance } from '@/lib/distance';
 import { GEM_SELECT_WITH_COMMUNITY } from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
+import { navigateToGemWithSharedTransition } from '@/lib/gemSharedTransition';
+import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -50,10 +52,80 @@ const formatDistanceKm = (meters: number) => {
 const getCategoryName = (categoryId: string) =>
   CATEGORIES.find((c) => c.id === categoryId)?.name ?? categoryId;
 
+type TripPlannerResultCardProps = {
+  gem: GemWithDistance;
+  likeCount: number;
+  styles: ReturnType<typeof createStyles>;
+  theme: Theme;
+  router: ReturnType<typeof useRouter>;
+  reduceMotion: boolean;
+};
+
+function TripPlannerResultCard({
+  gem,
+  likeCount,
+  styles,
+  theme,
+  router,
+  reduceMotion,
+}: TripPlannerResultCardProps) {
+  const imageRef = useRef<View>(null);
+  const titleRef = useRef<View>(null);
+  const username = gem.profiles?.username ?? 'unknown';
+
+  return (
+    <TouchableOpacity
+      style={styles.listCard}
+      onPress={() =>
+        navigateToGemWithSharedTransition(router, gem, { imageRef, titleRef }, reduceMotion)
+      }
+      activeOpacity={0.7}>
+      <View ref={imageRef} style={styles.listCardImageWrap} collapsable={false}>
+        {gem.image_url ? (
+          <Image
+            source={{ uri: gem.image_url }}
+            style={styles.listCardImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <View style={[styles.listCardImage, styles.listCardImagePlaceholder]} />
+        )}
+      </View>
+      <View style={styles.listCardContent}>
+        <View style={styles.listBadgeRow}>
+          <View style={styles.listCategoryBadge}>
+            <Text style={styles.listCategoryBadgeText}>{getCategoryName(gem.category)}</Text>
+          </View>
+        </View>
+        <View ref={titleRef} collapsable={false}>
+          <Text style={styles.listCardTitle} numberOfLines={1}>
+            {gem.title}
+          </Text>
+        </View>
+        <Text style={styles.listCardUsername}>@{username}</Text>
+        <View style={styles.listCardMetaRow}>
+          <View style={styles.listCardMetaItem}>
+            <Ionicons name="heart-outline" size={12} color={theme.textSecondary} />
+            <Text style={styles.listCardMetaText}>{likeCount}</Text>
+          </View>
+          <Text style={styles.listCardMetaDivider}>|</Text>
+          <View style={styles.listCardMetaItem}>
+            <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
+            <Text style={styles.listCardMetaText}>{formatDistanceKm(gem.distanceMeters)}</Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function TripPlannerScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
+  const reduceMotion = useReduceMotion();
 
   const [checkingPremium, setCheckingPremium] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
@@ -179,53 +251,17 @@ export default function TripPlannerScreen() {
     setSearching(false);
   };
 
-  const renderGemCard = (gem: GemWithDistance) => {
-    const username = gem.profiles?.username ?? 'unknown';
-
-    return (
-      <TouchableOpacity
-        key={gem.id}
-        style={styles.listCard}
-        onPress={() => router.push('/gem/' + gem.id)}
-        activeOpacity={0.7}>
-        <View style={styles.listCardImageWrap}>
-          {gem.image_url ? (
-            <Image
-              source={{ uri: gem.image_url }}
-              style={styles.listCardImage}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={[styles.listCardImage, styles.listCardImagePlaceholder]} />
-          )}
-        </View>
-        <View style={styles.listCardContent}>
-          <View style={styles.listBadgeRow}>
-            <View style={styles.listCategoryBadge}>
-              <Text style={styles.listCategoryBadgeText}>{getCategoryName(gem.category)}</Text>
-            </View>
-          </View>
-          <Text style={styles.listCardTitle} numberOfLines={1}>
-            {gem.title}
-          </Text>
-          <Text style={styles.listCardUsername}>@{username}</Text>
-          <View style={styles.listCardMetaRow}>
-            <View style={styles.listCardMetaItem}>
-              <Ionicons name="heart-outline" size={12} color={theme.textSecondary} />
-              <Text style={styles.listCardMetaText}>{likeCounts[gem.id] ?? 0}</Text>
-            </View>
-            <Text style={styles.listCardMetaDivider}>|</Text>
-            <View style={styles.listCardMetaItem}>
-              <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
-              <Text style={styles.listCardMetaText}>{formatDistanceKm(gem.distanceMeters)}</Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderGemCard = (gem: GemWithDistance) => (
+    <TripPlannerResultCard
+      key={gem.id}
+      gem={gem}
+      likeCount={likeCounts[gem.id] ?? 0}
+      styles={styles}
+      theme={theme}
+      router={router}
+      reduceMotion={reduceMotion}
+    />
+  );
 
   if (checkingPremium) {
     return (
