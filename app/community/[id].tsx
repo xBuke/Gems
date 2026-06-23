@@ -1,8 +1,21 @@
+import { CommunityPostCommentThread } from '@/components/CommunityPostCommentThread'
+import { CommunityPostReactionBar } from '@/components/CommunityPostReactionBar'
 import { EmptyState } from '@/components/EmptyState'
+import { GemListCard } from '@/components/GemListCard'
 import { requireAuth } from '@/lib/authGuard'
 import { CATEGORIES } from '@/lib/categories'
 import { canJoinMoreCommunities, getCommunityMemberCount } from '@/lib/communities'
-import { hapticLight } from '@/lib/haptics'
+import {
+  buildReactionSummary,
+  formatPostTimeAgo,
+  togglePostReaction,
+  type CommunityPost,
+  type PostGem,
+  type ReactionRow,
+  type ReactionSummary,
+  type ReactionType,
+} from '@/lib/communityPosts'
+import { hapticLight, hapticSuccess } from '@/lib/haptics'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
@@ -26,7 +39,6 @@ import {
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
-const IMAGE_PLACEHOLDER = '#1A5C3A'
 const SCREEN_WIDTH = Dimensions.get('window').width
 const BUBBLE_MAX_WIDTH = SCREEN_WIDTH * 0.75
 // Heights of UI above the chat-tab KeyboardAvoidingView (always visible when chat is active).
@@ -47,14 +59,6 @@ type Community = {
   color: string
   creator_id: string
   creator?: { username: string } | null
-}
-
-type Gem = {
-  id: string
-  title: string
-  category: string
-  image_url: string | null
-  profiles: { username: string } | null
 }
 
 type CommunityMessage = {
@@ -124,10 +128,13 @@ export default function CommunityDetailScreen() {
   const [memberCount, setMemberCount] = useState(0)
   const [isMember, setIsMember] = useState(false)
   const [myId, setMyId] = useState<string | null>(null)
-  const [gems, setGems] = useState<Gem[]>([])
-  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
+  const [posts, setPosts] = useState<CommunityPost[]>([])
+  const [reactions, setReactions] = useState<ReactionRow[]>([])
+  const [gemLikeCounts, setGemLikeCounts] = useState<Record<string, number>>({})
   const [messages, setMessages] = useState<CommunityMessage[]>([])
   const [activeTab, setActiveTab] = useState<DetailTab>('feed')
+  const [postText, setPostText] = useState('')
+  const [postingText, setPostingText] = useState(false)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
   const [joining, setJoining] = useState(false)
@@ -148,13 +155,12 @@ export default function CommunityDetailScreen() {
     }, 100)
   }, [])
 
-  const fetchLikeCounts = useCallback(async (gemList: Gem[]) => {
-    if (gemList.length === 0) {
-      setLikeCounts({})
+  const fetchGemLikeCounts = useCallback(async (gemIds: string[]) => {
+    if (gemIds.length === 0) {
+      setGemLikeCounts({})
       return
     }
 
-    const gemIds = gemList.map((gem) => gem.id)
     const { data } = await supabase.from('gem_likes').select('gem_id').in('gem_id', gemIds)
 
     const counts: Record<string, number> = {}
@@ -164,8 +170,61 @@ export default function CommunityDetailScreen() {
         counts[row.gem_id] = (counts[row.gem_id] ?? 0) + 1
       }
     }
-    setLikeCounts(counts)
+    setGemLikeCounts(counts)
   }, [])
+
+  const fetchPosts = useCallback(async () => {
+    if (!id) return
+
+    const { data: postsData } = await supabase
+      .from('community_posts')
+      .select('*, author:profiles!community_posts_author_id_fkey(username, avatar_url)')
+      .eq('community_id', id)
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    const rawPosts = (postsData ?? []) as (Omit<CommunityPost, 'gem'> & {
+      author: CommunityPost['author']
+    })[]
+
+    const gemIds = rawPosts
+      .filter((post) => post.post_type === 'gem_share' && post.gem_id)
+      .map((post) => post.gem_id as string)
+
+    let gemsMap: Record<string, PostGem> = {}
+    if (gemIds.length > 0) {
+      const { data: gemsData } = await supabase
+        .from('gems')
+        .select('id, title, category, image_url, latitude, longitude, profiles!gems_user_id_fkey(username)')
+        .in('id', gemIds)
+
+      gemsMap = ((gemsData ?? []) as PostGem[]).reduce<Record<string, PostGem>>((acc, gem) => {
+        acc[gem.id] = gem
+        return acc
+      }, {})
+    }
+
+    const enrichedPosts: CommunityPost[] = rawPosts.map((post) => ({
+      ...post,
+      gem: post.gem_id ? gemsMap[post.gem_id] ?? null : null,
+    }))
+
+    setPosts(enrichedPosts)
+
+    const postIds = enrichedPosts.map((post) => post.id)
+    if (postIds.length === 0) {
+      setReactions([])
+    } else {
+      const { data: reactionsData } = await supabase
+        .from('community_post_reactions')
+        .select('id, post_id, user_id, reaction_type')
+        .in('post_id', postIds)
+
+      setReactions((reactionsData ?? []) as ReactionRow[])
+    }
+
+    await fetchGemLikeCounts(gemIds)
+  }, [id, fetchGemLikeCounts])
 
   const loadData = useCallback(async () => {
     if (!id) return
@@ -210,15 +269,7 @@ export default function CommunityDetailScreen() {
       setIsMember(false)
     }
 
-    const { data: gemsData } = await supabase
-      .from('gems')
-      .select('*, profiles!gems_user_id_fkey(username)')
-      .eq('community_id', id)
-      .order('created_at', { ascending: false })
-
-    const gemList = (gemsData ?? []) as Gem[]
-    setGems(gemList)
-    await fetchLikeCounts(gemList)
+    await fetchPosts()
     setLoadingFeed(false)
 
     const { data: messagesData } = await supabase
@@ -230,7 +281,7 @@ export default function CommunityDetailScreen() {
     setMessages((messagesData ?? []) as CommunityMessage[])
     setLoadingChat(false)
     setLoading(false)
-  }, [id, fetchLikeCounts])
+  }, [id, fetchPosts])
 
   useEffect(() => {
     loadData()
@@ -245,11 +296,22 @@ export default function CommunityDetailScreen() {
   useEffect(() => {
     if (!id) return
 
-    let channel: any = null
+    let cancelled = false
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
     const setupChat = async () => {
+      const channelName = 'community-chat-' + id
+      const existing = supabase
+        .getChannels()
+        .find((ch) => ch.topic === 'realtime:' + channelName)
+      if (existing) {
+        await supabase.removeChannel(existing)
+      }
+
+      if (cancelled) return
+
       channel = supabase
-        .channel('community-chat-' + id)
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -265,10 +327,18 @@ export default function CommunityDetailScreen() {
         .subscribe()
     }
 
-    setupChat()
+    void setupChat()
 
     return () => {
-      if (channel) supabase.removeChannel(channel)
+      cancelled = true
+      const channelName = 'community-chat-' + id
+      const existing = supabase
+        .getChannels()
+        .find((ch) => ch.topic === 'realtime:' + channelName)
+      if (existing) {
+        void supabase.removeChannel(existing)
+      }
+      channel = null
     }
   }, [id])
 
@@ -422,44 +492,210 @@ export default function CommunityDetailScreen() {
     }
   }
 
-  const renderGemCard = (gem: Gem) => {
-    const username = gem.profiles?.username ?? 'unknown'
+  const handleCreateTextPost = async () => {
+    const text = postText.trim()
+    if (!text || !myId || !id || postingText) return
+
+    if (!isMember) {
+      Alert.alert('Join first', 'You need to join this community before posting.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Join', onPress: handleJoin },
+      ])
+      return
+    }
+
+    setPostingText(true)
+    const { data, error } = await supabase
+      .from('community_posts')
+      .insert({
+        community_id: id,
+        author_id: myId,
+        post_type: 'text',
+        content: text,
+      })
+      .select('*, author:profiles!community_posts_author_id_fkey(username, avatar_url)')
+      .single()
+
+    setPostingText(false)
+
+    if (error) {
+      Alert.alert('Error', error.message)
+      return
+    }
+
+    hapticSuccess()
+    setPostText('')
+    if (data) {
+      const newPost = { ...(data as CommunityPost), gem: null }
+      setPosts((prev) => {
+        const next = [newPost, ...prev]
+        next.sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        })
+        return next
+      })
+    }
+  }
+
+  const handleTogglePin = async (post: CommunityPost) => {
+    if (!myId || post.author_id !== myId) return
+
+    const nextPinned = !post.is_pinned
+    const { error } = await supabase
+      .from('community_posts')
+      .update({ is_pinned: nextPinned })
+      .eq('id', post.id)
+
+    if (error) {
+      Alert.alert('Error', error.message)
+      return
+    }
+
+    hapticLight()
+    setPosts((prev) => {
+      const next = prev.map((item) =>
+        item.id === post.id ? { ...item, is_pinned: nextPinned } : item,
+      )
+      next.sort((a, b) => {
+        if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+      return next
+    })
+  }
+
+  const getMyReaction = (postId: string): ReactionType | null => {
+    if (!myId) return null
+    const row = reactions.find((r) => r.post_id === postId && r.user_id === myId)
+    return row?.reaction_type ?? null
+  }
+
+  const getReactionSummary = (postId: string): ReactionSummary =>
+    buildReactionSummary(reactions, postId)
+
+  const handleReaction = async (postId: string, reactionType: ReactionType) => {
+    if (!myId) {
+      await requireAuth('/community/' + id)
+      return
+    }
+
+    const current = getMyReaction(postId)
+    const { error } = await togglePostReaction(postId, myId, reactionType, current)
+
+    if (error) {
+      Alert.alert('Error', error.message)
+      return
+    }
+
+    setReactions((prev) => {
+      const existing = prev.find((r) => r.post_id === postId && r.user_id === myId)
+      if (current === reactionType) {
+        return prev.filter((r) => r.id !== existing?.id)
+      }
+      if (existing) {
+        return prev.map((r) =>
+          r.id === existing.id ? { ...r, reaction_type: reactionType } : r,
+        )
+      }
+      return [
+        ...prev,
+        {
+          id: `temp-${postId}-${myId}`,
+          post_id: postId,
+          user_id: myId,
+          reaction_type: reactionType,
+        },
+      ]
+    })
+  }
+
+  const renderAuthorAvatar = (username: string, avatarUrl?: string | null) => {
+    if (avatarUrl) {
+      return (
+        <Image
+          source={{ uri: avatarUrl }}
+          style={styles.authorAvatar}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+        />
+      )
+    }
 
     return (
-      <TouchableOpacity
-        key={gem.id}
-        style={styles.listCard}
-        onPress={() => router.push('/gem/' + gem.id)}
-        activeOpacity={0.7}>
-        <View style={styles.listCardImageWrap}>
-          {gem.image_url ? (
-            <Image
-              source={{ uri: gem.image_url }}
-              style={styles.listCardImage}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={[styles.listCardImage, styles.listCardImagePlaceholder]} />
-          )}
-        </View>
-        <View style={styles.listCardContent}>
-          <View style={styles.listCategoryBadge}>
-            <Text style={styles.listCategoryBadgeText}>{gem.category}</Text>
-          </View>
-          <Text style={styles.listCardTitle} numberOfLines={1}>
-            {gem.title}
-          </Text>
-          <Text style={styles.listCardUsername}>@{username}</Text>
-          <View style={styles.listCardMetaRow}>
-            <View style={styles.listCardMetaItem}>
-              <Ionicons name="heart-outline" size={12} color={theme.textSecondary} />
-              <Text style={styles.listCardMetaText}>{likeCounts[gem.id] ?? 0}</Text>
+      <View style={styles.authorAvatarPlaceholder}>
+        <Text style={styles.authorAvatarText}>{username[0]?.toUpperCase() ?? '?'}</Text>
+      </View>
+    )
+  }
+
+  const renderPost = (post: CommunityPost) => {
+    const username = post.author?.username ?? 'unknown'
+    const isOwnPost = myId != null && post.author_id === myId
+    const summary = getReactionSummary(post.id)
+    const myReaction = getMyReaction(post.id)
+
+    return (
+      <View key={post.id} style={styles.postCard}>
+        <View style={styles.postHeader}>
+          {renderAuthorAvatar(username, post.author?.avatar_url)}
+          <View style={styles.postHeaderText}>
+            <View style={styles.postAuthorRow}>
+              <Text style={styles.postUsername}>@{username}</Text>
+              {post.post_type === 'gem_share' ? (
+                <Text style={styles.postActionText}> shared a gem</Text>
+              ) : null}
             </View>
+            <Text style={styles.postTimestamp}>{formatPostTimeAgo(post.created_at)}</Text>
           </View>
+          {isOwnPost ? (
+            <TouchableOpacity
+              onPress={() => handleTogglePin(post)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.7}
+              style={styles.pinButton}>
+              <Ionicons
+                name={post.is_pinned ? 'pin' : 'pin-outline'}
+                size={16}
+                color={post.is_pinned ? theme.accent : theme.textTertiary}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
-      </TouchableOpacity>
+
+        {post.is_pinned ? (
+          <View style={styles.pinnedBadge}>
+            <Text style={styles.pinnedBadgeText}>📌 PINNED</Text>
+          </View>
+        ) : null}
+
+        {post.post_type === 'text' ? (
+          <Text style={styles.postContent}>{post.content}</Text>
+        ) : null}
+
+        {post.post_type === 'gem_share' && post.gem ? (
+          <GemListCard
+            gem={post.gem}
+            likeCount={gemLikeCounts[post.gem.id] ?? 0}
+            locationLabel={community?.location_focus ?? null}
+            onPress={() => router.push('/gem/' + post.gem!.id)}
+          />
+        ) : null}
+
+        <CommunityPostReactionBar
+          summary={summary}
+          myReaction={myReaction}
+          onReact={(type) => handleReaction(post.id, type)}
+        />
+
+        <CommunityPostCommentThread
+          postId={post.id}
+          myId={myId}
+          isMember={isMember}
+          onJoinPress={handleJoin}
+        />
+      </View>
     )
   }
 
@@ -510,20 +746,44 @@ export default function CommunityDetailScreen() {
     return (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.feedContent}>
+      contentContainerStyle={styles.feedContent}
+      keyboardShouldPersistTaps="handled">
+      <View style={styles.composerCard}>
+        <TextInput
+          style={styles.composerInput}
+          placeholder="Share something with the community..."
+          placeholderTextColor={theme.textTertiary}
+          value={postText}
+          onChangeText={setPostText}
+          multiline
+          maxLength={2000}
+        />
+        <TouchableOpacity
+          style={[styles.composerPostButton, (!postText.trim() || postingText) && styles.composerPostButtonDisabled]}
+          onPress={handleCreateTextPost}
+          disabled={!postText.trim() || postingText}
+          activeOpacity={0.8}>
+          {postingText ? (
+            <ActivityIndicator size="small" color={theme.accentText} />
+          ) : (
+            <Text style={styles.composerPostButtonText}>Post</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.addGemButton} onPress={handleAddGem} activeOpacity={0.8}>
         <Ionicons name="add-circle-outline" size={18} color={theme.accentText} />
         <Text style={styles.addGemButtonText}>Add Gem to Community</Text>
       </TouchableOpacity>
 
-      {gems.length === 0 ? (
+      {posts.length === 0 ? (
         <EmptyState
-          icon="location-outline"
-          title="No gems in this community yet"
-          subtitle="Be the first to add one!"
+          icon="chatbubbles-outline"
+          title="No posts yet"
+          subtitle="Start the conversation or share a gem!"
         />
       ) : (
-        gems.map(renderGemCard)
+        posts.map(renderPost)
       )}
     </ScrollView>
     )
@@ -897,78 +1157,120 @@ const createStyles = (theme: Theme) =>
       fontSize: 14,
       color: theme.accentText,
     },
+    composerCard: {
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      gap: 10,
+    },
+    composerInput: {
+      fontSize: 14,
+      fontFamily: 'SpaceGrotesk-Regular',
+      color: theme.text,
+      minHeight: 44,
+      maxHeight: 120,
+    },
+    composerPostButton: {
+      alignSelf: 'flex-end',
+      backgroundColor: theme.accent,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      minWidth: 72,
+      alignItems: 'center',
+    },
+    composerPostButtonDisabled: {
+      opacity: 0.5,
+    },
+    composerPostButtonText: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 13,
+      color: theme.accentText,
+    },
+    postCard: {
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      gap: 10,
+    },
+    postHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+    },
+    authorAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+    },
+    authorAvatarPlaceholder: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.bgTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    authorAvatarText: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    postHeaderText: {
+      flex: 1,
+      gap: 2,
+    },
+    postAuthorRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+    },
+    postUsername: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 13,
+      color: theme.text,
+    },
+    postActionText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    postTimestamp: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      color: theme.textTertiary,
+    },
+    pinButton: {
+      padding: 4,
+    },
+    pinnedBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: theme.bgTertiary,
+      borderRadius: 6,
+      paddingVertical: 2,
+      paddingHorizontal: 6,
+    },
+    pinnedBadgeText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 8,
+      color: theme.textTertiary,
+    },
+    postContent: {
+      fontFamily: 'SpaceGrotesk-Regular',
+      fontSize: 13,
+      color: theme.text,
+      lineHeight: 19,
+    },
     emptyText: {
       fontSize: 14,
       color: theme.textSecondary,
       textAlign: 'center',
       paddingVertical: 32,
-    },
-    listCard: {
-      flexDirection: 'row',
-      height: 90,
-      backgroundColor: theme.card,
-      borderWidth: 0.5,
-      borderColor: theme.border,
-      borderRadius: 12,
-      overflow: 'hidden',
-      marginBottom: 10,
-    },
-    listCardImageWrap: {
-      width: 90,
-      height: 90,
-    },
-    listCardImage: {
-      width: 90,
-      height: 90,
-      borderTopLeftRadius: 12,
-      borderBottomLeftRadius: 12,
-    },
-    listCardImagePlaceholder: {
-      backgroundColor: IMAGE_PLACEHOLDER,
-    },
-    listCardContent: {
-      flex: 1,
-      padding: 12,
-      justifyContent: 'space-between',
-    },
-    listCategoryBadge: {
-      alignSelf: 'flex-start',
-      backgroundColor: theme.accentSub,
-      borderWidth: 0.5,
-      borderColor: theme.accent,
-      paddingVertical: 2,
-      paddingHorizontal: 8,
-      borderRadius: 20,
-      marginBottom: 2,
-    },
-    listCategoryBadgeText: {
-      fontSize: 10,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    listCardTitle: {
-      fontSize: 14,
-      fontFamily: 'SpaceGrotesk-Bold',
-      color: theme.text,
-    },
-    listCardUsername: {
-      fontSize: 12,
-      color: theme.textSecondary,
-    },
-    listCardMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    listCardMetaItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    listCardMetaText: {
-      fontSize: 11,
-      fontFamily: 'SpaceMono-Regular',
-      color: theme.textSecondary,
     },
     chatGate: {
       flex: 1,
@@ -1030,18 +1332,22 @@ const createStyles = (theme: Theme) =>
       paddingVertical: 10,
     },
     bubbleMine: {
-      backgroundColor: theme.accent,
-      borderTopLeftRadius: 18,
-      borderTopRightRadius: 18,
+      backgroundColor: theme.accentSub,
+      borderWidth: 0.5,
+      borderColor: theme.accent,
+      borderTopLeftRadius: 14,
+      borderTopRightRadius: 14,
       borderBottomRightRadius: 4,
-      borderBottomLeftRadius: 18,
+      borderBottomLeftRadius: 14,
     },
     bubbleTheirs: {
       backgroundColor: theme.card,
-      borderTopLeftRadius: 18,
-      borderTopRightRadius: 18,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderTopLeftRadius: 14,
+      borderTopRightRadius: 14,
       borderBottomLeftRadius: 4,
-      borderBottomRightRadius: 18,
+      borderBottomRightRadius: 14,
     },
     bubbleText: {
       fontSize: 15,

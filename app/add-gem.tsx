@@ -17,6 +17,7 @@ import { formatLatitude } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticError, hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
+import { createGemSharePost } from '@/lib/communityPosts';
 import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -296,11 +297,22 @@ export default function AddGemScreen() {
           ...communityField,
         };
 
-    const { error } = await supabase.from('gems').insert(gemPayload);
+    const { data: newGem, error } = await supabase
+      .from('gems')
+      .insert(gemPayload)
+      .select('id')
+      .single();
 
     if (error) {
       Alert.alert('Error', error.message);
       return;
+    }
+
+    if (communityId && newGem?.id) {
+      const { error: postError } = await createGemSharePost(communityId, user.id, newGem.id);
+      if (postError) {
+        Alert.alert('Gem added', 'Your gem was created but could not be posted to the feed. Try again from the community.');
+      }
     }
 
     hapticSuccess();
