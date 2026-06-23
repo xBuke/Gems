@@ -20,6 +20,7 @@ import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-rout
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, type ReactNode } from 'react';
 import { Platform, View } from 'react-native';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function OnboardingGate() {
@@ -159,8 +160,10 @@ export default function RootLayout() {
         <ThemeProvider>
           <ReduceMotionProvider>
             <ToastProvider>
-              <PushNotificationManager />
-              <RootNavigator />
+              <BottomSheetModalProvider>
+                <PushNotificationManager />
+                <RootNavigator />
+              </BottomSheetModalProvider>
             </ToastProvider>
           </ReduceMotionProvider>
         </ThemeProvider>

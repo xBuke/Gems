@@ -448,8 +448,8 @@ export default function CommunityDetailScreen() {
 
   const handleSettingsPress = () => {
     Alert.alert('Community Options', undefined, [
-      { text: 'Cancel', style: 'cancel' },
       { text: 'Delete Community', style: 'destructive', onPress: handleDeleteCommunity },
+      { text: 'Cancel', style: 'cancel' },
     ])
   }
 

@@ -16,7 +16,8 @@ import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetHandle } from '@/components/BottomSheetHandle';
+import BottomSheet, { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
@@ -95,12 +96,14 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const tapSheetRef = useRef<BottomSheet>(null);
   const sheetImageRef = useRef<View>(null);
   const sheetTitleRef = useRef<View>(null);
   const reduceMotion = useReduceMotion();
   const regionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchedRegionRef = useRef<Region | null>(null);
-  const snapPoints = useMemo(() => ['25%', '60%'], []);
+  const snapPoints = useMemo(() => ['30%', '65%'], []);
+  const tapSnapPoints = useMemo(() => ['32%'], []);
   const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
   const [gemsLoading, setGemsLoading] = useState(true);
@@ -255,6 +258,14 @@ export default function MapScreen() {
       setSelectedGem(null);
     }
   }, [placingMode, tapLocation]);
+
+  useEffect(() => {
+    if (!tapLocation) return;
+
+    requestAnimationFrame(() => {
+      tapSheetRef.current?.snapToIndex(0);
+    });
+  }, [tapLocation]);
 
   useEffect(() => {
     if (!selectedGem) {
@@ -694,21 +705,33 @@ export default function MapScreen() {
       </View>
 
       {tapLocation && (
-        <View style={[styles.actionSheet, { paddingBottom: 20 + insets.bottom }]}>
-          <Text style={styles.actionSheetTitle}>Drop a gem here?</Text>
-          <Text style={styles.actionSheetLocation}>{tapLocationLabel}</Text>
-          <View style={styles.actionSheetButtons}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setTapLocation(null)}
-              activeOpacity={0.8}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.addButton} onPress={handleAddGemHere} activeOpacity={0.8}>
-              <Text style={styles.addButtonText}>Add Gem Here</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <BottomSheet
+          ref={tapSheetRef}
+          index={0}
+          snapPoints={tapSnapPoints}
+          enablePanDownToClose
+          onClose={() => setTapLocation(null)}
+          handleComponent={BottomSheetHandle}
+          backgroundStyle={{ backgroundColor: theme.card }}
+          activeOffsetY={[-1, 1]}>
+          <BottomSheetView style={[styles.tapSheetContent, { paddingBottom: 20 + insets.bottom }]}>
+            <Text style={styles.actionSheetTitle}>Drop a gem here?</Text>
+            <Text style={styles.actionSheetLocation}>{tapLocationLabel}</Text>
+            <View style={styles.actionSheetButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setTapLocation(null);
+                }}
+                activeOpacity={0.8}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addButton} onPress={handleAddGemHere} activeOpacity={0.8}>
+                <Text style={styles.addButtonText}>Add Gem Here</Text>
+              </TouchableOpacity>
+            </View>
+          </BottomSheetView>
+        </BottomSheet>
       )}
 
       {!placingMode && !tapLocation && (
@@ -718,27 +741,15 @@ export default function MapScreen() {
           snapPoints={snapPoints}
           enablePanDownToClose
           onClose={() => setSelectedGem(null)}
+          handleComponent={BottomSheetHandle}
           backgroundStyle={{ backgroundColor: theme.card }}
-          handleIndicatorStyle={{ backgroundColor: theme.border }}>
-          <BottomSheetView style={styles.bottomSheetContent}>
+          activeOffsetY={[-1, 1]}>
+          <BottomSheetScrollView
+            overScrollMode="never"
+            bounces={Platform.OS === 'ios' ? false : undefined}
+            contentContainerStyle={styles.bottomSheetContent}>
             {selectedGem && (
               <>
-                <View ref={sheetImageRef} style={styles.sheetImageWrap} collapsable={false}>
-                  {selectedGem.image_url ? (
-                    <Image
-                      source={{ uri: selectedGem.image_url }}
-                      style={styles.sheetImage}
-                      contentFit="cover"
-                      transition={200}
-                      cachePolicy="memory-disk"
-                    />
-                  ) : (
-                    <View style={styles.sheetImagePlaceholder}>
-                      <Ionicons name="location-outline" size={40} color={theme.accent} />
-                    </View>
-                  )}
-                </View>
-
                 <View ref={sheetTitleRef} collapsable={false}>
                   <Text style={styles.sheetTitle}>{selectedGem.title}</Text>
                 </View>
@@ -755,6 +766,40 @@ export default function MapScreen() {
                   )}
                 </View>
 
+                <TouchableOpacity
+                  style={styles.checkInButton}
+                  onPress={() =>
+                    navigateToGemWithSharedTransition(
+                      router,
+                      {
+                        id: selectedGem.id,
+                        title: selectedGem.title,
+                        image_url: selectedGem.image_url ?? null,
+                      },
+                      { imageRef: sheetImageRef, titleRef: sheetTitleRef },
+                      reduceMotion,
+                    )
+                  }
+                  activeOpacity={0.8}>
+                  <Text style={styles.checkInButtonText}>Check In</Text>
+                </TouchableOpacity>
+
+                <View ref={sheetImageRef} style={styles.sheetImageWrap} collapsable={false}>
+                  {selectedGem.image_url ? (
+                    <Image
+                      source={{ uri: selectedGem.image_url }}
+                      style={styles.sheetImage}
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                    />
+                  ) : (
+                    <View style={styles.sheetImagePlaceholder}>
+                      <Ionicons name="location-outline" size={40} color={theme.accent} />
+                    </View>
+                  )}
+                </View>
+
                 <Text style={styles.sheetLocation}>{selectedGemLocationLabel}</Text>
 
                 <View style={styles.sheetStatsRow}>
@@ -766,6 +811,12 @@ export default function MapScreen() {
                     <Ionicons name="chatbubble-outline" size={14} color={theme.textSecondary} />
                     <Text style={styles.sheetStatText}>{selectedCommentCount}</Text>
                   </View>
+                  {selectedGemDistance ? (
+                    <View style={styles.sheetStat}>
+                      <Ionicons name="navigate-outline" size={14} color={theme.textSecondary} />
+                      <Text style={styles.sheetStatText}>{selectedGemDistance}</Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 <TouchableOpacity
@@ -795,7 +846,7 @@ export default function MapScreen() {
                 </TouchableOpacity>
               </>
             )}
-          </BottomSheetView>
+          </BottomSheetScrollView>
         </BottomSheet>
       )}
     </View>
@@ -930,16 +981,7 @@ const createStyles = (theme: Theme, overlay: string) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    actionSheet: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: theme.card,
-      borderTopWidth: 0.5,
-      borderTopColor: theme.border,
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
+    tapSheetContent: {
       padding: 20,
     },
     actionSheetTitle: {
@@ -985,8 +1027,21 @@ const createStyles = (theme: Theme, overlay: string) =>
       fontWeight: '600',
     },
     bottomSheetContent: {
-      flex: 1,
       padding: 16,
+      paddingBottom: 28,
+    },
+    checkInButton: {
+      backgroundColor: theme.accent,
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginTop: 12,
+      marginBottom: 16,
+    },
+    checkInButtonText: {
+      color: theme.accentText,
+      fontSize: 15,
+      fontWeight: '700',
     },
     sheetImageWrap: {
       width: '100%',

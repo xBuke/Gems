@@ -5,7 +5,9 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import ReportSheet from '@/components/ReportSheet';
+import { AppBottomSheetModal, type AppBottomSheetModalRef } from '@/components/AppBottomSheetModal';
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -16,9 +18,7 @@ import {
   Dimensions,
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -118,11 +118,11 @@ export default function ChatScreen() {
   const [reportVisible, setReportVisible] = useState(false);
   const [otherAvatarUrl, setOtherAvatarUrl] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState(true);
-  const [gemPickerVisible, setGemPickerVisible] = useState(false);
   const [myGems, setMyGems] = useState<ShareableGem[]>([]);
   const [gemsLoading, setGemsLoading] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const listRef = useRef<FlatList>(null);
+  const gemPickerRef = useRef<AppBottomSheetModalRef>(null);
 
   const chatItems = useMemo(() => buildChatItems(messages), [messages]);
 
@@ -286,12 +286,16 @@ export default function ChatScreen() {
 
   const openGemPicker = async () => {
     hapticLight();
-    setGemPickerVisible(true);
+    gemPickerRef.current?.present();
     await loadMyGems();
   };
 
+  const closeGemPicker = useCallback(() => {
+    gemPickerRef.current?.dismiss();
+  }, []);
+
   const handleShareGem = async (gem: ShareableGem) => {
-    setGemPickerVisible(false);
+    closeGemPicker();
     const coords = formatCoordinates(gem.latitude, gem.longitude);
     const content = `${gem.title}\n${coords}`;
     await sendMessage(content);
@@ -532,68 +536,68 @@ export default function ChatScreen() {
         />
       )}
 
-      <Modal
-        visible={gemPickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setGemPickerVisible(false)}>
-        <Pressable style={styles.gemPickerOverlay} onPress={() => setGemPickerVisible(false)}>
-          <Pressable style={styles.gemPickerSheet} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.gemPickerHandle} />
-            <Text style={styles.gemPickerTitle}>Share a gem</Text>
-            <Text style={styles.gemPickerSubtitle}>Pick one of your gems to send coordinates</Text>
-
-            {gemsLoading ? (
-              <ActivityIndicator size="small" color={theme.accent} style={styles.gemPickerLoader} />
-            ) : myGems.length === 0 ? (
-              <Text style={styles.gemPickerEmpty}>You haven&apos;t added any gems yet.</Text>
-            ) : (
-              <FlatList
-                data={myGems}
-                keyExtractor={(item) => item.id}
-                style={styles.gemPickerList}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.gemPickerRow}
-                    onPress={() => handleShareGem(item)}
-                    activeOpacity={0.7}>
-                    {item.image_url ? (
-                      <Image
-                        source={{ uri: item.image_url }}
-                        style={styles.gemPickerThumb}
-                        contentFit="cover"
-                        transition={200}
-                        cachePolicy="memory-disk"
-                      />
-                    ) : (
-                      <View style={[styles.gemPickerThumb, styles.gemPickerThumbPlaceholder]}>
-                        <Ionicons name="diamond-outline" size={18} color={theme.textTertiary} />
-                      </View>
-                    )}
-                    <View style={styles.gemPickerMeta}>
-                      <Text style={styles.gemPickerName} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      <Text style={styles.gemPickerCoords} numberOfLines={1}>
-                        {formatCoordinates(item.latitude, item.longitude)}
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-
+      <AppBottomSheetModal
+        ref={gemPickerRef}
+        onClose={() => {}}
+        snapPoints={['55%']}>
+        <BottomSheetFlatList
+          data={myGems}
+          keyExtractor={(item) => item.id}
+          overScrollMode="never"
+          bounces={Platform.OS === 'ios' ? false : undefined}
+          style={styles.gemPickerList}
+          contentContainerStyle={styles.gemPickerListContent}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <>
+              <Text style={styles.gemPickerTitle}>Share a gem</Text>
+              <Text style={styles.gemPickerSubtitle}>Pick one of your gems to send coordinates</Text>
+              {gemsLoading ? (
+                <ActivityIndicator size="small" color={theme.accent} style={styles.gemPickerLoader} />
+              ) : myGems.length === 0 ? (
+                <Text style={styles.gemPickerEmpty}>You haven&apos;t added any gems yet.</Text>
+              ) : null}
+            </>
+          }
+          ListFooterComponent={
             <TouchableOpacity
               style={styles.gemPickerCancel}
-              onPress={() => setGemPickerVisible(false)}
+              onPress={closeGemPicker}
               activeOpacity={0.7}>
               <Text style={styles.gemPickerCancelText}>Cancel</Text>
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.gemPickerRow}
+              onPress={() => handleShareGem(item)}
+              activeOpacity={0.7}>
+              {item.image_url ? (
+                <Image
+                  source={{ uri: item.image_url }}
+                  style={styles.gemPickerThumb}
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <View style={[styles.gemPickerThumb, styles.gemPickerThumbPlaceholder]}>
+                  <Ionicons name="diamond-outline" size={18} color={theme.textTertiary} />
+                </View>
+              )}
+              <View style={styles.gemPickerMeta}>
+                <Text style={styles.gemPickerName} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.gemPickerCoords} numberOfLines={1}>
+                  {formatCoordinates(item.latitude, item.longitude)}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+            </TouchableOpacity>
+          )}
+        />
+      </AppBottomSheetModal>
     </SafeAreaView>
   );
 }
@@ -841,6 +845,10 @@ const createStyles = (theme: Theme) =>
     },
     gemPickerList: {
       maxHeight: 320,
+    },
+    gemPickerListContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 8,
     },
     gemPickerRow: {
       flexDirection: 'row',

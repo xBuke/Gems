@@ -1,3 +1,4 @@
+import { AppBottomSheetModal, type AppBottomSheetModalRef } from '@/components/AppBottomSheetModal';
 import { FullScreenError } from '@/components/FullScreenError';
 import { CompassIcon } from '@/components/CompassIcon';
 import { EmptyState } from '@/components/EmptyState';
@@ -19,6 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
@@ -26,8 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import {
   ActivityIndicator,
   Dimensions,
-  Modal,
-  Pressable,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -364,7 +365,7 @@ export default function GemSwipeScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
-  const [filterVisible, setFilterVisible] = useState(false);
+  const filterSheetRef = useRef<AppBottomSheetModalRef>(null);
   const [searchRadius, setSearchRadius] = useState<number>(25);
   const [sessionSaveCount, setSessionSaveCount] = useState(0);
   const [weeklyNewCount, setWeeklyNewCount] = useState<number | null>(null);
@@ -587,50 +588,54 @@ export default function GemSwipeScreen() {
   const nextGem = deck[1];
 
   const renderFilterSheet = () => (
-    <Modal visible={filterVisible} transparent animationType="slide">
-      <Pressable style={styles.filterOverlay} onPress={() => setFilterVisible(false)}>
-        <Pressable style={styles.filterSheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.filterTitle}>Filter by Category</Text>
+    <AppBottomSheetModal
+      ref={filterSheetRef}
+      onClose={() => {}}
+      snapPoints={['50%']}>
+      <BottomSheetScrollView
+        overScrollMode="never"
+        bounces={Platform.OS === 'ios' ? false : undefined}
+        contentContainerStyle={styles.filterSheet}>
+        <Text style={styles.filterTitle}>Filter by Category</Text>
 
+        <TouchableOpacity
+          style={[styles.filterOption, !selectedCategoryFilter && styles.filterOptionActive]}
+          onPress={() => {
+            setSelectedCategoryFilter(null);
+            filterSheetRef.current?.dismiss();
+          }}
+          activeOpacity={0.7}>
+          <Text style={styles.filterOptionText}>All Categories</Text>
+          {!selectedCategoryFilter && (
+            <Ionicons name="checkmark" size={20} color={theme.accent} />
+          )}
+        </TouchableOpacity>
+
+        {CATEGORIES.map((cat) => (
           <TouchableOpacity
-            style={[styles.filterOption, !selectedCategoryFilter && styles.filterOptionActive]}
+            key={cat.id}
+            style={[
+              styles.filterOption,
+              selectedCategoryFilter === cat.id && styles.filterOptionActive,
+            ]}
             onPress={() => {
-              setSelectedCategoryFilter(null);
-              setFilterVisible(false);
+              setSelectedCategoryFilter(cat.id);
+              filterSheetRef.current?.dismiss();
             }}
             activeOpacity={0.7}>
-            <Text style={styles.filterOptionText}>All Categories</Text>
-            {!selectedCategoryFilter && (
+            <View style={styles.filterOptionLeft}>
+              <View style={[styles.filterDot, { backgroundColor: cat.color }]}>
+                <Ionicons name={cat.icon as keyof typeof Ionicons.glyphMap} size={12} color="#FFFFFF" />
+              </View>
+              <Text style={styles.filterOptionText}>{cat.name}</Text>
+            </View>
+            {selectedCategoryFilter === cat.id && (
               <Ionicons name="checkmark" size={20} color={theme.accent} />
             )}
           </TouchableOpacity>
-
-          {CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              style={[
-                styles.filterOption,
-                selectedCategoryFilter === cat.id && styles.filterOptionActive,
-              ]}
-              onPress={() => {
-                setSelectedCategoryFilter(cat.id);
-                setFilterVisible(false);
-              }}
-              activeOpacity={0.7}>
-              <View style={styles.filterOptionLeft}>
-                <View style={[styles.filterDot, { backgroundColor: cat.color }]}>
-                  <Ionicons name={cat.icon as keyof typeof Ionicons.glyphMap} size={12} color="#FFFFFF" />
-                </View>
-                <Text style={styles.filterOptionText}>{cat.name}</Text>
-              </View>
-              {selectedCategoryFilter === cat.id && (
-                <Ionicons name="checkmark" size={20} color={theme.accent} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </Pressable>
-      </Pressable>
-    </Modal>
+        ))}
+      </BottomSheetScrollView>
+    </AppBottomSheetModal>
   );
 
   if (checkingPremium) {
@@ -680,7 +685,7 @@ export default function GemSwipeScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Gem Swipe</Text>
         <TouchableOpacity
-          onPress={() => setFilterVisible(true)}
+          onPress={() => filterSheetRef.current?.present()}
           style={styles.headerButton}
           activeOpacity={0.7}>
           <Ionicons name="options-outline" size={22} color={theme.text} />

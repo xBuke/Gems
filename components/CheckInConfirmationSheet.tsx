@@ -1,10 +1,11 @@
+import { AppBottomSheetModal, type AppBottomSheetModalRef } from '@/components/AppBottomSheetModal';
 import { CompassIcon } from '@/components/CompassIcon';
 import { formatCoordinates } from '@/lib/coordinates';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
-import { useEffect, useMemo } from 'react';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  Modal,
   Pressable,
   Share,
   StyleSheet,
@@ -12,12 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 
 type CheckInConfirmationSheetProps = {
   visible: boolean;
@@ -48,26 +43,22 @@ export default function CheckInConfirmationSheet({
 }: CheckInConfirmationSheetProps) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const overlayOpacity = useSharedValue(0);
-  const sheetTranslateY = useSharedValue(400);
+  const sheetRef = useRef<AppBottomSheetModalRef>(null);
 
   useEffect(() => {
+    if (!checkedInAt) return;
+
     if (visible) {
-      overlayOpacity.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.ease) });
-      sheetTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
-    } else {
-      overlayOpacity.value = withTiming(0, { duration: 200, easing: Easing.in(Easing.ease) });
-      sheetTranslateY.value = withTiming(400, { duration: 250, easing: Easing.in(Easing.cubic) });
+      sheetRef.current?.present();
+      return;
     }
-  }, [visible, overlayOpacity, sheetTranslateY]);
+    sheetRef.current?.dismiss();
+  }, [visible, checkedInAt]);
 
-  const overlayAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }));
-
-  const sheetAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: sheetTranslateY.value }],
-  }));
+  const handleClose = useCallback(() => {
+    sheetRef.current?.dismiss();
+    onClose();
+  }, [onClose]);
 
   const handleShare = async () => {
     try {
@@ -80,68 +71,42 @@ export default function CheckInConfirmationSheet({
   if (!checkedInAt) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.modalRoot}>
-        <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        </Animated.View>
-
-        <Animated.View style={[styles.sheet, sheetAnimatedStyle]}>
-          <Pressable onPress={(event) => event.stopPropagation()}>
-            <View style={styles.handle} />
-            <View style={styles.compassWrap}>
-              <CompassIcon size={64} />
-            </View>
-            <Text style={styles.checkedInLabel}>CHECKED IN</Text>
-            <Text style={styles.gemTitle}>{gemTitle}</Text>
-            <Text style={styles.coordinates}>{formatCoordinates(latitude, longitude)}</Text>
-            <Text style={styles.meta}>
-              {formatCheckInTimestamp(checkedInAt)} · check-in #{checkInCount}
-            </Text>
-            <TouchableOpacity style={styles.shareButton} onPress={handleShare} activeOpacity={0.85}>
-              <Text style={styles.shareButtonText}>Share This Check-in</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.doneButton} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.doneButtonText}>Done</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Animated.View>
-      </View>
-    </Modal>
+    <AppBottomSheetModal ref={sheetRef} onClose={onClose} snapPoints={['52%']}>
+      <BottomSheetView style={styles.content}>
+        <Pressable onPress={(event) => event.stopPropagation()}>
+          <View style={styles.compassWrap}>
+            <CompassIcon size={64} />
+          </View>
+          <Text style={styles.checkedInLabel}>CHECKED IN</Text>
+          <Text style={styles.gemTitle}>{gemTitle}</Text>
+          <Text style={styles.coordinates}>{formatCoordinates(latitude, longitude)}</Text>
+          <Text style={styles.meta}>
+            {formatCheckInTimestamp(checkedInAt)} · check-in #{checkInCount}
+          </Text>
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare} activeOpacity={0.85}>
+            <Text style={styles.shareButtonText}>Share This Check-in</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.doneButton} onPress={handleClose} activeOpacity={0.7}>
+            <Text style={styles.doneButtonText}>Done</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </BottomSheetView>
+    </AppBottomSheetModal>
   );
 }
 
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    modalRoot: {
-      flex: 1,
-      justifyContent: 'flex-end',
-    },
-    overlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    sheet: {
-      backgroundColor: theme.card,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+    content: {
       paddingHorizontal: 24,
-      paddingTop: 16,
       paddingBottom: 32,
+      alignItems: 'center',
       borderTopWidth: 1,
       borderTopColor: theme.border,
     },
-    handle: {
-      width: 36,
-      height: 4,
-      backgroundColor: theme.border,
-      borderRadius: 2,
-      alignSelf: 'center',
-      marginBottom: 18,
-    },
     compassWrap: {
       alignItems: 'center',
-      marginBottom: 16,
+      width: '100%',
     },
     checkedInLabel: {
       fontFamily: 'SpaceMono-Regular',
@@ -150,6 +115,7 @@ const createStyles = (theme: Theme) =>
       letterSpacing: 2,
       textTransform: 'uppercase',
       textAlign: 'center',
+      marginTop: 16,
       marginBottom: 8,
     },
     gemTitle: {
@@ -174,6 +140,7 @@ const createStyles = (theme: Theme) =>
       marginBottom: 20,
     },
     shareButton: {
+      alignSelf: 'stretch',
       backgroundColor: theme.accent,
       borderRadius: 12,
       paddingVertical: 14,
@@ -186,6 +153,7 @@ const createStyles = (theme: Theme) =>
       color: theme.accentText,
     },
     doneButton: {
+      alignSelf: 'stretch',
       paddingVertical: 12,
       alignItems: 'center',
     },
