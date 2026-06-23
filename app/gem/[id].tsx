@@ -12,6 +12,7 @@ import { hapticLight, hapticMedium, hapticSuccess } from '@/lib/haptics';
 import { addStreakBonus } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
+import CheckInConfirmationSheet from '@/components/CheckInConfirmationSheet';
 import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -33,7 +34,7 @@ import {
   View,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const LOCAL_PICK_COLOR = '#7F77DD';
 const PIONEER_COLOR = '#FFD700';
@@ -84,9 +85,12 @@ const formatTimeAgo = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString();
 };
 
+const COMPOSER_BAR_HEIGHT = 54;
+
 export default function GemDetailScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [gem, setGem] = useState<Gem | null>(null);
@@ -101,6 +105,13 @@ export default function GemDetailScreen() {
   const [isOwner, setIsOwner] = useState(false);
   const [locationName, setLocationName] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<{
+    username: string;
+    avatar_url: string | null;
+  } | null>(null);
+  const [checkInSheetVisible, setCheckInSheetVisible] = useState(false);
+  const [checkedInAt, setCheckedInAt] = useState<Date | null>(null);
+  const [checkInDisplayCount, setCheckInDisplayCount] = useState(0);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [reportVisible, setReportVisible] = useState(false);
   const [reportTarget, setReportTarget] = useState<{
@@ -158,10 +169,17 @@ export default function GemDetailScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setCurrentUserId(null);
+      setCurrentUserProfile(null);
       setBlockedUserIds([]);
       return;
     }
     setCurrentUserId(user.id);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle();
+    setCurrentUserProfile(profile ?? null);
     const blocked = await getMyBlockedUsers(user.id);
     setBlockedUserIds(blocked.map((b: { blocked_id: string }) => b.blocked_id));
   }, []);
@@ -483,7 +501,17 @@ export default function GemDetailScreen() {
         read: false,
       });
       setVisitVerified(true);
-      fetchVisitCount();
+
+      const { count } = await supabase
+        .from('gem_visits')
+        .select('*', { count: 'exact', head: true })
+        .eq('gem_id', resolvedGemId);
+      const updatedCount = count ?? visitCount + 1;
+      setVisitCount(updatedCount);
+      setCheckInDisplayCount(updatedCount);
+      setCheckedInAt(new Date());
+      setCheckInSheetVisible(true);
+
       await addStreakBonus(user.id, 5);
       const newAchievements = await checkAndUnlockAchievements(user.id);
       if (newAchievements.length > 0) {
@@ -597,13 +625,19 @@ export default function GemDetailScreen() {
   }
 
   const username = gem.profiles?.username ?? 'unknown';
+  const composerBottomPadding = Math.max(insets.bottom, 10);
+  const scrollBottomInset = COMPOSER_BAR_HEIGHT + composerBottomPadding;
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: scrollBottomInset }}>
         <View style={styles.hero}>
           {gem.image_url ? (
             <Image
@@ -862,19 +896,38 @@ export default function GemDetailScreen() {
         </View>
       </SafeAreaView>
 
-      <SafeAreaView style={styles.commentInputBar} edges={['bottom']}>
+      <View
+        style={[
+          styles.commentInputBar,
+          { paddingBottom: composerBottomPadding },
+        ]}>
+        <View style={styles.composerAvatar}>
+          {currentUserProfile?.avatar_url ? (
+            <Image
+              source={{ uri: currentUserProfile.avatar_url }}
+              style={styles.composerAvatarImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <Text style={styles.composerAvatarText}>
+              {(currentUserProfile?.username ?? '?').charAt(0).toUpperCase()}
+            </Text>
+          )}
+        </View>
         <TextInput
           style={styles.commentInput}
-          placeholder="Add a comment..."
-          placeholderTextColor={theme.textSecondary}
+          placeholder="Add a comment…"
+          placeholderTextColor={theme.textTertiary}
           value={commentText}
           onChangeText={setCommentText}
           maxLength={500}
+          returnKeyType="send"
+          blurOnSubmit={false}
+          onSubmitEditing={handleSendComment}
         />
-        <TouchableOpacity style={styles.sendButton} onPress={handleSendComment} activeOpacity={0.8}>
-          <Ionicons name="send" size={18} color={theme.background} />
-        </TouchableOpacity>
-      </SafeAreaView>
+      </View>
 
       {currentUserId && reportTarget && (
         <ReportSheet
@@ -899,6 +952,16 @@ export default function GemDetailScreen() {
           setUnlockedBadge(null);
           setUnlockCoords(null);
         }}
+      />
+
+      <CheckInConfirmationSheet
+        visible={checkInSheetVisible}
+        onClose={() => setCheckInSheetVisible(false)}
+        gemTitle={gem.title}
+        latitude={gem.latitude}
+        longitude={gem.longitude}
+        checkedInAt={checkedInAt}
+        checkInCount={checkInDisplayCount}
       />
     </KeyboardAvoidingView>
   );
@@ -1068,7 +1131,6 @@ const createStyles = (theme: Theme) =>
   },
   content: {
     padding: 16,
-    paddingBottom: 100,
   },
   authorRow: {
     flexDirection: 'row',
@@ -1312,32 +1374,46 @@ const createStyles = (theme: Theme) =>
     fontSize: 11,
   },
   commentInputBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 8,
+    paddingHorizontal: 14,
     backgroundColor: theme.background,
     borderTopWidth: 0.5,
     borderTopColor: theme.border,
     gap: 10,
+    zIndex: 5,
   },
-  commentInput: {
-    flex: 1,
-    backgroundColor: theme.card,
-    borderWidth: 0.5,
-    borderColor: theme.border,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: theme.text,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  composerAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  composerAvatarImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  composerAvatarText: {
+    color: theme.accentText,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  commentInput: {
+    flex: 1,
+    backgroundColor: theme.bgTertiary,
+    borderRadius: 20,
+    height: 36,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: theme.text,
   },
 });
