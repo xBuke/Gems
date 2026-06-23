@@ -112,6 +112,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<'username' | 'email' | 'password' | null>(null);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -241,7 +242,8 @@ export default function AuthScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
@@ -264,20 +266,23 @@ export default function AuthScreen() {
               <>
                 <Text style={styles.fieldLabel}>USERNAME</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, focusedField === 'username' && styles.inputFocused]}
                   placeholder="Username"
                   placeholderTextColor={theme.textSecondary}
                   value={username}
                   onChangeText={setUsername}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  selectionColor={theme.accent}
+                  onFocus={() => setFocusedField('username')}
+                  onBlur={() => setFocusedField(null)}
                 />
               </>
             )}
 
             <Text style={styles.fieldLabel}>EMAIL</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, focusedField === 'email' && styles.inputFocused]}
               placeholder="Email"
               placeholderTextColor={theme.textSecondary}
               value={email}
@@ -285,11 +290,14 @@ export default function AuthScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              selectionColor={theme.accent}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
             />
 
             <Text style={styles.fieldLabel}>PASSWORD</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, focusedField === 'password' && styles.inputFocused]}
               placeholder="Password"
               placeholderTextColor={theme.textSecondary}
               value={password}
@@ -297,6 +305,9 @@ export default function AuthScreen() {
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
+              selectionColor={theme.accent}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField(null)}
             />
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -399,6 +410,9 @@ const createStyles = (theme: Theme) =>
       fontSize: 14,
       color: theme.text,
       marginBottom: 12,
+    },
+    inputFocused: {
+      borderColor: theme.accent,
     },
     errorText: {
       color: theme.danger,

@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -63,6 +63,7 @@ type Gem = {
 type Comment = {
   id: string;
   user_id: string;
+  parent_comment_id: string | null;
   content: string;
   created_at: string;
   profiles: { username: string } | null;
@@ -86,6 +87,10 @@ const formatTimeAgo = (dateStr: string) => {
 };
 
 const COMPOSER_BAR_HEIGHT = 54;
+const REPLY_BANNER_HEIGHT = 52;
+
+const truncatePreview = (text: string, maxLen = 40) =>
+  text.length <= maxLen ? text : `${text.slice(0, maxLen).trimEnd()}…`;
 
 export default function GemDetailScreen() {
   const { theme } = useTheme();
@@ -96,6 +101,10 @@ export default function GemDetailScreen() {
   const [gem, setGem] = useState<Gem | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [commentInputFocused, setCommentInputFocused] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const commentInputRef = useRef<TextInput>(null);
   const [loading, setLoading] = useState(true);
   const [visitVerified, setVisitVerified] = useState(false);
   const [visitCount, setVisitCount] = useState(0);
@@ -326,7 +335,12 @@ export default function GemDetailScreen() {
     const resolvedGemId = Array.isArray(id) ? id[0] : id;
     const { error } = await supabase
       .from('comments')
-      .insert({ gem_id: resolvedGemId, user_id: user.id, content: text });
+      .insert({
+        gem_id: resolvedGemId,
+        user_id: user.id,
+        content: text,
+        parent_comment_id: replyingTo?.id ?? null,
+      });
 
     if (!error) {
       hapticSuccess();
@@ -340,6 +354,7 @@ export default function GemDetailScreen() {
         });
       }
       setCommentText('');
+      setReplyingTo(null);
       fetchComments();
       await addStreakBonus(user.id, 3);
     }
@@ -626,7 +641,86 @@ export default function GemDetailScreen() {
 
   const username = gem.profiles?.username ?? 'unknown';
   const composerBottomPadding = Math.max(insets.bottom, 10);
-  const scrollBottomInset = COMPOSER_BAR_HEIGHT + composerBottomPadding;
+  const replyBannerInset = replyingTo ? REPLY_BANNER_HEIGHT : 0;
+  const scrollBottomInset = COMPOSER_BAR_HEIGHT + composerBottomPadding + replyBannerInset;
+
+  const topLevelComments = comments.filter((comment) => comment.parent_comment_id == null);
+  const repliesByParent = comments.reduce<Record<string, Comment[]>>((acc, comment) => {
+    if (!comment.parent_comment_id) return acc;
+    if (!acc[comment.parent_comment_id]) acc[comment.parent_comment_id] = [];
+    acc[comment.parent_comment_id].push(comment);
+    return acc;
+  }, {});
+
+  const handleReplyPress = (comment: Comment) => {
+    setReplyingTo(comment);
+    commentInputRef.current?.focus();
+  };
+
+  const handleCommentInputFocus = () => {
+    setCommentInputFocused(true);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  };
+
+  const renderCommentCard = (comment: Comment, isReply: boolean) => {
+    const commentUsername = comment.profiles?.username ?? 'Anonymous';
+    const likeState = commentLikes[comment.id] ?? { count: 0, likedByMe: false };
+    const avatarSize = isReply ? 28 : 36;
+
+    return (
+      <View style={[styles.commentCard, isReply && styles.commentCardReply]}>
+        <View style={[styles.commentAvatar, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }]}>
+          <Text style={[styles.commentAvatarText, isReply && styles.commentAvatarTextSmall]}>
+            {commentUsername.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.commentBody}>
+          <View style={styles.commentHeader}>
+            <Text style={styles.commentUsername} numberOfLines={1} ellipsizeMode="tail">
+              {commentUsername}
+            </Text>
+            <View style={styles.commentHeaderRight}>
+              <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
+              {currentUserId && comment.user_id !== currentUserId && (
+                <TouchableOpacity
+                  onPress={() => showCommentMenu(comment)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.7}>
+                  <Ionicons name="ellipsis-horizontal" size={14} color={theme.textTertiary} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          <Text style={styles.commentContent} numberOfLines={5} ellipsizeMode="tail">
+            {comment.content}
+          </Text>
+          <View style={styles.commentLikeWrap}>
+            <TouchableOpacity
+              style={styles.commentLikeRow}
+              onPress={() => handleToggleCommentLike(comment.id)}
+              activeOpacity={0.7}>
+              <Ionicons
+                name={likeState.likedByMe ? 'heart' : 'heart-outline'}
+                size={14}
+                color={theme.textTertiary}
+              />
+              <Text style={styles.commentLikeCount}>{likeState.count}</Text>
+            </TouchableOpacity>
+            {!isReply ? (
+              <TouchableOpacity
+                onPress={() => handleReplyPress(comment)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Text style={styles.commentReplyLink}>Reply</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <KeyboardAvoidingView
@@ -634,6 +728,7 @@ export default function GemDetailScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -820,53 +915,14 @@ export default function GemDetailScreen() {
           {comments.length === 0 ? (
             <Text style={styles.emptyComments}>Be the first to comment!</Text>
           ) : (
-            comments.map((comment) => {
-              const commentUsername = comment.profiles?.username ?? 'Anonymous';
-              const likeState = commentLikes[comment.id] ?? { count: 0, likedByMe: false };
-              return (
-                <View key={comment.id} style={styles.commentCard}>
-                  <View style={styles.commentAvatar}>
-                    <Text style={styles.commentAvatarText}>
-                      {commentUsername.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.commentBody}>
-                    <View style={styles.commentHeader}>
-                      <Text style={styles.commentUsername} numberOfLines={1} ellipsizeMode="tail">
-                        {commentUsername}
-                      </Text>
-                      <View style={styles.commentHeaderRight}>
-                        <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
-                        {currentUserId && comment.user_id !== currentUserId && (
-                          <TouchableOpacity
-                            onPress={() => showCommentMenu(comment)}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            activeOpacity={0.7}>
-                            <Ionicons name="ellipsis-horizontal" size={14} color={theme.textTertiary} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-                    <Text style={styles.commentContent} numberOfLines={5} ellipsizeMode="tail">
-                      {comment.content}
-                    </Text>
-                    <View style={styles.commentLikeWrap}>
-                      <TouchableOpacity
-                        style={styles.commentLikeRow}
-                        onPress={() => handleToggleCommentLike(comment.id)}
-                        activeOpacity={0.7}>
-                        <Ionicons
-                          name={likeState.likedByMe ? 'heart' : 'heart-outline'}
-                          size={14}
-                          color={theme.textTertiary}
-                        />
-                        <Text style={styles.commentLikeCount}>{likeState.count}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              );
-            })
+            topLevelComments.map((comment) => (
+              <View key={comment.id} style={styles.commentBlock}>
+                {renderCommentCard(comment, false)}
+                {(repliesByParent[comment.id] ?? []).map((reply) => (
+                  <View key={reply.id}>{renderCommentCard(reply, true)}</View>
+                ))}
+              </View>
+            ))
           )}
         </View>
       </ScrollView>
@@ -898,35 +954,59 @@ export default function GemDetailScreen() {
 
       <View
         style={[
-          styles.commentInputBar,
+          styles.composerWrapper,
           { paddingBottom: composerBottomPadding },
         ]}>
-        <View style={styles.composerAvatar}>
-          {currentUserProfile?.avatar_url ? (
-            <Image
-              source={{ uri: currentUserProfile.avatar_url }}
-              style={styles.composerAvatarImage}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <Text style={styles.composerAvatarText}>
-              {(currentUserProfile?.username ?? '?').charAt(0).toUpperCase()}
-            </Text>
-          )}
+        {replyingTo ? (
+          <View style={styles.replyBanner}>
+            <View style={styles.replyBannerContent}>
+              <Text style={styles.replyBannerLabel}>
+                Replying to @{replyingTo.profiles?.username ?? 'unknown'}
+              </Text>
+              <Text style={styles.replyBannerPreview} numberOfLines={1}>
+                {truncatePreview(replyingTo.content)}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setReplyingTo(null)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.7}>
+              <Text style={styles.replyBannerDismiss}>×</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        <View style={styles.commentInputBar}>
+          <View style={styles.composerAvatar}>
+            {currentUserProfile?.avatar_url ? (
+              <Image
+                source={{ uri: currentUserProfile.avatar_url }}
+                style={styles.composerAvatarImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <Text style={styles.composerAvatarText}>
+                {(currentUserProfile?.username ?? '?').charAt(0).toUpperCase()}
+              </Text>
+            )}
+          </View>
+          <TextInput
+            ref={commentInputRef}
+            style={[styles.commentInput, commentInputFocused && styles.commentInputFocused]}
+            placeholder="Add a comment…"
+            placeholderTextColor={theme.textTertiary}
+            value={commentText}
+            onChangeText={setCommentText}
+            maxLength={500}
+            returnKeyType="send"
+            blurOnSubmit={false}
+            onSubmitEditing={handleSendComment}
+            selectionColor={theme.accent}
+            onFocus={handleCommentInputFocus}
+            onBlur={() => setCommentInputFocused(false)}
+          />
         </View>
-        <TextInput
-          style={styles.commentInput}
-          placeholder="Add a comment…"
-          placeholderTextColor={theme.textTertiary}
-          value={commentText}
-          onChangeText={setCommentText}
-          maxLength={500}
-          returnKeyType="send"
-          blurOnSubmit={false}
-          onSubmitEditing={handleSendComment}
-        />
       </View>
 
       {currentUserId && reportTarget && (
@@ -1316,6 +1396,13 @@ const createStyles = (theme: Theme) =>
     padding: 12,
     marginBottom: 8,
   },
+  commentCardReply: {
+    marginLeft: 28,
+    marginBottom: 6,
+  },
+  commentBlock: {
+    marginBottom: 0,
+  },
   commentAvatar: {
     width: 36,
     height: 36,
@@ -1328,6 +1415,9 @@ const createStyles = (theme: Theme) =>
     color: theme.background,
     fontSize: 14,
     fontWeight: '600',
+  },
+  commentAvatarTextSmall: {
+    fontSize: 12,
   },
   commentBody: {
     flex: 1,
@@ -1361,7 +1451,9 @@ const createStyles = (theme: Theme) =>
     lineHeight: 18,
   },
   commentLikeWrap: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     marginTop: 6,
   },
   commentLikeRow: {
@@ -1373,20 +1465,57 @@ const createStyles = (theme: Theme) =>
     color: theme.textTertiary,
     fontSize: 11,
   },
-  commentInputBar: {
+  commentReplyLink: {
+    color: theme.textTertiary,
+    fontSize: 11,
+    fontFamily: 'SpaceGrotesk-Regular',
+  },
+  composerWrapper: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: theme.background,
+    borderTopWidth: 0.5,
+    borderTopColor: theme.border,
+    zIndex: 5,
+  },
+  replyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.accentSub,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.accent,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  replyBannerContent: {
+    flex: 1,
+    gap: 2,
+  },
+  replyBannerLabel: {
+    fontFamily: 'SpaceGrotesk-Regular',
+    fontSize: 12,
+    color: theme.text,
+  },
+  replyBannerPreview: {
+    fontFamily: 'SpaceGrotesk-Regular',
+    fontSize: 11,
+    color: theme.textSecondary,
+  },
+  replyBannerDismiss: {
+    fontSize: 18,
+    color: theme.textTertiary,
+    lineHeight: 20,
+    paddingHorizontal: 4,
+  },
+  commentInputBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 8,
     paddingHorizontal: 14,
-    backgroundColor: theme.background,
-    borderTopWidth: 0.5,
-    borderTopColor: theme.border,
     gap: 10,
-    zIndex: 5,
   },
   composerAvatar: {
     width: 30,
@@ -1415,5 +1544,10 @@ const createStyles = (theme: Theme) =>
     paddingHorizontal: 14,
     fontSize: 14,
     color: theme.text,
+    borderWidth: 0.5,
+    borderColor: theme.border,
+  },
+  commentInputFocused: {
+    borderColor: theme.accent,
   },
 });

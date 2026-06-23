@@ -121,6 +121,7 @@ export default function ChatScreen() {
   const [gemPickerVisible, setGemPickerVisible] = useState(false);
   const [myGems, setMyGems] = useState<ShareableGem[]>([]);
   const [gemsLoading, setGemsLoading] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const listRef = useRef<FlatList>(null);
 
   const chatItems = useMemo(() => buildChatItems(messages), [messages]);
@@ -496,13 +497,19 @@ export default function ChatScreen() {
               <Text style={styles.gemShareEmoji}>📍</Text>
             </TouchableOpacity>
             <TextInput
-              style={styles.input}
+              style={[styles.input, inputFocused && styles.inputFocused]}
               placeholder="Message..."
               placeholderTextColor={theme.textTertiary}
               value={inputText}
               onChangeText={setInputText}
               multiline
               maxLength={1000}
+              returnKeyType="send"
+              blurOnSubmit
+              onSubmitEditing={handleSend}
+              selectionColor={theme.accent}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
             />
             <TouchableOpacity
               style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
@@ -775,6 +782,9 @@ const createStyles = (theme: Theme) =>
       fontSize: 15,
       color: theme.text,
       maxHeight: 100,
+    },
+    inputFocused: {
+      borderColor: theme.accent,
     },
     sendButton: {
       width: 38,
