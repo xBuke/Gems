@@ -2,6 +2,7 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { hapticLight, hapticSuccess } from '@/lib/haptics';
 import { goBackOrTab, useTabRootBackHandler, useTabStackGesture } from '@/lib/navigationMotion';
+import { sendPushNotification } from '@/lib/sendPushNotification';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -264,6 +265,21 @@ export default function NotificationsScreen() {
       hapticSuccess();
       await markAsRead(notification);
       setFollowRequestStatus((prev) => ({ ...prev, [notification.id]: 'accepted' }));
+
+      void (async () => {
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', currentUserId)
+          .single();
+        sendPushNotification({
+          user_id: notification.sender_id,
+          category: 'social',
+          title: 'Follow accepted',
+          body: `@${myProfile?.username ?? 'Someone'} accepted your follow request`,
+          data: { type: 'follow_accepted', user_id: currentUserId },
+        });
+      })();
     }
   };
 

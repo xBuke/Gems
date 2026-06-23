@@ -26,6 +26,7 @@ export type ToastOptions = {
   message?: string;
   actionLabel?: string;
   onAction?: () => void;
+  onPress?: () => void;
 };
 
 type ToastItem = ToastOptions & { id: string };
@@ -113,17 +114,8 @@ function ToastCard({
     ]).start();
   }, [opacityAnim, slideAnim]);
 
-  return (
-    <Animated.View
-      style={[
-        styles.toast,
-        {
-          backgroundColor: theme.card,
-          borderLeftColor: typeColor,
-          opacity: opacityAnim,
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}>
+  const mainContent = (
+    <>
       <View
         style={[
           styles.iconCircle,
@@ -140,30 +132,64 @@ function ToastCard({
           </Text>
         ) : null}
       </View>
+    </>
+  );
 
-      {showRetry ? (
+  const trailingAction = showRetry ? (
+    <TouchableOpacity
+      style={[
+        styles.retryPill,
+        { backgroundColor: hexToRgba(semantic.error, 0.12) },
+      ]}
+      onPress={() => {
+        toast.onAction?.();
+        onDismiss(toast.id);
+      }}
+      activeOpacity={0.7}>
+      <Text style={[styles.retryText, { color: semantic.error }]}>
+        {toast.actionLabel}
+      </Text>
+    </TouchableOpacity>
+  ) : (
+    <TouchableOpacity
+      onPress={() => onDismiss(toast.id)}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      activeOpacity={0.7}>
+      <Text style={[styles.dismiss, { color: theme.textTertiary }]}>×</Text>
+    </TouchableOpacity>
+  );
+
+  const cardStyle = [
+    styles.toast,
+    {
+      backgroundColor: theme.card,
+      borderLeftColor: typeColor,
+      opacity: opacityAnim,
+      transform: [{ translateY: slideAnim }],
+    },
+  ];
+
+  if (toast.onPress) {
+    return (
+      <Animated.View style={cardStyle}>
         <TouchableOpacity
-          style={[
-            styles.retryPill,
-            { backgroundColor: hexToRgba(semantic.error, 0.12) },
-          ]}
+          style={styles.pressableRow}
           onPress={() => {
-            toast.onAction?.();
+            toast.onPress?.();
             onDismiss(toast.id);
           }}
-          activeOpacity={0.7}>
-          <Text style={[styles.retryText, { color: semantic.error }]}>
-            {toast.actionLabel}
-          </Text>
+          activeOpacity={0.85}>
+          {mainContent}
         </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          onPress={() => onDismiss(toast.id)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          activeOpacity={0.7}>
-          <Text style={[styles.dismiss, { color: theme.textTertiary }]}>×</Text>
-        </TouchableOpacity>
-      )}
+        {trailingAction}
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View style={cardStyle}>
+      {mainContent}
+      {trailingAction}
     </Animated.View>
   );
 }
@@ -228,6 +254,12 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 9999,
     gap: 8,
+  },
+  pressableRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   toast: {
     flexDirection: 'row',

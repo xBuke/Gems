@@ -1,3 +1,5 @@
+import { sendPushNotification } from './sendPushNotification';
+
 export const EXPLORER_LEVELS = [
   { name: 'Wanderer', minPoints: 0, icon: 'footsteps-outline' },
   { name: 'Scout', minPoints: 50, icon: 'compass-outline' },
@@ -64,6 +66,14 @@ export const checkAndUnlockAchievements = async (userId: string) => {
   const tryUnlock = async (type: string) => {
     if (!unlockedTypes.includes(type)) {
       await supabase.from('achievements').insert({ user_id: userId, badge_type: type });
+      const badge = ACHIEVEMENTS.find((a) => a.type === type);
+      sendPushNotification({
+        user_id: userId,
+        category: 'achievements',
+        title: 'Achievement unlocked!',
+        body: `You earned ${badge?.name ?? type}`,
+        data: { type: 'achievement', badge_type: type },
+      });
       return true;
     }
     return false;

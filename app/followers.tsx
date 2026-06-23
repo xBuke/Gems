@@ -1,6 +1,7 @@
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { sendPushNotification } from '@/lib/sendPushNotification';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -118,6 +119,21 @@ export default function FollowersScreen() {
       gem_id: null,
       read: false,
     });
+
+    void (async () => {
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', currentUserId)
+        .single();
+      sendPushNotification({
+        user_id: targetId,
+        category: 'social',
+        title: 'New follower',
+        body: `@${myProfile?.username ?? 'Someone'} started following you`,
+        data: { type: 'follow', user_id: currentUserId },
+      });
+    })();
 
     setFollowingIds((prev) => new Set(prev).add(targetId));
   };

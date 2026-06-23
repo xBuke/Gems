@@ -13,6 +13,7 @@ import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/lib/haptics';
 import { addStreakBonus } from '@/lib/streak';
+import { sendPushNotification } from '@/lib/sendPushNotification';
 import { supabase } from '@/lib/supabase';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import CheckInConfirmationSheet from '@/components/CheckInConfirmationSheet';
@@ -408,6 +409,21 @@ export default function GemDetailScreen() {
           gem_id: resolvedGemId,
           read: false,
         });
+
+        void (async () => {
+          const { data: myProfile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+          sendPushNotification({
+            user_id: gem.user_id,
+            category: 'social',
+            title: 'New comment',
+            body: `@${myProfile?.username ?? 'Someone'} commented on ${gem.title}`,
+            data: { type: 'comment', gem_id: resolvedGemId },
+          });
+        })();
       }
       setCommentText('');
       setReplyingTo(null);
@@ -448,6 +464,21 @@ export default function GemDetailScreen() {
           gem_id: gemId,
           read: false,
         });
+
+        void (async () => {
+          const { data: myProfile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+          sendPushNotification({
+            user_id: gem.user_id,
+            category: 'social',
+            title: 'New like',
+            body: `@${myProfile?.username ?? 'Someone'} liked ${gem.title}`,
+            data: { type: 'like', gem_id: gemId },
+          });
+        })();
       }
 
       await addStreakBonus(user.id, 2);

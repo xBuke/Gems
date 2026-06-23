@@ -9,6 +9,7 @@ import { checkAndExpireTrial } from '@/lib/paywall';
 import { ReduceMotionProvider, useReduceMotion } from '@/lib/ReduceMotionContext';
 import { updateStreak } from '@/lib/streak';
 import { OfflineBanner, useOfflineStatus } from '@/components/OfflineBanner';
+import { PushNotificationManager } from '@/components/PushNotificationManager';
 import { ToastProvider } from '@/lib/ToastContext';
 import { ThemeProvider, useTheme } from '@/lib/ThemeContext';
 import { startTracking, stopTracking } from '@/lib/locationTracker';
@@ -157,6 +158,7 @@ export default function RootLayout() {
         <ThemeProvider>
           <ReduceMotionProvider>
             <ToastProvider>
+              <PushNotificationManager />
               <RootNavigator />
             </ToastProvider>
           </ReduceMotionProvider>

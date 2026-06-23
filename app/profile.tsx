@@ -24,6 +24,7 @@ import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { useToast } from '@/lib/ToastContext';
+import { sendPushNotification } from '@/lib/sendPushNotification';
 import { supabase } from '@/lib/supabase';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import { EmptyState } from '@/components/EmptyState';
@@ -322,7 +323,7 @@ export default function ProfileScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const reduceMotion = useReduceMotion();
-  const { userId } = useLocalSearchParams<{ userId?: string }>();
+  const { userId, panel } = useLocalSearchParams<{ userId?: string; panel?: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [gems, setGems] = useState<Gem[]>([]);
   const [followingCount, setFollowingCount] = useState(0);
@@ -909,6 +910,33 @@ export default function ProfileScreen() {
       read: false,
     });
 
+    void (async () => {
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', currentUserId)
+        .single();
+      const followerUsername = myProfile?.username ?? 'Someone';
+
+      if (isPrivate) {
+        sendPushNotification({
+          user_id: userId,
+          category: 'social',
+          title: 'Follow request',
+          body: `@${followerUsername} wants to follow you`,
+          data: { type: 'follow_request', user_id: currentUserId },
+        });
+      } else {
+        sendPushNotification({
+          user_id: userId,
+          category: 'social',
+          title: 'New follower',
+          body: `@${followerUsername} started following you`,
+          data: { type: 'follow', user_id: currentUserId },
+        });
+      }
+    })();
+
     if (isPrivate) {
       setIsRequested(true);
       showToast({
@@ -967,6 +995,21 @@ export default function ProfileScreen() {
     if (!error) {
       hapticSuccess();
       setFollowRequests((prev) => prev.filter((r) => r.follower_id !== followerId));
+
+      void (async () => {
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', currentUserId)
+          .single();
+        sendPushNotification({
+          user_id: followerId,
+          category: 'social',
+          title: 'Follow accepted',
+          body: `@${myProfile?.username ?? 'Someone'} accepted your follow request`,
+          data: { type: 'follow_accepted', user_id: currentUserId },
+        });
+      })();
 
       const { count: followers } = await supabase
         .from('follows')
@@ -1095,6 +1138,11 @@ export default function ProfileScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedPanel((prev) => (prev === panel ? null : panel));
   };
+
+  useEffect(() => {
+    if (panel !== 'achievements' || !isOwnProfile) return;
+    setExpandedPanel('achievements');
+  }, [panel, isOwnProfile]);
 
   const toggleLikedGemsPublic = async () => {
     if (!currentUserId || !profile) return;

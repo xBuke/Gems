@@ -42,11 +42,26 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#2DD4BF",
+          "defaultChannel": "social"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d0e52f92-8b5b-46f5-aa28-25cf520c313d"
+      }
+    },
+    "owner": "xbuke"
   }
 }
