@@ -87,7 +87,11 @@ export default function MapScreen() {
   const overlay = isDark ? 'rgba(13, 13, 13, 0.85)' : 'rgba(255, 255, 255, 0.9)';
   const chipUnselectedBg = `${theme.card}E6`;
   const styles = useMemo(() => createStyles(theme, overlay), [theme, overlay]);
-  const { placeMode } = useLocalSearchParams<{ placeMode?: string }>();
+  const { placeMode, focusLat, focusLng } = useLocalSearchParams<{
+    placeMode?: string;
+    focusLat?: string;
+    focusLng?: string;
+  }>();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -161,6 +165,22 @@ export default function MapScreen() {
       setGemsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const lat = focusLat ? parseFloat(focusLat) : NaN;
+    const lng = focusLng ? parseFloat(focusLng) : NaN;
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+
+    const region: Region = {
+      latitude: lat,
+      longitude: lng,
+      latitudeDelta: 0.15,
+      longitudeDelta: 0.15,
+    };
+
+    mapRef.current?.animateToRegion(region, 500);
+    fetchVisibleGems(region);
+  }, [focusLat, focusLng, fetchVisibleGems]);
 
   const handleRegionChangeComplete = useCallback(
     (region: Region) => {

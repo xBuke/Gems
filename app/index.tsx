@@ -887,6 +887,10 @@ export default function DiscoverScreen() {
     router.push('/communities');
   };
 
+  const handleSearchPress = () => {
+    router.push({ pathname: '/search' });
+  };
+
   const handleNotifications = async () => {
     const proceed = await requireAuth('/notifications');
     if (!proceed) return;
@@ -1286,6 +1290,12 @@ export default function DiscoverScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.title}>Discover</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleSearchPress}
+            activeOpacity={0.7}>
+            <Ionicons name="search-outline" size={22} color={theme.text} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIconButton}
             onPress={handleTripPlannerPress}

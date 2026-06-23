@@ -16,6 +16,7 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { formatLatitude } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
+import { resolveCityName } from '@/lib/reverseGeocode';
 import { hapticError, hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
 import { createGemSharePost } from '@/lib/communityPosts';
@@ -106,6 +107,7 @@ export default function AddGemScreen() {
   const [locationDetected, setLocationDetected] = useState(false);
   const [locationFromMap, setLocationFromMap] = useState(false);
   const [locationChoice, setLocationChoice] = useState<LocationChoice | null>(null);
+  const [cityName, setCityName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [communityName, setCommunityName] = useState<string | null>(null);
   const [unlockedBadge, setUnlockedBadge] = useState<string | null>(null);
@@ -133,6 +135,22 @@ export default function AddGemScreen() {
     };
     loadCustomCategories();
   }, []);
+
+  useEffect(() => {
+    if (latitude == null || longitude == null) {
+      setCityName(null);
+      return;
+    }
+
+    let cancelled = false;
+    resolveCityName(latitude, longitude).then((name) => {
+      if (!cancelled) setCityName(name);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [latitude, longitude]);
 
   useEffect(() => {
     if (!communityId) return;
@@ -334,6 +352,7 @@ export default function AddGemScreen() {
           verified,
           is_local_pick: isLocal,
           is_first_in_area: isFirstInArea,
+          city_name: cityName,
           ...communityField,
         }
       : {
@@ -350,6 +369,7 @@ export default function AddGemScreen() {
           verified,
           is_local_pick: isLocal,
           is_first_in_area: isFirstInArea,
+          city_name: cityName,
           ...communityField,
         };
 
@@ -483,11 +503,20 @@ export default function AddGemScreen() {
     }
   };
 
+  const locationCoordsLabel =
+    latitude != null && longitude != null
+      ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+      : null;
+
   const locationStatusText =
-    locationDetected && latitude != null && longitude != null
-      ? locationFromMap
-        ? `Location set from map · ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-        : `Using your current location · ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+    locationDetected && locationCoordsLabel
+      ? cityName
+        ? locationFromMap
+          ? `Location set from map · ${cityName}`
+          : `Using your current location · ${cityName}`
+        : locationFromMap
+          ? `Location set from map · ${locationCoordsLabel}`
+          : `Using your current location · ${locationCoordsLabel}`
       : 'Location not detected yet';
 
   const showForm = hasMapLocation || locationChoice === 'here';

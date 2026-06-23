@@ -109,6 +109,7 @@ function RootNavigator() {
         <Stack.Screen name="paywall" options={modalOptions} />
         <Stack.Screen name="gem-swipe" options={{ headerShown: false }} />
         <Stack.Screen name="trip-planner" options={modalOptions} />
+        <Stack.Screen name="search" options={modalOptions} />
         <Stack.Screen name="communities" options={{ headerShown: false }} />
         <Stack.Screen name="create-community" options={modalOptions} />
         <Stack.Screen name="create-category" options={modalOptions} />
