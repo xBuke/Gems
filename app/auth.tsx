@@ -1,3 +1,4 @@
+import { FormFieldError, fieldErrorBorder } from '@/components/FormFieldError';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
@@ -20,6 +21,7 @@ import { SegmentedPill } from '@/components/SegmentedPill';
 import { supabase } from '@/lib/supabase';
 
 type AuthMode = 'login' | 'register';
+type FieldName = 'username' | 'email' | 'password';
 
 function CompassLogo({ theme }: { theme: Theme }) {
   return (
@@ -110,29 +112,42 @@ export default function AuthScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState<'username' | 'email' | 'password' | null>(null);
+  const [focusedField, setFocusedField] = useState<FieldName | null>(null);
+
+  const clearFieldError = (field: FieldName) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const setFieldError = (field: FieldName, message: string) => {
+    setFieldErrors({ [field]: message });
+  };
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
-    setError('');
+    setFieldErrors({});
   };
 
   const handleLogin = async () => {
-    setError('');
+    setFieldErrors({});
 
     if (!email.trim()) {
-      setError('Please enter your email')
-      return
+      setFieldError('email', 'Please enter your email');
+      return;
     }
     if (!isValidEmail(email)) {
-      setError('Please enter a valid email address')
-      return
+      setFieldError('email', 'Please enter a valid email address');
+      return;
     }
     if (!password) {
-      setError('Please enter your password')
-      return
+      setFieldError('password', 'Please enter your password');
+      return;
     }
 
     setLoading(true);
@@ -145,7 +160,7 @@ export default function AuthScreen() {
     if (loginError) {
       setLoading(false);
       hapticError();
-      setError(loginError.message);
+      setFieldError('password', loginError.message);
       return;
     }
 
@@ -160,7 +175,7 @@ export default function AuthScreen() {
         await supabase.auth.signOut();
         setLoading(false);
         hapticError();
-        setError('This account has been suspended.');
+        setFieldError('password', 'This account has been suspended.');
         return;
       }
     }
@@ -171,36 +186,36 @@ export default function AuthScreen() {
   };
 
   const handleRegister = async () => {
-    setError('');
+    setFieldErrors({});
 
     if (!email.trim()) {
-      setError('Please enter your email')
-      return
+      setFieldError('email', 'Please enter your email');
+      return;
     }
     if (!isValidEmail(email)) {
-      setError('Please enter a valid email address')
-      return
+      setFieldError('email', 'Please enter a valid email address');
+      return;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
+      setFieldError('password', 'Password must be at least 6 characters');
+      return;
     }
     if (!username.trim()) {
-      setError('Please choose a username')
-      return
+      setFieldError('username', 'Please choose a username');
+      return;
     }
     if (username.trim().length < 3) {
-      setError('Username must be at least 3 characters')
-      return
+      setFieldError('username', 'Username must be at least 3 characters');
+      return;
     }
     if (username.trim().length > 20) {
-      setError('Username must be 20 characters or less')
-      return
+      setFieldError('username', 'Username must be 20 characters or less');
+      return;
     }
     const usernameRegex = /^[a-zA-Z0-9_]+$/
     if (!usernameRegex.test(username.trim())) {
-      setError('Username can only contain letters, numbers, and underscores')
-      return
+      setFieldError('username', 'Username can only contain letters, numbers, and underscores');
+      return;
     }
 
     setLoading(true);
@@ -213,7 +228,7 @@ export default function AuthScreen() {
     if (signUpError) {
       setLoading(false);
       hapticError();
-      setError(signUpError.message);
+      setFieldError('email', signUpError.message);
       return;
     }
 
@@ -226,7 +241,7 @@ export default function AuthScreen() {
       if (profileError) {
         setLoading(false);
         hapticError();
-        setError(profileError.message);
+        setFieldError('username', profileError.message);
         return;
       }
     }
@@ -266,27 +281,42 @@ export default function AuthScreen() {
               <>
                 <Text style={styles.fieldLabel}>USERNAME</Text>
                 <TextInput
-                  style={[styles.input, focusedField === 'username' && styles.inputFocused]}
+                  style={[
+                    styles.input,
+                    focusedField === 'username' && styles.inputFocused,
+                    fieldErrors.username && fieldErrorBorder,
+                  ]}
                   placeholder="Username"
                   placeholderTextColor={theme.textSecondary}
                   value={username}
-                  onChangeText={setUsername}
+                  onChangeText={(text) => {
+                    setUsername(text);
+                    clearFieldError('username');
+                  }}
                   autoCapitalize="none"
                   autoCorrect={false}
                   selectionColor={theme.accent}
                   onFocus={() => setFocusedField('username')}
                   onBlur={() => setFocusedField(null)}
                 />
+                <FormFieldError message={fieldErrors.username} />
               </>
             )}
 
             <Text style={styles.fieldLabel}>EMAIL</Text>
             <TextInput
-              style={[styles.input, focusedField === 'email' && styles.inputFocused]}
+              style={[
+                styles.input,
+                focusedField === 'email' && styles.inputFocused,
+                fieldErrors.email && fieldErrorBorder,
+              ]}
               placeholder="Email"
               placeholderTextColor={theme.textSecondary}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                clearFieldError('email');
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -294,14 +324,22 @@ export default function AuthScreen() {
               onFocus={() => setFocusedField('email')}
               onBlur={() => setFocusedField(null)}
             />
+            <FormFieldError message={fieldErrors.email} />
 
             <Text style={styles.fieldLabel}>PASSWORD</Text>
             <TextInput
-              style={[styles.input, focusedField === 'password' && styles.inputFocused]}
+              style={[
+                styles.input,
+                focusedField === 'password' && styles.inputFocused,
+                fieldErrors.password && fieldErrorBorder,
+              ]}
               placeholder="Password"
               placeholderTextColor={theme.textSecondary}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                clearFieldError('password');
+              }}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
@@ -309,8 +347,7 @@ export default function AuthScreen() {
               onFocus={() => setFocusedField('password')}
               onBlur={() => setFocusedField(null)}
             />
-
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <FormFieldError message={fieldErrors.password} />
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -413,11 +450,6 @@ const createStyles = (theme: Theme) =>
     },
     inputFocused: {
       borderColor: theme.accent,
-    },
-    errorText: {
-      color: theme.danger,
-      fontSize: 14,
-      marginBottom: 16,
     },
     button: {
       backgroundColor: theme.accent,

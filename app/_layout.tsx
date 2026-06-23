@@ -2,6 +2,8 @@ import { useAppFonts } from '@/lib/fonts';
 import { hasCompletedOnboarding, syncPendingPreferences } from '@/lib/onboarding';
 import { checkAndExpireTrial } from '@/lib/paywall';
 import { updateStreak } from '@/lib/streak';
+import { OfflineBanner, useOfflineStatus } from '@/components/OfflineBanner';
+import { ToastProvider } from '@/lib/ToastContext';
 import { ThemeProvider, useTheme } from '@/lib/ThemeContext';
 import { startTracking, stopTracking } from '@/lib/locationTracker';
 import { darkTheme } from '@/lib/theme';
@@ -9,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 import * as NavigationBar from 'expo-navigation-bar';
 import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -53,11 +55,22 @@ function ThemeEffects() {
   return null;
 }
 
+function OfflineShell({ children }: { children: ReactNode }) {
+  const { showBanner, dismissBanner } = useOfflineStatus();
+
+  return (
+    <>
+      {showBanner ? <OfflineBanner onDismiss={dismissBanner} /> : null}
+      {children}
+    </>
+  );
+}
+
 function RootNavigator() {
   const { theme } = useTheme();
 
   return (
-    <>
+    <OfflineShell>
       <ThemeEffects />
       <OnboardingGate />
       <Stack
@@ -111,7 +124,7 @@ function RootNavigator() {
         <Stack.Screen name="admin" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
-    </>
+    </OfflineShell>
   );
 }
 
@@ -151,7 +164,9 @@ export default function RootLayout() {
         <View style={{ flex: 1, backgroundColor: darkTheme.background }} />
       ) : (
         <ThemeProvider>
-          <RootNavigator />
+          <ToastProvider>
+            <RootNavigator />
+          </ToastProvider>
         </ThemeProvider>
       )}
     </GestureHandlerRootView>

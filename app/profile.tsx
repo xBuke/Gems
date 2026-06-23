@@ -20,6 +20,7 @@ import { checkIsPremium } from '@/lib/paywall';
 import { blockUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { useToast } from '@/lib/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import { EmptyState } from '@/components/EmptyState';
@@ -248,6 +249,7 @@ const uploadAvatar = async (uri: string, userId: string) => {
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId?: string }>();
@@ -829,8 +831,18 @@ export default function ProfileScreen() {
 
     if (isPrivate) {
       setIsRequested(true);
+      showToast({
+        type: 'info',
+        title: 'Request sent',
+        message: `Waiting for @${profile.username} to approve`,
+      });
     } else {
       setIsFollowing(true);
+      showToast({
+        type: 'success',
+        title: 'Following!',
+        message: `@${profile.username} added to your feed`,
+      });
     }
     await fetchData();
   };

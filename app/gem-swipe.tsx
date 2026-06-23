@@ -1,3 +1,4 @@
+import { FullScreenError } from '@/components/FullScreenError';
 import { CompassIcon } from '@/components/CompassIcon';
 import { EmptyState } from '@/components/EmptyState';
 import { GemSwipeDeckSkeleton } from '@/components/SkeletonCard';
@@ -11,6 +12,7 @@ import {
 } from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
 import { hapticLight, hapticMedium } from '@/lib/haptics';
+import { useToast } from '@/lib/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -336,11 +338,13 @@ const cardStyles = StyleSheet.create({
 export default function GemSwipeScreen() {
   const router = useRouter();
   const { theme, isDark } = useTheme();
+  const { showToast } = useToast();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [checkingPremium, setCheckingPremium] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
   const [loadingDeck, setLoadingDeck] = useState(true);
+  const [deckError, setDeckError] = useState<string | null>(null);
   const [deck, setDeck] = useState<Gem[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -362,46 +366,62 @@ export default function GemSwipeScreen() {
       radiusKm: number,
     ) => {
       setLoadingDeck(true);
+      setDeckError(null);
 
-      const { data: alreadySeen } = await supabase
-        .from('saved_gems')
-        .select('gem_id')
-        .eq('user_id', myId);
+      try {
+        const { data: alreadySeen } = await supabase
+          .from('saved_gems')
+          .select('gem_id')
+          .eq('user_id', myId);
 
-      const seenIds = alreadySeen?.map((s: { gem_id: string }) => s.gem_id) ?? [];
+        const seenIds = alreadySeen?.map((s: { gem_id: string }) => s.gem_id) ?? [];
 
-      const myCommunityIds = await fetchMyCommunityIds(myId);
+        const myCommunityIds = await fetchMyCommunityIds(myId);
 
-      let query = supabase
-        .from('gems')
-        .select(GEM_SELECT_WITH_COMMUNITY)
-        .eq('is_private', false)
-        .neq('user_id', myId);
+        let query = supabase
+          .from('gems')
+          .select(GEM_SELECT_WITH_COMMUNITY)
+          .eq('is_private', false)
+          .neq('user_id', myId);
 
-      query = applyCommunityGemFilter(query, myCommunityIds);
+        query = applyCommunityGemFilter(query, myCommunityIds);
 
-      if (categoryFilter) {
-        query = query.eq('category', categoryFilter);
+        if (categoryFilter) {
+          query = query.eq('category', categoryFilter);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          setDeckError(error.message);
+          setDeck([]);
+          setHasSwiped(false);
+          return;
+        }
+
+        let filtered =
+          data?.filter((g: { id: string }) => !seenIds.includes(g.id)) ?? [];
+
+        if (coords) {
+          const radiusMeters = radiusKm * 1000;
+          filtered = filtered.filter(
+            (g: { latitude: number; longitude: number }) =>
+              getDistance(coords.latitude, coords.longitude, g.latitude, g.longitude) <=
+              radiusMeters,
+          );
+        }
+
+        const shuffled = shuffleArray(filtered).slice(0, 30);
+
+        setDeck(shuffled as Gem[]);
+        setHasSwiped(false);
+      } catch {
+        setDeckError('Could not load gems');
+        setDeck([]);
+        setHasSwiped(false);
+      } finally {
+        setLoadingDeck(false);
       }
-
-      const { data } = await query;
-      let filtered =
-        data?.filter((g: { id: string }) => !seenIds.includes(g.id)) ?? [];
-
-      if (coords) {
-        const radiusMeters = radiusKm * 1000;
-        filtered = filtered.filter(
-          (g: { latitude: number; longitude: number }) =>
-            getDistance(coords.latitude, coords.longitude, g.latitude, g.longitude) <=
-            radiusMeters,
-        );
-      }
-
-      const shuffled = shuffleArray(filtered).slice(0, 30);
-
-      setDeck(shuffled as Gem[]);
-      setHasSwiped(false);
-      setLoadingDeck(false);
     },
     [],
   );
@@ -516,6 +536,11 @@ export default function GemSwipeScreen() {
           skipped: false,
         });
         setSessionSaveCount((count) => count + 1);
+        showToast({
+          type: 'success',
+          title: 'Gem saved!',
+          message: `${currentGem.title} added to your list`,
+        });
       } else {
         await supabase.from('saved_gems').insert({
           user_id: userId,
@@ -529,8 +554,13 @@ export default function GemSwipeScreen() {
       setHasSwiped(true);
       processingRef.current = false;
     },
-    [deck, userId],
+    [deck, userId, showToast],
   );
+
+  const retryFetchDeck = useCallback(() => {
+    if (!userId) return;
+    fetchDeck(userId, selectedCategoryFilter, userCoords, searchRadius);
+  }, [fetchDeck, userId, selectedCategoryFilter, userCoords, searchRadius]);
 
   const handleButtonPress = (action: 'save' | 'skip') => {
     swipeTriggerRef.current?.(action);
@@ -642,6 +672,8 @@ export default function GemSwipeScreen() {
 
       {loadingDeck ? (
         <GemSwipeDeckSkeleton cardWidth={CARD_WIDTH} cardHeight={CARD_HEIGHT} />
+      ) : deckError ? (
+        <FullScreenError contentLabel="gems" onRetry={retryFetchDeck} />
       ) : deck.length === 0 ? (
         <View style={styles.centered}>
           <EmptyState

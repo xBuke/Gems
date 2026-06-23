@@ -19,10 +19,12 @@ import { hapticError, hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
 import { createGemSharePost } from '@/lib/communityPosts';
 import { addStreakBonus } from '@/lib/streak';
+import { useToast } from '@/lib/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -44,6 +46,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type Category = (typeof CATEGORIES)[number];
 
 type LocationChoice = 'here' | 'else';
+
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
 const uploadImage = async (uri: string) => {
   const fileName = `gem_${Date.now()}.jpg`;
@@ -73,6 +77,7 @@ const uploadImage = async (uri: string) => {
 
 export default function AddGemScreen() {
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { lat, lng, communityId } = useLocalSearchParams<{ lat?: string; lng?: string; communityId?: string }>();
@@ -164,6 +169,26 @@ export default function AddGemScreen() {
     router.push({ pathname: '/map', params: { placeMode: 'true' } });
   };
 
+  const showPhotoTooLargeToast = (retry: () => void) => {
+    showToast({
+      type: 'error',
+      title: 'Upload failed',
+      message: 'Photo too large · max 10MB',
+      actionLabel: 'Retry',
+      onAction: retry,
+    });
+  };
+
+  const validatePhotoSize = async (uri: string, retry: () => void): Promise<boolean> => {
+    const info = await FileSystem.getInfoAsync(uri);
+    const size = info.exists && 'size' in info ? info.size ?? 0 : 0;
+    if (size > MAX_PHOTO_BYTES) {
+      showPhotoTooLargeToast(retry);
+      return false;
+    }
+    return true;
+  };
+
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
@@ -179,8 +204,16 @@ export default function AddGemScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      const assetSize = result.assets[0].fileSize;
+      if (assetSize && assetSize > MAX_PHOTO_BYTES) {
+        showPhotoTooLargeToast(openCamera);
+        return;
+      }
+      const valid = await validatePhotoSize(uri, openCamera);
+      if (!valid) return;
       hapticLight();
-      setImageUri(result.assets[0].uri);
+      setImageUri(uri);
     }
   };
 
@@ -199,8 +232,16 @@ export default function AddGemScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      const assetSize = result.assets[0].fileSize;
+      if (assetSize && assetSize > MAX_PHOTO_BYTES) {
+        showPhotoTooLargeToast(openGallery);
+        return;
+      }
+      const valid = await validatePhotoSize(uri, openGallery);
+      if (!valid) return;
       hapticLight();
-      setImageUri(result.assets[0].uri);
+      setImageUri(uri);
     }
   };
 
@@ -254,7 +295,21 @@ export default function AddGemScreen() {
 
     const compressedUri = imageUri ? await compressImage(imageUri) : null;
 
-    const imageUrl = compressedUri ? await uploadImage(compressedUri) : null;
+    let imageUrl: string | null = null;
+    if (compressedUri) {
+      imageUrl = await uploadImage(compressedUri);
+      if (!imageUrl) {
+        hapticError();
+        showToast({
+          type: 'error',
+          title: 'Upload failed',
+          message: 'Could not upload photo',
+          actionLabel: 'Retry',
+          onAction: () => insertGem(verified),
+        });
+        return;
+      }
+    }
 
     const finalLatitude = latitude!;
     const finalLongitude = longitude!;
