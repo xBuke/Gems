@@ -1,6 +1,12 @@
 import { useAppFonts } from '@/lib/fonts';
 import { hasCompletedOnboarding, syncPendingPreferences } from '@/lib/onboarding';
+import {
+  getModalScreenOptions,
+  getStackPushOptions,
+  getTabScreenOptions,
+} from '@/lib/navigationMotion';
 import { checkAndExpireTrial } from '@/lib/paywall';
+import { ReduceMotionProvider, useReduceMotion } from '@/lib/ReduceMotionContext';
 import { updateStreak } from '@/lib/streak';
 import { OfflineBanner, useOfflineStatus } from '@/components/OfflineBanner';
 import { ToastProvider } from '@/lib/ToastContext';
@@ -68,6 +74,10 @@ function OfflineShell({ children }: { children: ReactNode }) {
 
 function RootNavigator() {
   const { theme } = useTheme();
+  const reduceMotion = useReduceMotion();
+  const stackPushOptions = getStackPushOptions(reduceMotion);
+  const tabOptions = getTabScreenOptions(reduceMotion);
+  const modalOptions = getModalScreenOptions(reduceMotion);
 
   return (
     <OfflineShell>
@@ -77,49 +87,30 @@ function RootNavigator() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.background },
-          animation: 'slide_from_right',
-          animationDuration: 250,
+          ...stackPushOptions,
         }}>
-        <Stack.Screen name="index" />
+        <Stack.Screen name="index" options={tabOptions} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="auth" />
-        <Stack.Screen name="map" options={{ headerShown: false }} />
-        <Stack.Screen name="notifications" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="add-gem"
-          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
+        <Stack.Screen name="map" options={{ headerShown: false, ...tabOptions }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false, ...tabOptions }} />
+        <Stack.Screen name="add-gem" options={modalOptions} />
         <Stack.Screen name="messages" options={{ headerShown: false }} />
         <Stack.Screen name="chat" options={{ headerShown: false }} />
-        <Stack.Screen name="profile" options={{ headerShown: false }} />
+        <Stack.Screen name="profile" options={{ headerShown: false, ...tabOptions }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
         <Stack.Screen name="legal-document" options={{ headerShown: false }} />
         <Stack.Screen name="blocked-users" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="edit-hometown"
-          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
+        <Stack.Screen name="edit-hometown" options={modalOptions} />
         <Stack.Screen name="followers" options={{ headerShown: false }} />
         <Stack.Screen name="user-gems" options={{ headerShown: false }} />
         <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="paywall"
-          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
+        <Stack.Screen name="paywall" options={modalOptions} />
         <Stack.Screen name="gem-swipe" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="trip-planner"
-          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
+        <Stack.Screen name="trip-planner" options={modalOptions} />
         <Stack.Screen name="communities" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="create-community"
-          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
-        <Stack.Screen
-          name="create-category"
-          options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
+        <Stack.Screen name="create-community" options={modalOptions} />
+        <Stack.Screen name="create-category" options={modalOptions} />
         <Stack.Screen name="community/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
       </Stack>
@@ -164,9 +155,11 @@ export default function RootLayout() {
         <View style={{ flex: 1, backgroundColor: darkTheme.background }} />
       ) : (
         <ThemeProvider>
-          <ToastProvider>
-            <RootNavigator />
-          </ToastProvider>
+          <ReduceMotionProvider>
+            <ToastProvider>
+              <RootNavigator />
+            </ToastProvider>
+          </ReduceMotionProvider>
         </ThemeProvider>
       )}
     </GestureHandlerRootView>

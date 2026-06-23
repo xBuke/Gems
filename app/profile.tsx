@@ -18,6 +18,7 @@ import { hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
 import { checkIsPremium } from '@/lib/paywall';
 import { blockUser } from '@/lib/safety';
+import { goBackOrTab, useTabRootBackHandler, useTabStackGesture } from '@/lib/navigationMotion';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { useToast } from '@/lib/ToastContext';
@@ -258,6 +259,8 @@ export default function ProfileScreen() {
   const [followingCount, setFollowingCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
+  useTabRootBackHandler(isOwnProfile);
+  useTabStackGesture(router);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isRequested, setIsRequested] = useState(false);
@@ -682,6 +685,14 @@ export default function ProfileScreen() {
   }, [gems, isOwnProfile]);
 
   const profileId = isOwnProfile ? currentUserId : userId;
+
+  const handleProfileBack = useCallback(() => {
+    if (isOwnProfile) {
+      goBackOrTab(router, 'index');
+      return;
+    }
+    router.back();
+  }, [isOwnProfile, router]);
 
   const handleAvatarPicked = async (uri: string) => {
     if (!currentUserId) return;
@@ -1285,7 +1296,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
+        <TouchableOpacity onPress={handleProfileBack} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>

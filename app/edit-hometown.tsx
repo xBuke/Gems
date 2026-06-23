@@ -1,3 +1,4 @@
+import { ModalEntryWrapper } from '@/components/ModalEntryWrapper'
 import { searchCities } from '@/lib/cityAutocomplete'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
@@ -118,6 +119,7 @@ export default function EditHomeTownScreen() {
   }
 
   return (
+    <ModalEntryWrapper>
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
@@ -188,6 +190,7 @@ export default function EditHomeTownScreen() {
       )}
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </ModalEntryWrapper>
   )
 }
 

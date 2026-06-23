@@ -1,5 +1,6 @@
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { DiscoverListCard } from '@/components/DiscoverListCard';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
@@ -17,6 +18,7 @@ import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticSelection } from '@/lib/haptics';
 import { getMysteryGemOfTheWeek } from '@/lib/mysteryGem';
+import { navigateToTab } from '@/lib/navigationMotion';
 import { getMyBlockedUsers } from '@/lib/safety';
 import { consumeLastStreakResult } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
@@ -888,13 +890,13 @@ export default function DiscoverScreen() {
   const handleNotifications = async () => {
     const proceed = await requireAuth('/notifications');
     if (!proceed) return;
-    router.push('/notifications');
+    navigateToTab(router, 'notifications');
   };
 
   const handleProfile = async () => {
     const proceed = await requireAuth('/profile');
     if (!proceed) return;
-    router.push('/profile');
+    navigateToTab(router, 'profile');
   };
 
   const renderLocalPickBadge = () => (
@@ -951,59 +953,18 @@ export default function DiscoverScreen() {
     showBestTime = false,
     staggerIndex?: number,
   ) => {
-    const username = gem.profiles?.username ?? 'unknown';
-
     const card = (
-      <TouchableOpacity
-        style={styles.listCard}
-        onPress={() => router.push('/gem/' + gem.id)}
-        activeOpacity={0.85}>
-        <View style={styles.listCardImageWrap}>
-          {gem.image_url ? (
-            <Image
-              source={{ uri: gem.image_url }}
-              style={styles.listCardImage}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={[styles.listCardImage, styles.listCardImagePlaceholder]} />
-          )}
-        </View>
-        <View style={styles.listCardContent}>
-          {renderCommunityBadge(gem)}
-          <View style={styles.listBadgeRow}>
-            <View style={styles.listCategoryBadge}>
-              <Text style={styles.listCategoryBadgeText}>{gem.category}</Text>
-            </View>
-            {gem.is_local_pick && renderLocalPickBadge()}
-            {gem.is_first_in_area && renderPioneerBadge()}
-          </View>
-          <Text style={styles.listCardTitle} numberOfLines={1}>
-            {gem.title}
-          </Text>
-          <Text style={styles.listCardUsername} numberOfLines={1} ellipsizeMode="tail">
-            @{username}
-          </Text>
-          {showBestTime && renderBestTimeHint(gem.best_time)}
-          <View style={styles.listCardMetaRow}>
-            <View style={styles.listCardMetaItem}>
-              <Ionicons name="heart-outline" size={12} color={theme.textSecondary} />
-              <Text style={styles.listCardMetaText}>{likeCounts[gem.id] ?? 0}</Text>
-            </View>
-            {distanceMeters != null && (
-              <>
-                <Text style={styles.listCardMetaDivider}>|</Text>
-                <View style={styles.listCardMetaItem}>
-                  <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
-                  <Text style={styles.listCardMetaText}>{formatDistanceKm(distanceMeters)}</Text>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
+      <DiscoverListCard
+        gem={gem}
+        likeCount={likeCounts[gem.id] ?? 0}
+        distanceMeters={distanceMeters}
+        showBestTime={showBestTime}
+        renderCommunityBadge={(cardGem) => renderCommunityBadge(cardGem as GemWithProfile)}
+        renderLocalPickBadge={renderLocalPickBadge}
+        renderPioneerBadge={renderPioneerBadge}
+        renderBestTimeHint={renderBestTimeHint}
+        formatDistanceKm={formatDistanceKm}
+      />
     );
 
     if (staggerIndex !== undefined) {
@@ -1611,7 +1572,7 @@ export default function DiscoverScreen() {
                   if (tab.key === 'discover') {
                     setActiveTab('discover');
                   } else if (tab.key === 'map') {
-                    router.push('/map');
+                    navigateToTab(router, 'map');
                     setActiveTab(tab.key);
                   } else if (tab.key === 'add') {
                     const proceed = await requireAuth('/add-gem');

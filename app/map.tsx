@@ -10,6 +10,7 @@ import {
 } from '@/lib/gemVisibility';
 import { checkIsPremium } from '@/lib/paywall';
 import { hapticLight, hapticSelection } from '@/lib/haptics';
+import { goBackOrTab, useTabRootBackHandler, useTabStackGesture } from '@/lib/navigationMotion';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -78,6 +79,8 @@ type TapLocation = {
 
 export default function MapScreen() {
   const router = useRouter();
+  useTabRootBackHandler(true);
+  useTabStackGesture(router);
   const { theme, isDark } = useTheme();
   const overlay = isDark ? 'rgba(13, 13, 13, 0.85)' : 'rgba(255, 255, 255, 0.9)';
   const chipUnselectedBg = `${theme.card}E6`;
@@ -466,7 +469,10 @@ export default function MapScreen() {
         )}
       </MapView>
 
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => goBackOrTab(router, 'index')}
+        activeOpacity={0.8}>
         <Ionicons name="arrow-back" size={20} color={theme.text} />
       </TouchableOpacity>
 

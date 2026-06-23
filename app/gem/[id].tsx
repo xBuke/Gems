@@ -1,3 +1,6 @@
+import { shouldRunGemSharedTransition } from '@/lib/gemSharedTransition';
+import { goBackOrTab, SHARED_ELEMENT_DURATION_MS } from '@/lib/navigationMotion';
+import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { requireAuth } from '@/lib/authGuard';
 import { checkAndUnlockAchievements } from '@/lib/gamification';
 import {
@@ -17,12 +20,13 @@ import ReportSheet from '@/components/ReportSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter, useFocusEffect, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -33,8 +37,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useGemSharedTransition } from '@/hooks/useGemSharedTransition';
 
 const LOCAL_PICK_COLOR = '#7F77DD';
 const PIONEER_COLOR = '#FFD700';
@@ -97,7 +107,9 @@ export default function GemDetailScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const navigation = useNavigation();
+  const reduceMotion = useReduceMotion();
+  const { id, st } = useLocalSearchParams<{ id?: string | string[]; st?: string | string[] }>();
   const [gem, setGem] = useState<Gem | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
@@ -139,6 +151,47 @@ export default function GemDetailScreen() {
   }));
 
   const gemId = Array.isArray(id) ? id[0] : id;
+  const sharedTransitionFlag = Array.isArray(st) ? st[0] : st;
+  const useSharedTransition = shouldRunGemSharedTransition(
+    gemId,
+    sharedTransitionFlag,
+    reduceMotion,
+  );
+  const {
+    imageDestRef,
+    titleDestRef,
+    isAnimating,
+    showFlyingLayer,
+    flyingImageStyle,
+    flyingTitleStyle,
+    origin,
+    runBackTransition,
+  } = useGemSharedTransition(useSharedTransition);
+
+  useLayoutEffect(() => {
+    if (useSharedTransition) {
+      navigation.setOptions({ animation: 'none' });
+    }
+  }, [navigation, useSharedTransition]);
+
+  const handleBack = useCallback(() => {
+    if (useSharedTransition && !reduceMotion) {
+      runBackTransition(() => goBackOrTab(router, 'index'));
+      return;
+    }
+    goBackOrTab(router, 'index');
+  }, [reduceMotion, router, runBackTransition, useSharedTransition]);
+
+  useEffect(() => {
+    if (!useSharedTransition || reduceMotion) return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBack();
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [handleBack, reduceMotion, useSharedTransition]);
 
   const fetchVisitCount = async () => {
     if (!gemId) return;
@@ -632,7 +685,7 @@ export default function GemDetailScreen() {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.errorText}>Gem not found</Text>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={handleBack}>
           <Text style={styles.backLink}>Go back</Text>
         </TouchableOpacity>
       </View>
@@ -734,22 +787,40 @@ export default function GemDetailScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: scrollBottomInset }}>
         <View style={styles.hero}>
-          {gem.image_url ? (
-            <Image
-              source={{ uri: gem.image_url }}
-              style={styles.heroImage}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={styles.heroPlaceholder}>
-              <Ionicons name="location-outline" size={64} color={theme.accent} />
-            </View>
-          )}
+          <View
+            ref={imageDestRef}
+            collapsable={false}
+            style={[
+              styles.heroImageMeasure,
+              (isAnimating || showFlyingLayer) && styles.heroImageHidden,
+            ]}>
+            {gem.image_url ? (
+              <Image
+                source={{ uri: gem.image_url }}
+                style={styles.heroImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <View style={styles.heroPlaceholder}>
+                <Ionicons name="location-outline" size={64} color={theme.accent} />
+              </View>
+            )}
+          </View>
 
-          <View style={styles.heroOverlay}>
-            <View style={styles.badgeRow}>
+          <View
+            style={[
+              styles.heroOverlay,
+              (isAnimating || showFlyingLayer) && styles.heroOverlayHidden,
+            ]}>
+            <Animated.View
+              entering={
+                useSharedTransition && !reduceMotion
+                  ? FadeIn.delay(SHARED_ELEMENT_DURATION_MS).duration(200)
+                  : undefined
+              }
+              style={styles.badgeRow}>
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryBadgeText}>{gem.category}</Text>
               </View>
@@ -792,14 +863,28 @@ export default function GemDetailScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
+            </Animated.View>
+            <View ref={titleDestRef} collapsable={false}>
+              <Text
+                style={[
+                  styles.heroTitle,
+                  (isAnimating || showFlyingLayer) && styles.heroTitleHidden,
+                ]}
+                numberOfLines={2}
+                ellipsizeMode="tail">
+                {gem.title}
+              </Text>
             </View>
-            <Text style={styles.heroTitle} numberOfLines={2} ellipsizeMode="tail">
-              {gem.title}
-            </Text>
           </View>
         </View>
 
-        <View style={styles.content}>
+        <Animated.View
+          entering={
+            useSharedTransition && !reduceMotion
+              ? FadeIn.delay(SHARED_ELEMENT_DURATION_MS).duration(200)
+              : undefined
+          }
+          style={styles.content}>
           <View style={styles.authorRow}>
             <TouchableOpacity
               style={styles.authorLeft}
@@ -924,11 +1009,33 @@ export default function GemDetailScreen() {
               </View>
             ))
           )}
-        </View>
+        </Animated.View>
       </ScrollView>
 
+      {showFlyingLayer && origin ? (
+        <>
+          <Animated.View style={flyingImageStyle} pointerEvents="none">
+            {origin.imageUrl ? (
+              <Image
+                source={{ uri: origin.imageUrl }}
+                style={styles.flyingImage}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <View style={[styles.flyingImage, styles.heroPlaceholder]} />
+            )}
+          </Animated.View>
+          <Animated.View style={flyingTitleStyle} pointerEvents="none">
+            <Text style={styles.flyingTitle} numberOfLines={2}>
+              {origin.title}
+            </Text>
+          </Animated.View>
+        </>
+      ) : null}
+
       <SafeAreaView style={styles.header} edges={['top']} pointerEvents="box-none">
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity style={styles.headerButton} onPress={handleBack} activeOpacity={0.8} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerRight}>
@@ -1101,9 +1208,33 @@ const createStyles = (theme: Theme) =>
     backgroundColor: theme.bgTertiary,
     position: 'relative',
   },
+  heroImageMeasure: {
+    width: '100%',
+    height: '100%',
+  },
+  heroImageHidden: {
+    opacity: 0,
+  },
   heroImage: {
     width: '100%',
     height: '100%',
+  },
+  heroOverlayHidden: {
+    opacity: 0,
+  },
+  heroTitleHidden: {
+    opacity: 0,
+  },
+  flyingImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  flyingTitle: {
+    color: theme.text,
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk-Bold',
   },
   heroPlaceholder: {
     flex: 1,

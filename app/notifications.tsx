@@ -1,6 +1,7 @@
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { hapticLight, hapticSuccess } from '@/lib/haptics';
+import { goBackOrTab, useTabRootBackHandler, useTabStackGesture } from '@/lib/navigationMotion';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -120,6 +121,8 @@ const groupNotifications = (items: Notification[]): NotificationSection[] => {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  useTabRootBackHandler(true);
+  useTabStackGesture(router);
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -405,7 +408,11 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
+        <TouchableOpacity
+          onPress={() => goBackOrTab(router, 'index')}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>

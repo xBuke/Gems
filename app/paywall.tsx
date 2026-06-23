@@ -1,4 +1,5 @@
 import { PressableScale } from '@/components/PressableScale';
+import { ModalEntryWrapper } from '@/components/ModalEntryWrapper';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -170,6 +171,7 @@ export default function PaywallScreen() {
   const isLifetime = payPlan === 'lifetime';
 
   return (
+    <ModalEntryWrapper>
     <SafeAreaView style={styles.container} edges={['top']}>
       <TouchableOpacity
         style={styles.closeButton}
@@ -318,6 +320,7 @@ export default function PaywallScreen() {
         <Text style={styles.footerNote}>Cancel anytime · Secure payment</Text>
       </ScrollView>
     </SafeAreaView>
+    </ModalEntryWrapper>
   );
 }
 

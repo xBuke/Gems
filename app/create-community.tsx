@@ -1,4 +1,5 @@
 import { PressableScale } from '@/components/PressableScale'
+import { ModalEntryWrapper } from '@/components/ModalEntryWrapper'
 import { CATEGORIES } from '@/lib/categories'
 import { checkIsPremium } from '@/lib/paywall'
 import { useTheme } from '@/lib/ThemeContext'
@@ -128,16 +129,19 @@ export default function CreateCommunityScreen() {
 
   if (checkingPremium) {
     return (
+      <ModalEntryWrapper>
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </SafeAreaView>
+      </ModalEntryWrapper>
     )
   }
 
   if (!isPremium) {
     return (
+      <ModalEntryWrapper>
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
@@ -161,10 +165,12 @@ export default function CreateCommunityScreen() {
           </PressableScale>
         </View>
       </SafeAreaView>
+      </ModalEntryWrapper>
     )
   }
 
   return (
+    <ModalEntryWrapper>
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
@@ -316,6 +322,7 @@ export default function CreateCommunityScreen() {
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </ModalEntryWrapper>
   )
 }
 

@@ -1,4 +1,5 @@
 import { SearchSpinner, TripPlannerResultsSkeleton } from '@/components/SkeletonCard';
+import { ModalEntryWrapper } from '@/components/ModalEntryWrapper';
 import { CATEGORIES } from '@/lib/categories';
 import { searchCities } from '@/lib/cityAutocomplete';
 import { getDistance } from '@/lib/distance';
@@ -228,16 +229,19 @@ export default function TripPlannerScreen() {
 
   if (checkingPremium) {
     return (
+      <ModalEntryWrapper>
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </SafeAreaView>
+      </ModalEntryWrapper>
     );
   }
 
   if (!isPremium) {
     return (
+      <ModalEntryWrapper>
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerSide} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -262,10 +266,12 @@ export default function TripPlannerScreen() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+      </ModalEntryWrapper>
     );
   }
 
   return (
+    <ModalEntryWrapper>
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerSide} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -437,6 +443,7 @@ export default function TripPlannerScreen() {
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </ModalEntryWrapper>
   );
 }
 

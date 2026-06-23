@@ -7,6 +7,7 @@ import {
   type CustomCategory,
 } from '@/lib/customCategories';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
+import { ModalEntryWrapper } from '@/components/ModalEntryWrapper';
 import { PressableScale } from '@/components/PressableScale';
 import { checkAndUnlockAchievements } from '@/lib/gamification';
 import { checkIsLocalPick } from '@/lib/localBadge';
@@ -495,6 +496,7 @@ export default function AddGemScreen() {
   const addGemStepLabels = ['LOCATION', 'DETAILS', 'CATEGORY'] as const;
 
   return (
+    <ModalEntryWrapper>
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButton}>
@@ -817,6 +819,7 @@ export default function AddGemScreen() {
         }}
       />
     </SafeAreaView>
+    </ModalEntryWrapper>
   );
 }
 
