@@ -1,3 +1,5 @@
+import { CompassIcon } from '@/components/CompassIcon';
+import { EmptyState } from '@/components/EmptyState';
 import { GemSwipeDeckSkeleton } from '@/components/SkeletonCard';
 import { CATEGORIES } from '@/lib/categories';
 import { formatCoordinates } from '@/lib/coordinates';
@@ -44,6 +46,8 @@ const CARD_WIDTH = SCREEN_WIDTH - 32;
 const CARD_HEIGHT = SCREEN_HEIGHT * 0.65;
 const SWIPE_THRESHOLD = 120;
 const VELOCITY_THRESHOLD = 800;
+
+const SWIPE_RADIUS_OPTIONS = [10, 25, 50, 100, 200] as const;
 
 type Gem = {
   id: string;
@@ -342,43 +346,65 @@ export default function GemSwipeScreen() {
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const [filterVisible, setFilterVisible] = useState(false);
+  const [searchRadius, setSearchRadius] = useState<number>(25);
+  const [sessionSaveCount, setSessionSaveCount] = useState(0);
+  const [weeklyNewCount, setWeeklyNewCount] = useState<number | null>(null);
 
   const swipeTriggerRef = useRef<((action: 'save' | 'skip') => void) | null>(null);
   const processingRef = useRef(false);
   const [hasSwiped, setHasSwiped] = useState(false);
 
-  const fetchDeck = useCallback(async (myId: string, categoryFilter: string | null) => {
-    setLoadingDeck(true);
+  const fetchDeck = useCallback(
+    async (
+      myId: string,
+      categoryFilter: string | null,
+      coords: { latitude: number; longitude: number } | null,
+      radiusKm: number,
+    ) => {
+      setLoadingDeck(true);
 
-    const { data: alreadySeen } = await supabase
-      .from('saved_gems')
-      .select('gem_id')
-      .eq('user_id', myId);
+      const { data: alreadySeen } = await supabase
+        .from('saved_gems')
+        .select('gem_id')
+        .eq('user_id', myId);
 
-    const seenIds = alreadySeen?.map((s: { gem_id: string }) => s.gem_id) ?? [];
+      const seenIds = alreadySeen?.map((s: { gem_id: string }) => s.gem_id) ?? [];
 
-    const myCommunityIds = await fetchMyCommunityIds(myId);
+      const myCommunityIds = await fetchMyCommunityIds(myId);
 
-    let query = supabase
-      .from('gems')
-      .select(GEM_SELECT_WITH_COMMUNITY)
-      .eq('is_private', false)
-      .neq('user_id', myId);
+      let query = supabase
+        .from('gems')
+        .select(GEM_SELECT_WITH_COMMUNITY)
+        .eq('is_private', false)
+        .neq('user_id', myId);
 
-    query = applyCommunityGemFilter(query, myCommunityIds);
+      query = applyCommunityGemFilter(query, myCommunityIds);
 
-    if (categoryFilter) {
-      query = query.eq('category', categoryFilter);
-    }
+      if (categoryFilter) {
+        query = query.eq('category', categoryFilter);
+      }
 
-    const { data } = await query.limit(50);
-    const filtered = data?.filter((g: { id: string }) => !seenIds.includes(g.id)) ?? [];
-    const shuffled = shuffleArray(filtered).slice(0, 30);
+      const { data } = await query;
+      let filtered =
+        data?.filter((g: { id: string }) => !seenIds.includes(g.id)) ?? [];
 
-    setDeck(shuffled as Gem[]);
-    setHasSwiped(false);
-    setLoadingDeck(false);
-  }, []);
+      if (coords) {
+        const radiusMeters = radiusKm * 1000;
+        filtered = filtered.filter(
+          (g: { latitude: number; longitude: number }) =>
+            getDistance(coords.latitude, coords.longitude, g.latitude, g.longitude) <=
+            radiusMeters,
+        );
+      }
+
+      const shuffled = shuffleArray(filtered).slice(0, 30);
+
+      setDeck(shuffled as Gem[]);
+      setHasSwiped(false);
+      setLoadingDeck(false);
+    },
+    [],
+  );
 
   useEffect(() => {
     const init = async () => {
@@ -409,8 +435,53 @@ export default function GemSwipeScreen() {
 
   useEffect(() => {
     if (!isPremium || !userId) return;
-    fetchDeck(userId, selectedCategoryFilter);
-  }, [isPremium, userId, selectedCategoryFilter, fetchDeck]);
+    fetchDeck(userId, selectedCategoryFilter, userCoords, searchRadius);
+  }, [isPremium, userId, selectedCategoryFilter, searchRadius, userCoords, fetchDeck]);
+
+  useEffect(() => {
+    if (deck.length > 0 || !userCoords) {
+      setWeeklyNewCount(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchWeeklyNewCount = async () => {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from('gems')
+        .select('latitude, longitude')
+        .eq('is_private', false)
+        .gte('created_at', weekAgo);
+
+      if (cancelled || !data) return;
+
+      const radiusMeters = searchRadius * 1000;
+      const count = data.filter(
+        (gem: { latitude: number; longitude: number }) =>
+          getDistance(userCoords.latitude, userCoords.longitude, gem.latitude, gem.longitude) <=
+          radiusMeters,
+      ).length;
+
+      if (!cancelled) {
+        setWeeklyNewCount(count);
+      }
+    };
+
+    fetchWeeklyNewCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deck.length, userCoords, searchRadius]);
+
+  const nextRadius = SWIPE_RADIUS_OPTIONS.find((radius) => radius > searchRadius);
+
+  const handleExpandRadius = useCallback(() => {
+    if (nextRadius) {
+      setSearchRadius(nextRadius);
+    }
+  }, [nextRadius]);
 
   const getGemDistance = useCallback(
     (gem: Gem) => {
@@ -444,6 +515,7 @@ export default function GemSwipeScreen() {
           gem_id: currentGem.id,
           skipped: false,
         });
+        setSessionSaveCount((count) => count + 1);
       } else {
         await supabase.from('saved_gems').insert({
           user_id: userId,
@@ -572,15 +644,31 @@ export default function GemSwipeScreen() {
         <GemSwipeDeckSkeleton cardWidth={CARD_WIDTH} cardHeight={CARD_HEIGHT} />
       ) : deck.length === 0 ? (
         <View style={styles.centered}>
-          <Ionicons name="checkmark-circle-outline" size={56} color={theme.accent} />
-          <Text style={styles.emptyTitle}>You&apos;ve seen them all!</Text>
-          <Text style={styles.emptySubtitle}>Check back later for new gems</Text>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: theme.accent }]}
-            onPress={() => router.back()}
-            activeOpacity={0.8}>
-            <Text style={[styles.backButtonText, { color: theme.accentText }]}>Back to Discover</Text>
-          </TouchableOpacity>
+          <EmptyState
+            iconNode={<CompassIcon size={56} variant="complete" embedded />}
+            overline="AREA EXPLORED"
+            title="You've seen everything nearby"
+            subtitle={
+              weeklyNewCount != null
+                ? `${weeklyNewCount} new gem${weeklyNewCount === 1 ? '' : 's'} added in this area this week.`
+                : undefined
+            }
+            accentLine="Check back tomorrow →"
+            cta={nextRadius ? `Expand to ${nextRadius} km` : undefined}
+            onCta={nextRadius ? handleExpandRadius : undefined}
+            secondaryCta="Try Trip Planner instead"
+            onSecondaryCta={() => router.push('/trip-planner')}
+            secondaryOutline
+            footer={
+              sessionSaveCount > 0 ? (
+                <View style={[styles.sessionChip, { backgroundColor: theme.bgTertiary }]}>
+                  <Text style={[styles.sessionChipText, { color: theme.textSecondary }]}>
+                    ❤ {sessionSaveCount} saved this session
+                  </Text>
+                </View>
+              ) : undefined
+            }
+          />
         </View>
       ) : (
         <View style={styles.deckArea}>
@@ -675,8 +763,15 @@ const createStyles = (theme: Theme) =>
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 32,
-      paddingTop: 60,
+    },
+    sessionChip: {
+      borderRadius: 20,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+    },
+    sessionChipText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 11,
     },
     premiumPrompt: {
       flex: 1,
@@ -756,29 +851,6 @@ const createStyles = (theme: Theme) =>
       justifyContent: 'center',
     },
     viewDetailEmoji: {
-      fontSize: 16,
-    },
-    emptyTitle: {
-      fontFamily: 'SpaceGrotesk-Bold',
-      fontSize: 20,
-      color: theme.text,
-      marginTop: 16,
-      textAlign: 'center',
-    },
-    emptySubtitle: {
-      fontSize: 15,
-      color: theme.textSecondary,
-      textAlign: 'center',
-      marginTop: 8,
-    },
-    backButton: {
-      borderRadius: 12,
-      paddingHorizontal: 24,
-      paddingVertical: 14,
-      marginTop: 24,
-    },
-    backButtonText: {
-      fontFamily: 'SpaceGrotesk-Bold',
       fontSize: 16,
     },
     filterOverlay: {

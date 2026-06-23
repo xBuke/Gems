@@ -3,17 +3,22 @@ import { useTheme } from '@/lib/ThemeContext';
 import { typography } from '@/lib/typography';
 import { radii, spacing } from '@/lib/spacing';
 import { Ionicons } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 type EmptyStateProps = {
-  icon: string;
+  icon?: string;
+  iconNode?: ReactNode;
   title: string;
   subtitle?: string;
   overline?: string;
+  accentLine?: string;
   cta?: string;
   onCta?: () => void;
   secondaryCta?: string;
   onSecondaryCta?: () => void;
+  secondaryOutline?: boolean;
+  footer?: ReactNode;
   /** @deprecated use cta */
   ctaText?: string;
   /** @deprecated use onCta */
@@ -22,13 +27,17 @@ type EmptyStateProps = {
 
 export const EmptyState = ({
   icon,
+  iconNode,
   title,
   subtitle,
   overline,
+  accentLine,
   cta,
   onCta,
   secondaryCta,
   onSecondaryCta,
+  secondaryOutline,
+  footer,
   ctaText,
   onCtaPress,
 }: EmptyStateProps) => {
@@ -51,13 +60,16 @@ export const EmptyState = ({
           shadowOpacity: 1,
           shadowRadius: 12,
         }}>
-        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={36} color={theme.accent} />
+        {iconNode ??
+          (icon ? (
+            <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={36} color={theme.accent} />
+          ) : null)}
       </View>
       {overline ? (
         <Text
           style={[
             typography.monoXS,
-            { color: theme.textSecondary, marginTop: spacing.sm, textAlign: 'center' },
+            { color: theme.accent, marginTop: spacing.sm, textAlign: 'center' },
           ]}>
           {overline}
         </Text>
@@ -77,15 +89,28 @@ export const EmptyState = ({
       {subtitle ? (
         <Text
           style={[
-            typography.body,
+            accentLine ? typography.bodyS : typography.body,
             {
               color: theme.textSecondary,
               textAlign: 'center',
               marginTop: spacing.sm,
-              lineHeight: 22,
+              lineHeight: accentLine ? 20 : 22,
             },
           ]}>
           {subtitle}
+        </Text>
+      ) : null}
+      {accentLine ? (
+        <Text
+          style={[
+            typography.monoM,
+            {
+              color: theme.accent,
+              textAlign: 'center',
+              marginTop: spacing.sm,
+            },
+          ]}>
+          {accentLine}
         </Text>
       ) : null}
       {primaryLabel && primaryAction ? (
@@ -107,10 +132,29 @@ export const EmptyState = ({
         </HapticPressable>
       ) : null}
       {secondaryCta && onSecondaryCta ? (
-        <HapticPressable onPress={onSecondaryCta} style={{ marginTop: spacing.md }}>
-          <Text style={[typography.bodyS, { color: theme.textSecondary }]}>{secondaryCta}</Text>
-        </HapticPressable>
+        secondaryOutline ? (
+          <HapticPressable
+            haptic="light"
+            onPress={onSecondaryCta}
+            style={{
+              marginTop: spacing.md,
+              width: '100%',
+              height: 50,
+              borderRadius: radii.lg,
+              borderWidth: 1.5,
+              borderColor: theme.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Text style={[typography.bodyS, { color: theme.textSecondary }]}>{secondaryCta}</Text>
+          </HapticPressable>
+        ) : (
+          <HapticPressable onPress={onSecondaryCta} style={{ marginTop: spacing.md }}>
+            <Text style={[typography.bodyS, { color: theme.textSecondary }]}>{secondaryCta}</Text>
+          </HapticPressable>
+        )
       ) : null}
+      {footer ? <View style={{ marginTop: spacing.lg, width: '100%', alignItems: 'center' }}>{footer}</View> : null}
     </View>
   );
 };

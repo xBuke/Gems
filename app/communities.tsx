@@ -207,13 +207,16 @@ export default function CommunitiesScreen() {
   }
 
   const renderEmptyMine = () => (
-    <View style={styles.emptyState}>
-      <Ionicons name="people-outline" size={48} color={theme.textTertiary} />
-      <Text style={styles.emptyText}>You haven't joined any communities yet</Text>
-      <PressableScale style={styles.emptyButton} onPress={() => setActiveTab('discover')}>
-        <Text style={styles.emptyButtonText}>Browse Communities</Text>
-      </PressableScale>
-    </View>
+    <EmptyState
+      icon="people"
+      overline="NO COMMUNITIES YET"
+      title="Find your explorer crew"
+      subtitle="Join groups built around the places you love — or start your own."
+      cta="Browse Communities"
+      onCta={() => setActiveTab('discover')}
+      secondaryCta="or create one →"
+      onSecondaryCta={handleCreatePress}
+    />
   )
 
   const listData = activeTab === 'discover' ? discoverCommunities : myCommunities
@@ -424,29 +427,5 @@ const createStyles = (theme: Theme) =>
     },
     joinedButtonText: {
       color: theme.accent,
-    },
-    emptyState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 48,
-      gap: 12,
-    },
-    emptyText: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      textAlign: 'center',
-    },
-    emptyButton: {
-      backgroundColor: theme.accent,
-      borderRadius: 10,
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      marginTop: 8,
-    },
-    emptyButtonText: {
-      fontSize: 14,
-      fontFamily: 'SpaceGrotesk-Bold',
-      color: theme.accentText,
     },
   })
