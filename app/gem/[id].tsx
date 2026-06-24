@@ -787,7 +787,8 @@ export default function GemDetailScreen() {
             <TouchableOpacity
               style={styles.commentLikeRow}
               onPress={() => handleToggleCommentLike(comment.id)}
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}>
               <Ionicons
                 name={likeState.likedByMe ? 'heart' : 'heart-outline'}
                 size={14}
@@ -799,7 +800,7 @@ export default function GemDetailScreen() {
               <TouchableOpacity
                 onPress={() => handleReplyPress(comment)}
                 activeOpacity={0.7}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}>
                 <Text style={styles.commentReplyLink}>Reply</Text>
               </TouchableOpacity>
             ) : null}
