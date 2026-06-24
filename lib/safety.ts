@@ -1,12 +1,41 @@
 import { supabase } from './supabase'
 
-export const REPORT_REASONS = [
+export const GEM_REPORT_REASONS = [
+  "It doesn't exist / wrong location",
+  'Spam or commercial',
   'Inappropriate content',
+  'Other',
+] as const
+
+export const COMMENT_REPORT_REASONS = [
   'Spam',
   'Harassment',
-  'Fake location',
+  'Misinformation',
+  'Inappropriate',
   'Other',
-]
+] as const
+
+export const USER_REPORT_REASONS = [
+  'Spam account',
+  'Harassment',
+  'Impersonation',
+  'Inappropriate content',
+  'Other',
+] as const
+
+export const getReportReasons = (
+  targetType: 'gem' | 'comment' | 'message' | 'user',
+): readonly string[] => {
+  switch (targetType) {
+    case 'gem':
+      return GEM_REPORT_REASONS
+    case 'comment':
+    case 'message':
+      return COMMENT_REPORT_REASONS
+    case 'user':
+      return USER_REPORT_REASONS
+  }
+}
 
 export const createReport = async (
   reporterId: string,
