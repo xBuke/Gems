@@ -1,10 +1,12 @@
 import { FormFieldError, fieldErrorBorder } from '@/components/FormFieldError';
+import { isReactivationEligible, reactivateAccount } from '@/lib/accountDeactivation';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { hapticError, hapticSuccess } from '@/lib/haptics';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -134,6 +136,11 @@ export default function AuthScreen() {
     setFieldErrors({});
   };
 
+  const finishLogin = () => {
+    hapticSuccess();
+    router.replace(redirectTo ? String(redirectTo) : '/');
+  };
+
   const handleLogin = async () => {
     setFieldErrors({});
 
@@ -178,11 +185,42 @@ export default function AuthScreen() {
         setFieldError('password', 'This account has been suspended.');
         return;
       }
+
+      const eligible = await isReactivationEligible(data.user.id);
+      if (eligible) {
+        setLoading(false);
+        Alert.alert(
+          'Welcome back!',
+          'Your account was scheduled for deletion. Would you like to reactivate it?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: async () => {
+                await supabase.auth.signOut();
+              },
+            },
+            {
+              text: 'Reactivate',
+              onPress: async () => {
+                const { error: reactivateError } = await reactivateAccount(data.user!.id);
+                if (reactivateError) {
+                  hapticError();
+                  setFieldError('password', 'Could not reactivate your account. Please try again.');
+                  await supabase.auth.signOut();
+                  return;
+                }
+                finishLogin();
+              },
+            },
+          ],
+        );
+        return;
+      }
     }
 
     setLoading(false);
-    hapticSuccess();
-    router.replace(redirectTo ? String(redirectTo) : '/');
+    finishLogin();
   };
 
   const handleRegister = async () => {

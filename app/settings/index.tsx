@@ -1,9 +1,11 @@
+import { DeleteAccountSheet } from '@/components/DeleteAccountSheet';
 import { stopTracking } from '@/lib/locationTracker';
 import { getExplorerLevelIndex } from '@/lib/gamification';
 import { checkIsPremium } from '@/lib/paywall';
-import { SUPABASE_URL, supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { useToast } from '@/lib/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -101,6 +103,7 @@ function SectionHeader({ title, theme, danger }: { title: string; theme: Theme; 
 export default function SettingsScreen() {
   const router = useRouter();
   const { theme, isDark, toggleTheme } = useTheme();
+  const { showToast } = useToast();
   const [username, setUsername] = useState('');
   const [homeTown, setHomeTown] = useState('');
   const [language, setLanguage] = useState('en');
@@ -112,6 +115,7 @@ export default function SettingsScreen() {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
   const [explorerLevelIndex, setExplorerLevelIndex] = useState(1);
+  const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
 
   const languageLabel = language === 'hr' ? 'Hrvatski' : 'English';
 
@@ -287,82 +291,18 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This will permanently delete your account, all your gems, comments, messages, and data. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete My Account',
-          style: 'destructive',
-          onPress: async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+    setDeleteSheetVisible(true);
+  };
 
-            const userId = user.id;
-
-            const { data: ownedCommunities } = await supabase
-              .from('communities')
-              .select('id')
-              .eq('creator_id', userId);
-
-            if (ownedCommunities?.length) {
-              for (const community of ownedCommunities) {
-                await supabase.from('community_messages').delete().eq('community_id', community.id);
-                await supabase.from('community_members').delete().eq('community_id', community.id);
-                await supabase.from('communities').delete().eq('id', community.id);
-              }
-            }
-
-            await Promise.all([
-              supabase.from('saved_gems').delete().eq('user_id', userId),
-              supabase.from('gem_likes').delete().eq('user_id', userId),
-              supabase.from('gem_visits').delete().eq('user_id', userId),
-              supabase.from('comment_likes').delete().eq('user_id', userId),
-              supabase.from('comments').delete().eq('user_id', userId),
-              supabase.from('notifications').delete().or(`user_id.eq.${userId},sender_id.eq.${userId}`),
-              supabase.from('messages').delete().or(`sender_id.eq.${userId},receiver_id.eq.${userId}`),
-              supabase.from('follows').delete().or(`follower_id.eq.${userId},following_id.eq.${userId}`),
-              supabase.from('blocked_users').delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`),
-              supabase.from('community_members').delete().eq('user_id', userId),
-              supabase.from('community_messages').delete().eq('user_id', userId),
-              supabase.from('custom_categories').delete().eq('creator_id', userId),
-              supabase.from('user_locations').delete().eq('user_id', userId),
-              supabase.from('reports').delete().eq('reporter_id', userId),
-            ]);
-
-            await supabase.from('gems').delete().eq('user_id', userId);
-
-            const { error } = await supabase.from('profiles').delete().eq('id', userId);
-
-            if (error) {
-              Alert.alert('Error', 'Could not delete your account. Please try again or contact support.');
-              return;
-            }
-
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              const response = await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json',
-                },
-              });
-
-              if (!response.ok) {
-                console.log('Auth user deletion failed, but app data was removed');
-              }
-            }
-
-            stopTracking();
-            await AsyncStorage.removeItem(LANGUAGE_KEY);
-            await supabase.auth.signOut();
-            router.replace('/auth');
-          },
-        },
-      ],
-    );
+  const handleAccountDeactivated = async () => {
+    showToast({
+      type: 'info',
+      title: 'Account deactivated. Log back in within 30 days to reactivate.',
+    });
+    stopTracking();
+    await AsyncStorage.removeItem(LANGUAGE_KEY);
+    await supabase.auth.signOut();
+    router.replace('/auth');
   };
 
   return (
@@ -590,6 +530,12 @@ export default function SettingsScreen() {
         </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <DeleteAccountSheet
+        visible={deleteSheetVisible}
+        onClose={() => setDeleteSheetVisible(false)}
+        onDeactivated={handleAccountDeactivated}
+      />
     </SafeAreaView>
   );
 }
