@@ -13,7 +13,7 @@ import {
 import { PENDING_PREFS_KEY } from '@/lib/onboarding';
 import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
-import type { Theme } from '@/lib/theme';
+import { semantic, type Theme } from '@/lib/theme';
 import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticSelection } from '@/lib/haptics';
@@ -703,7 +703,8 @@ export default function DiscoverScreen() {
       };
       load();
       checkStreakBanner();
-    }, [refreshDiscoverData, fetchFollowingGems, checkStreakBanner]),
+      checkUnreadNotifications();
+    }, [refreshDiscoverData, fetchFollowingGems, checkStreakBanner, checkUnreadNotifications]),
   );
 
   useEffect(() => {
@@ -1571,8 +1572,8 @@ export default function DiscoverScreen() {
         }}>
         <View style={[styles.tabBar, { paddingBottom: 8 + insets.bottom }]}>
           {TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
             const isAddButton = 'addButton' in tab && tab.addButton;
+            const isActive = !isAddButton && activeTab === tab.key;
             return (
               <TouchableOpacity
                 key={tab.key}
@@ -1588,8 +1589,8 @@ export default function DiscoverScreen() {
                     const proceed = await requireAuth('/add-gem');
                     if (!proceed) return;
                     router.push('/add-gem');
-                    setActiveTab(tab.key);
                   } else if (tab.key === 'notifications') {
+                    setUnreadNotificationCount(0);
                     await handleNotifications();
                     setActiveTab(tab.key);
                   } else if (tab.key === 'profile') {
@@ -1598,22 +1599,29 @@ export default function DiscoverScreen() {
                   }
                 }}
                 activeOpacity={0.7}>
-                <View style={styles.tabIconWrap}>
-                  <TabBarIcon
-                    isActive={isActive}
-                    icon={tab.icon}
-                    activeIcon={tab.activeIcon}
-                    size={isAddButton ? 34 : 24}
-                    color={isAddButton ? theme.accent : isActive ? theme.accent : theme.textTertiary}
-                  />
-                  {tab.key === 'notifications' && unreadNotificationCount > 0 && (
-                    <View style={styles.notificationBadge}>
-                      <Text style={styles.notificationBadgeText}>
-                        {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+                {isAddButton ? (
+                  <View style={[styles.addFab, { shadowColor: theme.coral }]}>
+                    <Ionicons name="add" size={26} color={theme.accentText} />
+                  </View>
+                ) : (
+                  <View style={styles.tabIconWrap}>
+                    {isActive && <View style={styles.tabActivePill} />}
+                    <TabBarIcon
+                      isActive={isActive}
+                      icon={tab.icon}
+                      activeIcon={tab.activeIcon}
+                      size={24}
+                      color={isActive ? theme.accent : theme.textTertiary}
+                    />
+                    {tab.key === 'notifications' && unreadNotificationCount > 0 && (
+                      <View style={styles.notificationBadge}>
+                        <Text style={styles.notificationBadgeText}>
+                          {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
                 <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
               </TouchableOpacity>
             );
@@ -2166,30 +2174,57 @@ const createStyles = (theme: Theme) =>
   },
   tabIconWrap: {
     position: 'relative',
+    width: 44,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabActivePill: {
+    position: 'absolute',
+    width: 44,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.accentSub,
+  },
+  addFab: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.coral,
+    marginTop: -14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   notificationBadge: {
     position: 'absolute',
-    top: -4,
-    right: -10,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: theme.danger,
+    top: -2,
+    right: 2,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: semantic.error,
+    borderWidth: 2,
+    borderColor: theme.background,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   notificationBadgeText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '700',
     color: '#FFFFFF',
+    lineHeight: 10,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 9,
+    fontFamily: 'SpaceMono-Regular',
     color: theme.textTertiary,
   },
   tabLabelActive: {
-    color: theme.textSecondary,
-    fontWeight: '600',
+    color: theme.accent,
   },
 });

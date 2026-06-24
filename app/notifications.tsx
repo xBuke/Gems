@@ -157,6 +157,19 @@ export default function NotificationsScreen() {
     setLoading(false);
   }, []);
 
+  const markAllReadOnVisit = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', user.id)
+      .eq('read', false);
+
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
@@ -164,7 +177,8 @@ export default function NotificationsScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchNotifications();
-    }, [fetchNotifications]),
+      markAllReadOnVisit();
+    }, [fetchNotifications, markAllReadOnVisit]),
   );
 
   useEffect(() => {
@@ -206,15 +220,7 @@ export default function NotificationsScreen() {
   }, [currentUserId]);
 
   const handleMarkAllRead = async () => {
-    if (!currentUserId) return;
-
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', currentUserId)
-      .eq('read', false);
-
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    await markAllReadOnVisit();
   };
 
   const markAsRead = async (notification: Notification) => {
