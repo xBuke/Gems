@@ -480,21 +480,6 @@ export default function GemDetailScreen() {
           gem_id: gemId,
           read: false,
         });
-
-        void (async () => {
-          const { data: myProfile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', user.id)
-            .single();
-          sendPushNotification({
-            user_id: gem.user_id,
-            category: 'social',
-            title: 'New like',
-            body: `@${myProfile?.username ?? 'Someone'} liked ${gem.title}`,
-            data: { type: 'like', gem_id: gemId },
-          });
-        })();
       }
 
       await addStreakBonus(user.id, 2);

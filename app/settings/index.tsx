@@ -103,7 +103,6 @@ export default function SettingsScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
   const [username, setUsername] = useState('');
   const [homeTown, setHomeTown] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
   const [language, setLanguage] = useState('en');
   const [userId, setUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -131,7 +130,7 @@ export default function SettingsScreen() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username, home_town, is_private, language, is_admin, streak_points')
+      .select('username, home_town, language, is_admin, streak_points')
       .eq('id', user.id)
       .single();
 
@@ -141,7 +140,6 @@ export default function SettingsScreen() {
     if (profile) {
       setUsername(profile.username ?? '');
       setHomeTown(profile.home_town ?? '');
-      setIsPrivate(profile.is_private ?? false);
       setIsAdmin(profile.is_admin ?? false);
       setExplorerLevelIndex(getExplorerLevelIndex(profile.streak_points ?? 0));
       if (profile.language) {
@@ -158,21 +156,6 @@ export default function SettingsScreen() {
       loadSettings();
     }, [loadSettings]),
   );
-
-  const handlePrivateToggle = async (value: boolean) => {
-    if (!userId) return;
-
-    setIsPrivate(value);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_private: value })
-      .eq('id', userId);
-
-    if (error) {
-      setIsPrivate(!value);
-      Alert.alert('Error', 'Could not update privacy setting');
-    }
-  };
 
   const handleUpdateUsername = async (newUsername: string) => {
     const trimmed = newUsername.trim();
@@ -446,23 +429,17 @@ export default function SettingsScreen() {
             onPress={showPasswordPrompt}
             theme={theme}
           />
+          <SettingItem
+            icon="notifications-outline"
+            label="Notifications"
+            showChevron
+            onPress={() => router.push('/settings/notifications')}
+            theme={theme}
+          />
         </View>
 
         <SectionHeader title="Privacy" theme={theme} />
         <View style={styles.sectionGroup}>
-          <SettingItem
-            icon="eye-off-outline"
-            label="Private Profile"
-            theme={theme}
-            rightElement={
-              <Switch
-                value={isPrivate}
-                onValueChange={handlePrivateToggle}
-                trackColor={{ false: theme.border, true: theme.accent }}
-                thumbColor="#FFFFFF"
-              />
-            }
-          />
           <SettingItem
             icon="ban-outline"
             label="Blocked Users"

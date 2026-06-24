@@ -58,21 +58,55 @@ export async function setupAndroidNotificationChannels() {
   });
 }
 
-async function ensureNotificationPreferences(userId: string) {
+export type NotificationPreferences = {
+  user_id: string;
+  nearby_enabled: boolean;
+  social_enabled: boolean;
+  achievements_enabled: boolean;
+  new_followers_enabled: boolean;
+  gem_likes_enabled: boolean;
+  gem_comments_enabled: boolean;
+  nearby_gems_enabled: boolean;
+  community_activity_enabled: boolean;
+};
+
+const NOTIFICATION_PREFERENCES_COLUMNS =
+  'user_id, nearby_enabled, social_enabled, achievements_enabled, new_followers_enabled, gem_likes_enabled, gem_comments_enabled, nearby_gems_enabled, community_activity_enabled';
+
+export async function ensureNotificationPreferences(
+  userId: string,
+): Promise<NotificationPreferences> {
   const { data } = await supabase
     .from('notification_preferences')
-    .select('user_id')
+    .select(NOTIFICATION_PREFERENCES_COLUMNS)
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (data) return;
+  if (data) return data as NotificationPreferences;
 
-  await supabase.from('notification_preferences').insert({
+  const defaults = {
     user_id: userId,
     nearby_enabled: true,
     social_enabled: true,
     achievements_enabled: true,
-  });
+    new_followers_enabled: true,
+    gem_likes_enabled: true,
+    gem_comments_enabled: true,
+    nearby_gems_enabled: true,
+    community_activity_enabled: true,
+  };
+
+  const { data: inserted, error } = await supabase
+    .from('notification_preferences')
+    .insert(defaults)
+    .select(NOTIFICATION_PREFERENCES_COLUMNS)
+    .single();
+
+  if (error || !inserted) {
+    return defaults;
+  }
+
+  return inserted as NotificationPreferences;
 }
 
 async function upsertPushToken(userId: string, token: string) {

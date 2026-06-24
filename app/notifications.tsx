@@ -2,6 +2,7 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { hapticLight, hapticSuccess } from '@/lib/haptics';
 import { goBackOrTab, useTabRootBackHandler, useTabStackGesture } from '@/lib/navigationMotion';
+import { ensureNotificationPreferences } from '@/lib/pushNotifications';
 import { sendPushNotification } from '@/lib/sendPushNotification';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,8 +120,14 @@ const getDateGroupLabel = (dateString: string): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
 };
 
-const groupNotifications = (items: Notification[]): NotificationSection[] => {
-  const filtered = items.filter((item) => item.type !== 'rating');
+const groupNotifications = (
+  items: Notification[],
+  options?: { showLikes?: boolean },
+): NotificationSection[] => {
+  const showLikes = options?.showLikes ?? true;
+  const filtered = items.filter(
+    (item) => item.type !== 'rating' && (showLikes || item.type !== 'like'),
+  );
   const sections: NotificationSection[] = [];
 
   for (const item of filtered) {
@@ -151,28 +158,37 @@ export default function NotificationsScreen() {
   const [communityJoinRequestStatus, setCommunityJoinRequestStatus] = useState<
     Record<string, 'accepted' | 'declined'>
   >({});
+  const [gemLikesEnabled, setGemLikesEnabled] = useState(true);
 
-  const sections = useMemo(() => groupNotifications(notifications), [notifications]);
+  const sections = useMemo(
+    () => groupNotifications(notifications, { showLikes: gemLikesEnabled }),
+    [notifications, gemLikesEnabled],
+  );
 
   const fetchNotifications = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setCurrentUserId(null);
       setNotifications([]);
+      setGemLikesEnabled(true);
       setLoading(false);
       return;
     }
 
     setCurrentUserId(user.id);
 
-    const { data } = await supabase
-      .from('notifications')
-      .select(NOTIFICATION_SELECT)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    const [notificationsResult, preferences] = await Promise.all([
+      supabase
+        .from('notifications')
+        .select(NOTIFICATION_SELECT)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      ensureNotificationPreferences(user.id),
+    ]);
 
-    if (data) setNotifications(data);
+    setGemLikesEnabled(preferences.gem_likes_enabled);
+    if (notificationsResult.data) setNotifications(notificationsResult.data);
     setLoading(false);
   }, []);
 
@@ -224,6 +240,7 @@ export default function NotificationsScreen() {
             .single();
 
           if (!fullNotification) return;
+          if (!gemLikesEnabled && fullNotification.type === 'like') return;
 
           setNotifications((prev) => {
             if (prev.some((n) => n.id === fullNotification.id)) return prev;
@@ -236,7 +253,7 @@ export default function NotificationsScreen() {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [currentUserId]);
+  }, [currentUserId, gemLikesEnabled]);
 
   const handleMarkAllRead = async () => {
     await markAllReadOnVisit();

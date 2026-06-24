@@ -9,7 +9,7 @@
 //       (like "nearby gem added", which has no single acting user) should
 //       call it.
 //
-// Respects notification_preferences (nearby/social/achievements toggles)
+// Respects notification_preferences (broad category + granular per-type toggles)
 // and skips silently if the user has that category disabled.
 //
 // Deploy with: supabase functions deploy send-push-notification
@@ -36,6 +36,27 @@ const PREFERENCE_COLUMN: Record<NotificationCategory, string> = {
   achievements: "achievements_enabled",
 };
 
+const TYPE_PREFERENCE_COLUMN: Record<string, string> = {
+  follow: "new_followers_enabled",
+  follow_request: "new_followers_enabled",
+  follow_accepted: "new_followers_enabled",
+  comment: "gem_comments_enabled",
+  like: "gem_likes_enabled",
+  nearby_gem: "nearby_gems_enabled",
+  community_post: "community_activity_enabled",
+};
+
+const PREFERENCE_COLUMNS = [
+  "nearby_enabled",
+  "social_enabled",
+  "achievements_enabled",
+  "new_followers_enabled",
+  "gem_likes_enabled",
+  "gem_comments_enabled",
+  "nearby_gems_enabled",
+  "community_activity_enabled",
+].join(", ");
+
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
@@ -56,11 +77,11 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // 1. Check notification_preferences — skip silently if this category is off
+    // 1. Check notification_preferences — skip if broad category or granular type is off
     const prefColumn = PREFERENCE_COLUMN[category];
     const { data: prefs, error: prefsError } = await supabase
       .from("notification_preferences")
-      .select(prefColumn)
+      .select(PREFERENCE_COLUMNS)
       .eq("user_id", user_id)
       .maybeSingle();
 
@@ -69,11 +90,28 @@ Deno.serve(async (req) => {
       // Fail open (still attempt to send) rather than silently dropping
       // notifications due to a transient read error — adjust if you'd
       // rather fail closed.
-    } else if (prefs && prefs[prefColumn as keyof typeof prefs] === false) {
-      return new Response(
-        JSON.stringify({ skipped: true, reason: `${category} notifications disabled for user` }),
-        { status: 200 }
-      );
+    } else if (prefs) {
+      if (prefs[prefColumn as keyof typeof prefs] === false) {
+        return new Response(
+          JSON.stringify({ skipped: true, reason: `${category} notifications disabled for user` }),
+          { status: 200 }
+        );
+      }
+
+      const notificationType =
+        typeof data?.type === "string" ? data.type : undefined;
+      if (notificationType) {
+        const typeColumn = TYPE_PREFERENCE_COLUMN[notificationType];
+        if (typeColumn && prefs[typeColumn as keyof typeof prefs] === false) {
+          return new Response(
+            JSON.stringify({
+              skipped: true,
+              reason: `${notificationType} notifications disabled for user`,
+            }),
+            { status: 200 }
+          );
+        }
+      }
     }
     // If no prefs row exists at all, default behavior is to send (matches
     // the DB default of all-true for new rows).
