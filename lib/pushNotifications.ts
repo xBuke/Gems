@@ -69,7 +69,7 @@ async function ensureNotificationPreferences(userId: string) {
 
   await supabase.from('notification_preferences').insert({
     user_id: userId,
-    nearby_enabled: false,
+    nearby_enabled: true,
     social_enabled: true,
     achievements_enabled: true,
   });
