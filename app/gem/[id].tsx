@@ -6,6 +6,7 @@ import { checkAndUnlockAchievements } from '@/lib/gamification';
 import {
   type CommunityGemInfo,
 } from '@/lib/gemVisibility';
+import { deleteGem } from '@/lib/deleteGem';
 import { blockUser, getMyBlockedUsers } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -33,6 +34,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -532,24 +534,24 @@ export default function GemDetailScreen() {
 
     hapticMedium();
 
+    const { error } = await deleteGem(gemId, gem.image_url);
+    if (error) {
+      Alert.alert('Error', error);
+      return;
+    }
+
+    router.replace('/');
+  };
+
+  const handleShare = async () => {
+    if (!gem) return;
+
     try {
-      if (gem.image_url) {
-        const fileName = gem.image_url.split('/').pop();
-        if (fileName) {
-          await supabase.storage.from('gem-images').remove([fileName]);
-        }
-      }
-
-      const { error } = await supabase.from('gems').delete().eq('id', gemId);
-
-      if (error) {
-        Alert.alert('Error', 'Could not delete gem');
-        return;
-      }
-
-      router.replace('/');
+      await Share.share({
+        message: `Check out ${gem.title} on Hidden Gems! 📍`,
+      });
     } catch {
-      Alert.alert('Error', 'Could not delete gem');
+      // User dismissed share sheet
     }
   };
 
@@ -650,7 +652,34 @@ export default function GemDetailScreen() {
   };
 
   const showGemMenu = () => {
-    if (!gem || isOwner) return;
+    if (!gem) return;
+
+    if (isOwner) {
+      const options = ['Edit', 'Delete', 'Cancel'];
+      const cancelIndex = 2;
+      const destructiveIndex = 1;
+
+      const handleOwnerSelection = (index: number) => {
+        if (index === 0) {
+          router.push({ pathname: '/add-gem', params: { gemId: gem.id } });
+        }
+        if (index === 1) confirmDelete();
+      };
+
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: destructiveIndex },
+          handleOwnerSelection,
+        );
+      } else {
+        Alert.alert('Options', undefined, [
+          { text: 'Edit', onPress: () => router.push({ pathname: '/add-gem', params: { gemId: gem.id } }) },
+          { text: 'Delete', style: 'destructive', onPress: confirmDelete },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+      }
+      return;
+    }
 
     const gemUsername = gem.profiles?.username ?? 'unknown';
     const options = [`Report Gem`, `Block @${gemUsername}`, 'Cancel'];
@@ -1083,11 +1112,9 @@ export default function GemDetailScreen() {
           <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerRight}>
-          {!isOwner && (
-            <TouchableOpacity style={styles.headerButton} onPress={showGemMenu} activeOpacity={0.8} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Ionicons name="ellipsis-horizontal" size={18} color={theme.text} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.headerButton} onPress={showGemMenu} activeOpacity={0.8} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="ellipsis-horizontal" size={18} color={theme.text} />
+          </TouchableOpacity>
           {isOwner && (
             <TouchableOpacity style={styles.headerButton} onPress={confirmDelete} activeOpacity={0.8} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Ionicons name="trash-outline" size={18} color={theme.danger} />
@@ -1095,7 +1122,7 @@ export default function GemDetailScreen() {
           )}
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() => console.log('Share gem', gem.id)}
+            onPress={handleShare}
             activeOpacity={0.8}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="share-outline" size={18} color={theme.text} />

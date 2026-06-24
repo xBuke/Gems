@@ -1,5 +1,7 @@
 import { supabase } from './supabase'
 
+export type GemVisibility = 'public' | 'friends' | 'private'
+
 export const GEM_SELECT_WITH_COMMUNITY =
   '*, profiles!gems_user_id_fkey(username), communities(name, icon, color)'
 

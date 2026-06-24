@@ -7,6 +7,7 @@ import {
   type CustomCategory,
 } from '@/lib/customCategories';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
+import { AppBottomSheetModal, type AppBottomSheetModalRef } from '@/components/AppBottomSheetModal';
 import { ModalEntryWrapper } from '@/components/ModalEntryWrapper';
 import { PressableScale } from '@/components/PressableScale';
 import { checkAndUnlockAchievements } from '@/lib/gamification';
@@ -20,6 +21,9 @@ import { resolveCityName } from '@/lib/reverseGeocode';
 import { hapticError, hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
 import { createGemSharePost } from '@/lib/communityPosts';
+import { deleteGem } from '@/lib/deleteGem';
+import type { GemVisibility } from '@/lib/gemVisibility';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { addStreakBonus } from '@/lib/streak';
 import { useToast } from '@/lib/ToastContext';
 import { supabase } from '@/lib/supabase';
@@ -29,7 +33,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -53,6 +57,14 @@ const STEP_INDICATOR_HEIGHT = 21;
 type LocationChoice = 'here' | 'else';
 
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+
+const VISIBILITY_OPTIONS: { value: GemVisibility; label: string }[] = [
+  { value: 'public', label: 'Public' },
+  { value: 'friends', label: 'Friends' },
+  { value: 'private', label: 'Private' },
+];
+
+const DELETE_RED = '#F87171';
 
 const uploadImage = async (uri: string) => {
   const fileName = `gem_${Date.now()}.jpg`;
@@ -86,7 +98,14 @@ export default function AddGemScreen() {
   const { showToast } = useToast();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
-  const { lat, lng, communityId } = useLocalSearchParams<{ lat?: string; lng?: string; communityId?: string }>();
+  const { lat, lng, communityId, gemId: gemIdParam } = useLocalSearchParams<{
+    lat?: string;
+    lng?: string;
+    communityId?: string;
+    gemId?: string;
+  }>();
+  const editGemId = Array.isArray(gemIdParam) ? gemIdParam[0] : gemIdParam;
+  const isEditMode = !!editGemId;
   const parsedLat = lat ? parseFloat(lat) : NaN;
   const parsedLng = lng ? parseFloat(lng) : NaN;
   const hasMapLocation =
@@ -96,6 +115,7 @@ export default function AddGemScreen() {
     !Number.isNaN(parsedLng);
 
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedMainCategory, setSelectedMainCategory] = useState<Category | null>(null);
@@ -119,6 +139,95 @@ export default function AddGemScreen() {
     null,
   );
   const [pendingSuccessRoute, setPendingSuccessRoute] = useState<string | null>(null);
+  const [loadingGem, setLoadingGem] = useState(isEditMode);
+  const [visibility, setVisibility] = useState<GemVisibility>('public');
+  const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const deleteSheetRef = useRef<AppBottomSheetModalRef>(null);
+
+  useEffect(() => {
+    if (!isEditMode || !editGemId) return;
+
+    const loadGem = async () => {
+      setLoadingGem(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoadingGem(false);
+        Alert.alert('Error', 'You must be logged in to edit a gem.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+        return;
+      }
+
+      const { data: gem, error } = await supabase
+        .from('gems')
+        .select('*')
+        .eq('id', editGemId)
+        .single();
+
+      if (error || !gem) {
+        setLoadingGem(false);
+        Alert.alert('Error', 'Could not load this gem.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+        return;
+      }
+
+      if (gem.user_id !== user.id) {
+        setLoadingGem(false);
+        Alert.alert('Error', 'You can only edit your own gems.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+        return;
+      }
+
+      setUserId(user.id);
+      setName(gem.title ?? '');
+      setDescription(gem.description ?? '');
+      setLatitude(gem.latitude);
+      setLongitude(gem.longitude);
+      setLocationDetected(true);
+      setExistingImageUrl(gem.image_url ?? null);
+      setVisibility((gem.visibility as GemVisibility) ?? 'public');
+
+      const tags = (gem.tags as string[] | null) ?? [];
+      setSelectedTags(tags);
+
+      const bestTime = gem.best_time ?? '';
+      if (bestTime && BEST_TIME_OPTIONS.includes(bestTime)) {
+        setSelectedBestTime(bestTime);
+        setCustomBestTime('');
+      } else if (bestTime) {
+        setSelectedBestTime('');
+        setCustomBestTime(bestTime);
+      }
+
+      if (gem.custom_category_id) {
+        const categories = await fetchVisibleCustomCategories(user.id);
+        setCustomCategories(categories);
+        const match = categories.find((c) => c.id === gem.custom_category_id);
+        if (match) {
+          setSelectedCustomCategory(match);
+        }
+      } else if (gem.category) {
+        const main = CATEGORIES.find((c) => c.id === gem.category);
+        if (main) {
+          setSelectedMainCategory(main);
+          setSelectedSubcategory(gem.subcategory ?? null);
+        }
+        const categories = await fetchVisibleCustomCategories(user.id);
+        setCustomCategories(categories);
+      } else {
+        const categories = await fetchVisibleCustomCategories(user.id);
+        setCustomCategories(categories);
+      }
+
+      setLoadingGem(false);
+    };
+
+    loadGem();
+  }, [editGemId, isEditMode, router]);
 
   useEffect(() => {
     if (hasMapLocation) {
@@ -296,7 +405,7 @@ export default function AddGemScreen() {
     const { data: nearbyGems } = await supabase
       .from('gems')
       .select('id, latitude, longitude')
-      .eq('is_private', false);
+      .eq('visibility', 'public');
 
     if (!nearbyGems || nearbyGems.length === 0) return true;
 
@@ -411,6 +520,123 @@ export default function AddGemScreen() {
     }
   };
 
+  const updateGem = async () => {
+    if (!editGemId) return;
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      Alert.alert('Error', userError?.message ?? 'You must be logged in.');
+      return;
+    }
+
+    let imageUrl = existingImageUrl;
+    if (imageUri) {
+      const compressedUri = await compressImage(imageUri);
+      const uploaded = await uploadImage(compressedUri);
+      if (!uploaded) {
+        hapticError();
+        showToast({
+          type: 'error',
+          title: 'Upload failed',
+          message: 'Could not upload photo',
+          actionLabel: 'Retry',
+          onAction: () => updateGem(),
+        });
+        return;
+      }
+      imageUrl = uploaded;
+    }
+
+    const bestTime = customBestTime.trim() || selectedBestTime || null;
+
+    const basePayload = {
+      title: name.trim(),
+      description: description.trim(),
+      tags: selectedTags.length > 0 ? selectedTags : null,
+      best_time: bestTime,
+      image_url: imageUrl,
+      visibility,
+    };
+
+    const gemPayload = selectedCustomCategory
+      ? {
+          ...basePayload,
+          custom_category_id: selectedCustomCategory.id,
+          category: null,
+          subcategory: null,
+        }
+      : {
+          ...basePayload,
+          category: selectedMainCategory!.id,
+          subcategory: selectedSubcategory,
+          custom_category_id: null,
+        };
+
+    const { error } = await supabase.from('gems').update(gemPayload).eq('id', editGemId);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+
+    hapticSuccess();
+    router.back();
+  };
+
+  const handleSaveEdit = async () => {
+    const proceed = await requireAuth();
+    if (!proceed) return;
+
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter a gem name.');
+      return;
+    }
+
+    if (!selectedCustomCategory && !selectedMainCategory) {
+      Alert.alert('Error', 'Please select a category.');
+      return;
+    }
+
+    if (!selectedCustomCategory && !selectedSubcategory) {
+      Alert.alert('Error', 'Please select a subcategory.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await updateGem();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!editGemId) return;
+
+    setDeleting(true);
+    const imageUrl = imageUri ? null : existingImageUrl;
+    const { error } = await deleteGem(editGemId, imageUrl);
+    setDeleting(false);
+    setDeleteSheetVisible(false);
+    deleteSheetRef.current?.dismiss();
+
+    if (error) {
+      Alert.alert('Error', error);
+      return;
+    }
+
+    hapticSuccess();
+    router.replace('/');
+  }, [editGemId, existingImageUrl, imageUri, router]);
+
+  useEffect(() => {
+    if (deleteSheetVisible) {
+      deleteSheetRef.current?.present();
+      return;
+    }
+    deleteSheetRef.current?.dismiss();
+  }, [deleteSheetVisible]);
+
   const handleCategorySelect = async (category: Category) => {
     if (category.premium) {
       const allowed = await canUseCategory(category.id);
@@ -451,6 +677,8 @@ export default function AddGemScreen() {
   };
 
   const handleSubmit = async () => {
+    if (isEditMode) return;
+
     const proceed = await requireAuth();
     if (!proceed) return;
 
@@ -523,27 +751,65 @@ export default function AddGemScreen() {
           : `Using your current location · ${locationCoordsLabel}`
       : 'Location not detected yet';
 
-  const showForm = hasMapLocation || locationChoice === 'here';
+  const showForm = isEditMode || hasMapLocation || locationChoice === 'here';
 
   const addGemStep = !showForm ? 1 : selectedMainCategory || selectedCustomCategory ? 3 : 2;
   const addGemStepLabels = ['LOCATION', 'DETAILS', 'CATEGORY'] as const;
+
+  const displayImageUri = imageUri ?? existingImageUrl;
+
+  if (isEditMode && loadingGem) {
+    return (
+      <ModalEntryWrapper>
+        <SafeAreaView style={styles.container} edges={['top']}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={theme.accent} size="large" />
+          </View>
+        </SafeAreaView>
+      </ModalEntryWrapper>
+    );
+  }
 
   return (
     <ModalEntryWrapper>
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Drop a Gem</Text>
-        <View style={styles.headerSpacer} />
+        {isEditMode ? (
+          <>
+            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerAction}>
+              <Text style={styles.headerActionText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Edit Gem</Text>
+            <TouchableOpacity
+              onPress={handleSaveEdit}
+              activeOpacity={0.7}
+              style={styles.headerAction}
+              disabled={submitting}>
+              {submitting ? (
+                <ActivityIndicator color={theme.accent} size="small" />
+              ) : (
+                <Text style={[styles.headerActionText, styles.headerSaveText]}>Save</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={22} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Drop a Gem</Text>
+            <View style={styles.headerSpacer} />
+          </>
+        )}
       </View>
 
+      {!isEditMode && (
       <View style={styles.stepIndicatorWrap}>
         <Text style={styles.stepIndicator}>
           STEP {addGemStep} OF 3 — {addGemStepLabels[addGemStep - 1]}
         </Text>
       </View>
+      )}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -563,7 +829,7 @@ export default function AddGemScreen() {
           </View>
         )}
 
-        {!hasMapLocation && (
+        {!hasMapLocation && !isEditMode && (
           <View style={styles.locationRow}>
             <TouchableOpacity
               style={[
@@ -631,21 +897,31 @@ export default function AddGemScreen() {
         {showForm && (
           <>
             <TouchableOpacity style={styles.imagePicker} onPress={handleImagePress} activeOpacity={0.8}>
-              {imageUri ? (
+              {displayImageUri ? (
                 <>
                   <Image
-                    source={{ uri: imageUri }}
+                    source={{ uri: displayImageUri }}
                     style={styles.selectedImage}
                     contentFit="cover"
                     transition={200}
                     cachePolicy="memory-disk"
                   />
-                  <TouchableOpacity
-                    style={styles.imageEditButton}
-                    onPress={handleImagePress}
-                    activeOpacity={0.8}>
-                    <Ionicons name="camera" size={16} color={theme.text} />
-                  </TouchableOpacity>
+                  {isEditMode ? (
+                    <TouchableOpacity
+                      style={styles.replacePhotoPill}
+                      onPress={handleImagePress}
+                      activeOpacity={0.8}>
+                      <Ionicons name="camera" size={14} color="#FFFFFF" />
+                      <Text style={styles.replacePhotoText}>Replace photo</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.imageEditButton}
+                      onPress={handleImagePress}
+                      activeOpacity={0.8}>
+                      <Ionicons name="camera" size={16} color={theme.text} />
+                    </TouchableOpacity>
+                  )}
                 </>
               ) : (
                 <View style={styles.imagePlaceholder}>
@@ -825,6 +1101,33 @@ export default function AddGemScreen() {
               <Text style={styles.locationStatusText}>{locationStatusText}</Text>
             </View>
 
+            {isEditMode && (
+              <View style={styles.formSection}>
+                <Text style={styles.journalFieldLabel}>VISIBILITY</Text>
+                <View style={styles.visibilitySegment}>
+                  {VISIBILITY_OPTIONS.map((option) => {
+                    const isActive = visibility === option.value;
+                    return (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[styles.visibilitySegmentItem, isActive && styles.visibilitySegmentItemActive]}
+                        onPress={() => setVisibility(option.value)}
+                        activeOpacity={0.8}>
+                        <Text
+                          style={[
+                            styles.visibilitySegmentText,
+                            isActive && styles.visibilitySegmentTextActive,
+                          ]}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {!isEditMode && (
             <PressableScale
               style={styles.submitButton}
               onPress={handleSubmit}
@@ -835,6 +1138,20 @@ export default function AddGemScreen() {
                 <Text style={styles.submitButtonText}>Drop this Gem</Text>
               )}
             </PressableScale>
+            )}
+
+            {isEditMode && (
+              <>
+                <View style={styles.editDivider} />
+                <TouchableOpacity
+                  style={styles.deleteGemRow}
+                  onPress={() => setDeleteSheetVisible(true)}
+                  activeOpacity={0.7}>
+                  <Ionicons name="trash-outline" size={18} color={DELETE_RED} />
+                  <Text style={styles.deleteGemText}>Delete this gem</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -854,6 +1171,36 @@ export default function AddGemScreen() {
           }
         }}
       />
+
+      {isEditMode && (
+        <AppBottomSheetModal
+          ref={deleteSheetRef}
+          visible={deleteSheetVisible}
+          onClose={() => setDeleteSheetVisible(false)}
+          snapPoints={['32%']}>
+          <BottomSheetView style={styles.deleteSheetContent}>
+            <Text style={styles.deleteSheetTitle}>Delete this gem?</Text>
+            <Text style={styles.deleteSheetMessage}>This cannot be undone.</Text>
+            <TouchableOpacity
+              style={styles.deleteSheetConfirm}
+              onPress={handleConfirmDelete}
+              disabled={deleting}
+              activeOpacity={0.85}>
+              {deleting ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.deleteSheetConfirmText}>Delete</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteSheetCancel}
+              onPress={() => setDeleteSheetVisible(false)}
+              activeOpacity={0.7}>
+              <Text style={styles.deleteSheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </BottomSheetView>
+        </AppBottomSheetModal>
+      )}
     </SafeAreaView>
     </ModalEntryWrapper>
   );
@@ -883,6 +1230,24 @@ const createStyles = (theme: Theme) =>
   },
   headerSpacer: {
     width: 22,
+  },
+  headerAction: {
+    minWidth: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionText: {
+    fontSize: 15,
+    color: theme.textSecondary,
+  },
+  headerSaveText: {
+    color: theme.accent,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stepIndicatorWrap: {
     paddingHorizontal: 16,
@@ -1008,6 +1373,23 @@ const createStyles = (theme: Theme) =>
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  replacePhotoPill: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  replacePhotoText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   formSection: {
     marginHorizontal: 16,
@@ -1200,5 +1582,92 @@ const createStyles = (theme: Theme) =>
     fontSize: 16,
     fontWeight: '700',
     color: theme.text,
+  },
+  visibilitySegment: {
+    flexDirection: 'row',
+    backgroundColor: theme.bgTertiary,
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 16,
+  },
+  visibilitySegmentItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  visibilitySegmentItemActive: {
+    backgroundColor: theme.accent,
+  },
+  visibilitySegmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.textSecondary,
+  },
+  visibilitySegmentTextActive: {
+    color: theme.accentText,
+  },
+  editDivider: {
+    height: 1,
+    backgroundColor: theme.border,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  deleteGemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    marginBottom: 16,
+  },
+  deleteGemText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: DELETE_RED,
+  },
+  deleteSheetContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    alignItems: 'center',
+  },
+  deleteSheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  deleteSheetMessage: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  deleteSheetConfirm: {
+    alignSelf: 'stretch',
+    backgroundColor: DELETE_RED,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 8,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  deleteSheetConfirmText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  deleteSheetCancel: {
+    alignSelf: 'stretch',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  deleteSheetCancelText: {
+    fontSize: 15,
+    color: theme.textSecondary,
   },
 });
