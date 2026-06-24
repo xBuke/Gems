@@ -18,7 +18,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type NotificationType = 'comment' | 'rating' | 'follow' | 'follow_request' | 'visit' | 'message' | 'like';
+type NotificationType =
+  | 'comment'
+  | 'rating'
+  | 'follow'
+  | 'follow_request'
+  | 'community_join_request'
+  | 'visit'
+  | 'message'
+  | 'like';
 
 type Notification = {
   id: string;
@@ -26,10 +34,12 @@ type Notification = {
   sender_id: string;
   type: NotificationType;
   gem_id: string | null;
+  community_id?: string | null;
   read: boolean;
   created_at: string;
   sender: { username: string; avatar_url: string | null } | null;
   gem: { title: string; image_url: string | null } | null;
+  community?: { name: string; icon: string; color: string } | null;
 };
 
 type NotificationSection = {
@@ -69,6 +79,12 @@ const getTypeConfig = (theme: Theme) =>
       bgColor: theme.coralSubtle,
       actionText: 'wants to follow you',
     },
+    community_join_request: {
+      icon: 'people' as const,
+      iconColor: theme.accent,
+      bgColor: theme.accentSub,
+      actionText: 'wants to join',
+    },
     message: {
       icon: 'chatbubble-ellipses' as const,
       iconColor: '#BA7517',
@@ -78,7 +94,7 @@ const getTypeConfig = (theme: Theme) =>
   }) as const;
 
 const NOTIFICATION_SELECT =
-  '*, sender:profiles!notifications_sender_id_fkey(username, avatar_url), gem:gems(title, image_url)';
+  '*, sender:profiles!notifications_sender_id_fkey(username, avatar_url), gem:gems(title, image_url), community:communities(name, icon, color)';
 
 const timeAgo = (dateString: string) => {
   const now = new Date();
@@ -130,6 +146,9 @@ export default function NotificationsScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [followRequestStatus, setFollowRequestStatus] = useState<
+    Record<string, 'accepted' | 'declined'>
+  >({});
+  const [communityJoinRequestStatus, setCommunityJoinRequestStatus] = useState<
     Record<string, 'accepted' | 'declined'>
   >({});
 
@@ -247,6 +266,8 @@ export default function NotificationsScreen() {
       router.push({ pathname: '/profile', params: { userId: notification.sender_id } });
     } else if (notification.type === 'follow_request') {
       return;
+    } else if (notification.type === 'community_join_request') {
+      return;
     } else if (
       notification.type === 'like' ||
       notification.type === 'comment' ||
@@ -304,10 +325,41 @@ export default function NotificationsScreen() {
     setFollowRequestStatus((prev) => ({ ...prev, [notification.id]: 'declined' }));
   };
 
+  const handleDeclineCommunityJoinRequest = async (notification: Notification) => {
+    if (!notification.community_id) return;
+
+    hapticLight();
+
+    await supabase
+      .from('community_members')
+      .delete()
+      .eq('user_id', notification.sender_id)
+      .eq('community_id', notification.community_id);
+
+    await markAsRead(notification);
+    setCommunityJoinRequestStatus((prev) => ({ ...prev, [notification.id]: 'declined' }));
+  };
+
+  const handleAcceptCommunityJoinRequest = async (notification: Notification) => {
+    if (!notification.community_id) return;
+
+    const { error } = await supabase
+      .from('community_members')
+      .update({ status: 'accepted' })
+      .eq('user_id', notification.sender_id)
+      .eq('community_id', notification.community_id);
+
+    if (!error) {
+      hapticSuccess();
+      await markAsRead(notification);
+      setCommunityJoinRequestStatus((prev) => ({ ...prev, [notification.id]: 'accepted' }));
+    }
+  };
+
   const renderRightThumbnail = (item: Notification) => {
     const username = item.sender?.username ?? 'S';
 
-    if (item.type === 'follow' || item.type === 'follow_request' || item.type === 'message') {
+    if (item.type === 'follow' || item.type === 'follow_request' || item.type === 'message' || item.type === 'community_join_request') {
       return (
         <View style={styles.initialAvatar}>
           <Text style={styles.initialText}>{username.charAt(0).toUpperCase()}</Text>
@@ -332,6 +384,47 @@ export default function NotificationsScreen() {
     return (
       <View style={styles.gemThumbnailFallback}>
         <Ionicons name="location" size={20} color={theme.accent} />
+      </View>
+    );
+  };
+
+  const renderCommunityJoinRequestActions = (
+    item: Notification,
+    username: string,
+    communityName: string,
+  ) => {
+    const status = communityJoinRequestStatus[item.id];
+
+    if (status === 'accepted') {
+      return (
+        <View style={styles.acceptConfirmation}>
+          <Text style={styles.acceptConfirmationText}>✓ {username} joined {communityName}</Text>
+        </View>
+      );
+    }
+
+    if (status === 'declined') {
+      return (
+        <View style={styles.declineConfirmation}>
+          <Text style={styles.declineConfirmationText}>Request declined</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.followRequestActions}>
+        <TouchableOpacity
+          style={styles.declineButton}
+          onPress={() => handleDeclineCommunityJoinRequest(item)}
+          activeOpacity={0.8}>
+          <Text style={styles.declineButtonText}>Decline</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.acceptButton}
+          onPress={() => handleAcceptCommunityJoinRequest(item)}
+          activeOpacity={0.8}>
+          <Text style={styles.acceptButtonText}>Accept ✓</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -377,9 +470,17 @@ export default function NotificationsScreen() {
     if (item.type === 'rating') return null;
 
     const typeConfig = getTypeConfig(theme);
-    const config = typeConfig[item.type];
+    const config = typeConfig[item.type as keyof typeof typeConfig];
+    if (!config) return null;
+
     const username = item.sender?.username ?? 'Someone';
     const isFollowRequest = item.type === 'follow_request';
+    const isCommunityJoinRequest = item.type === 'community_join_request';
+    const communityName = item.community?.name ?? 'your community';
+    const actionText = isCommunityJoinRequest
+      ? `${config.actionText} ${communityName}`
+      : config.actionText;
+    const hasInlineActions = isFollowRequest || isCommunityJoinRequest;
 
     const rowStyle = [
       styles.notificationItem,
@@ -394,12 +495,13 @@ export default function NotificationsScreen() {
         <View style={styles.notificationContent}>
           <View style={styles.notificationTextRow}>
             <Text style={styles.username}>{username}</Text>
-            <Text style={styles.actionText}> {config.actionText}</Text>
+            <Text style={styles.actionText}> {actionText}</Text>
           </View>
           <Text style={styles.notificationTime}>{timeAgo(item.created_at)}</Text>
           {isFollowRequest && renderFollowRequestActions(item, username)}
+          {isCommunityJoinRequest && renderCommunityJoinRequestActions(item, username, communityName)}
         </View>
-        {isFollowRequest ? (
+        {hasInlineActions ? (
           <TouchableOpacity
             onPress={() =>
               router.push({ pathname: '/profile', params: { userId: item.sender_id } })
@@ -413,7 +515,7 @@ export default function NotificationsScreen() {
       </>
     );
 
-    if (isFollowRequest) {
+    if (hasInlineActions) {
       return <View style={rowStyle}>{content}</View>;
     }
 

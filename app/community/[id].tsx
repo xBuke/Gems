@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { GemListCard } from '@/components/GemListCard'
 import { requireAuth } from '@/lib/authGuard'
 import { CATEGORIES } from '@/lib/categories'
-import { canJoinMoreCommunities, getCommunityMemberCount } from '@/lib/communities'
+import { canJoinMoreCommunities, getCommunityMemberCount, type CommunityJoinType, type CommunityMemberStatus } from '@/lib/communities'
 import {
   buildReactionSummary,
   formatPostTimeAgo,
@@ -59,7 +59,14 @@ type Community = {
   icon: string
   color: string
   creator_id: string
+  join_type?: CommunityJoinType | null
   creator?: { username: string } | null
+}
+
+type PendingRequest = {
+  id: string
+  user_id: string
+  profiles?: { username: string; avatar_url: string | null } | null
 }
 
 type CommunityMessage = {
@@ -127,7 +134,9 @@ export default function CommunityDetailScreen() {
   const [loadingChat, setLoadingChat] = useState(true)
   const [community, setCommunity] = useState<Community | null>(null)
   const [memberCount, setMemberCount] = useState(0)
-  const [isMember, setIsMember] = useState(false)
+  const [membershipStatus, setMembershipStatus] = useState<CommunityMemberStatus | null>(null)
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
+  const [actingOnRequestId, setActingOnRequestId] = useState<string | null>(null)
   const [myId, setMyId] = useState<string | null>(null)
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [reactions, setReactions] = useState<ReactionRow[]>([])
@@ -144,6 +153,9 @@ export default function CommunityDetailScreen() {
   const listRef = useRef<FlatList>(null)
   const chatItems = useMemo(() => buildChatItems(messages), [messages])
   const isCreator = myId != null && community?.creator_id === myId
+  const isMember = membershipStatus === 'accepted'
+  const isPending = membershipStatus === 'pending'
+  const isInviteOnly = community?.join_type === 'invite_only'
 
   const categoryLabel = useMemo(() => {
     if (!community?.category) return null
@@ -260,14 +272,27 @@ export default function CommunityDetailScreen() {
     if (user) {
       const { data: membership } = await supabase
         .from('community_members')
-        .select('id')
+        .select('id, status')
         .eq('community_id', id)
         .eq('user_id', user.id)
         .maybeSingle()
 
-      setIsMember(!!membership)
+      setMembershipStatus((membership?.status as CommunityMemberStatus | undefined) ?? null)
     } else {
-      setIsMember(false)
+      setMembershipStatus(null)
+    }
+
+    const communityRecord = communityData as Community
+    if (user && communityRecord.creator_id === user.id && communityRecord.join_type === 'invite_only') {
+      const { data: pendingData } = await supabase
+        .from('community_members')
+        .select('id, user_id, profiles!community_members_user_id_fkey(username, avatar_url)')
+        .eq('community_id', id)
+        .eq('status', 'pending')
+
+      setPendingRequests((pendingData ?? []) as PendingRequest[])
+    } else {
+      setPendingRequests([])
     }
 
     await fetchPosts()
@@ -350,7 +375,7 @@ export default function CommunityDetailScreen() {
   }, [messages.length, activeTab, scrollToBottom])
 
   const handleJoin = async () => {
-    if (!id) return
+    if (!id || membershipStatus === 'pending' || membershipStatus === 'accepted') return
 
     let userId = myId
     if (!userId) {
@@ -379,9 +404,11 @@ export default function CommunityDetailScreen() {
 
     setJoining(true)
     try {
+      const memberStatus: CommunityMemberStatus = isInviteOnly ? 'pending' : 'accepted'
       const { error } = await supabase.from('community_members').insert({
         user_id: userId,
         community_id: id,
+        status: memberStatus,
       })
 
       if (error) {
@@ -390,8 +417,10 @@ export default function CommunityDetailScreen() {
       }
 
       hapticSuccess()
-      setIsMember(true)
-      setMemberCount((prev) => prev + 1)
+      setMembershipStatus(memberStatus)
+      if (memberStatus === 'accepted') {
+        setMemberCount((prev) => prev + 1)
+      }
     } finally {
       setJoining(false)
     }
@@ -419,7 +448,7 @@ export default function CommunityDetailScreen() {
               return
             }
 
-            setIsMember(false)
+            setMembershipStatus(null)
             setMemberCount((prev) => Math.max(0, prev - 1))
             if (activeTab === 'chat') setActiveTab('feed')
           } finally {
@@ -448,6 +477,85 @@ export default function CommunityDetailScreen() {
     ])
   }
 
+  const handleApproveRequest = async (request: PendingRequest) => {
+    setActingOnRequestId(request.id)
+    try {
+      const { error } = await supabase
+        .from('community_members')
+        .update({ status: 'accepted' })
+        .eq('id', request.id)
+
+      if (error) {
+        Alert.alert('Error', error.message)
+        return
+      }
+
+      hapticSuccess()
+      setPendingRequests((prev) => prev.filter((r) => r.id !== request.id))
+      setMemberCount((prev) => prev + 1)
+    } finally {
+      setActingOnRequestId(null)
+    }
+  }
+
+  const handleDeclineRequest = async (request: PendingRequest) => {
+    setActingOnRequestId(request.id)
+    try {
+      const { error } = await supabase.from('community_members').delete().eq('id', request.id)
+
+      if (error) {
+        Alert.alert('Error', error.message)
+        return
+      }
+
+      hapticLight()
+      setPendingRequests((prev) => prev.filter((r) => r.id !== request.id))
+    } finally {
+      setActingOnRequestId(null)
+    }
+  }
+
+  const renderPendingRequest = (request: PendingRequest) => {
+    const username = request.profiles?.username ?? 'unknown'
+    const avatarUrl = request.profiles?.avatar_url
+    const isActing = actingOnRequestId === request.id
+
+    return (
+      <View key={request.id} style={styles.pendingRequestRow}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.pendingRequestAvatar} contentFit="cover" />
+        ) : (
+          <View style={styles.pendingRequestAvatarPlaceholder}>
+            <Text style={styles.pendingRequestAvatarText}>{username[0]?.toUpperCase() ?? '?'}</Text>
+          </View>
+        )}
+        <Text style={styles.pendingRequestUsername} numberOfLines={1}>
+          @{username}
+        </Text>
+        <View style={styles.pendingRequestActions}>
+          <TouchableOpacity
+            style={styles.declineRequestButton}
+            onPress={() => handleDeclineRequest(request)}
+            disabled={isActing}
+            activeOpacity={0.8}>
+            <Text style={styles.declineRequestButtonText}>Decline</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.approveRequestButton}
+            onPress={() => handleApproveRequest(request)}
+            disabled={isActing}
+            activeOpacity={0.8}>
+            {isActing ? (
+              <ActivityIndicator size="small" color={theme.accentText} />
+            ) : (
+              <Text style={styles.approveRequestButtonText}>Approve</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
+
   const handleSettingsPress = () => {
     Alert.alert('Community Options', undefined, [
       { text: 'Delete Community', style: 'destructive', onPress: handleDeleteCommunity },
@@ -462,7 +570,7 @@ export default function CommunityDetailScreen() {
     if (!isMember) {
       Alert.alert('Join first', 'You need to join this community before posting gems.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Join', onPress: handleJoin },
+        { text: isInviteOnly ? 'Request to join' : 'Join', onPress: handleJoin },
       ])
       return
     }
@@ -501,7 +609,7 @@ export default function CommunityDetailScreen() {
     if (!isMember) {
       Alert.alert('Join first', 'You need to join this community before posting.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Join', onPress: handleJoin },
+        { text: isInviteOnly ? 'Request to join' : 'Join', onPress: handleJoin },
       ])
       return
     }
@@ -801,24 +909,35 @@ export default function CommunityDetailScreen() {
     }
 
     if (!isMember) {
+      const joinLabel = isPending ? 'Waiting for approval' : isInviteOnly ? 'Request to join' : 'Join Community'
       return (
         <View style={styles.chatGate}>
           <Ionicons name="chatbubbles-outline" size={48} color={theme.textTertiary} />
-          <Text style={styles.chatGateTitle}>Join to chat</Text>
-          <Text style={styles.chatGateSubtitle}>
-            Become a member to participate in the group conversation
+          <Text style={styles.chatGateTitle}>
+            {isPending ? 'Request pending' : 'Join to chat'}
           </Text>
-          <TouchableOpacity
-            style={styles.chatGateButton}
-            onPress={handleJoin}
-            disabled={joining}
-            activeOpacity={0.8}>
-            {joining ? (
-              <ActivityIndicator color={theme.accentText} />
-            ) : (
-              <Text style={styles.chatGateButtonText}>Join Community</Text>
-            )}
-          </TouchableOpacity>
+          <Text style={styles.chatGateSubtitle}>
+            {isPending
+              ? 'The community creator will review your request'
+              : 'Become a member to participate in the group conversation'}
+          </Text>
+          {!isPending ? (
+            <TouchableOpacity
+              style={styles.chatGateButton}
+              onPress={handleJoin}
+              disabled={joining}
+              activeOpacity={0.8}>
+              {joining ? (
+                <ActivityIndicator color={theme.accentText} />
+              ) : (
+                <Text style={styles.chatGateButtonText}>{joinLabel}</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.requestedBadge}>
+              <Text style={styles.requestedBadgeText}>Requested</Text>
+            </View>
+          )}
         </View>
       )
     }
@@ -962,19 +1081,37 @@ export default function CommunityDetailScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.membershipButton, isMember && styles.leaveButton]}
-          onPress={isMember ? handleLeave : handleJoin}
-          disabled={joining || leaving}
-          activeOpacity={0.8}>
+          style={[
+            styles.membershipButton,
+            isMember && styles.leaveButton,
+            isPending && styles.requestedButton,
+          ]}
+          onPress={isMember ? handleLeave : isPending ? undefined : handleJoin}
+          disabled={joining || leaving || isPending}
+          activeOpacity={isPending ? 1 : 0.8}>
           {joining || leaving ? (
             <ActivityIndicator size="small" color={isMember ? theme.danger : theme.accentText} />
           ) : (
-            <Text style={[styles.membershipButtonText, isMember && styles.leaveButtonText]}>
-              {isMember ? 'Leave' : 'Join'}
+            <Text
+              style={[
+                styles.membershipButtonText,
+                isMember && styles.leaveButtonText,
+                isPending && styles.requestedButtonText,
+              ]}>
+              {isMember ? 'Leave' : isPending ? 'Requested' : isInviteOnly ? 'Request to join' : 'Join'}
             </Text>
           )}
         </TouchableOpacity>
       </View>
+
+      {isCreator && isInviteOnly && pendingRequests.length > 0 ? (
+        <View style={styles.pendingRequestsSection}>
+          <Text style={styles.pendingRequestsTitle}>
+            Join requests ({pendingRequests.length})
+          </Text>
+          {pendingRequests.map(renderPendingRequest)}
+        </View>
+      ) : null}
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -1110,6 +1247,98 @@ const createStyles = (theme: Theme) =>
     },
     leaveButtonText: {
       color: theme.danger,
+    },
+    requestedButton: {
+      backgroundColor: theme.bgTertiary,
+      borderWidth: 0,
+    },
+    requestedButtonText: {
+      color: theme.textSecondary,
+    },
+    pendingRequestsSection: {
+      marginHorizontal: 16,
+      marginBottom: 4,
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 12,
+      padding: 12,
+      gap: 10,
+    },
+    pendingRequestsTitle: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 13,
+      color: theme.text,
+    },
+    pendingRequestRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    pendingRequestAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+    },
+    pendingRequestAvatarPlaceholder: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.bgTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pendingRequestAvatarText: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 14,
+      color: theme.textSecondary,
+    },
+    pendingRequestUsername: {
+      flex: 1,
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 13,
+      color: theme.text,
+    },
+    pendingRequestActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    declineRequestButton: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    declineRequestButtonText: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    approveRequestButton: {
+      backgroundColor: theme.accent,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      minWidth: 72,
+      alignItems: 'center',
+    },
+    approveRequestButtonText: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
+      fontSize: 12,
+      color: theme.accentText,
+    },
+    requestedBadge: {
+      backgroundColor: theme.bgTertiary,
+      borderRadius: 10,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      marginTop: 8,
+    },
+    requestedBadgeText: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 14,
+      color: theme.textSecondary,
     },
     tabContainer: {
       flexDirection: 'row',

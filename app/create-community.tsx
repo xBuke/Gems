@@ -40,6 +40,7 @@ const ICON_OPTIONS = [
 
 type IconName = (typeof ICON_OPTIONS)[number]
 type Visibility = 'private' | 'public'
+type JoinType = 'open' | 'invite_only'
 
 export default function CreateCommunityScreen() {
   const { theme } = useTheme()
@@ -56,7 +57,10 @@ export default function CreateCommunityScreen() {
   const [selectedIcon, setSelectedIcon] = useState<IconName>('people')
   const [selectedColor, setSelectedColor] = useState(theme.accent)
   const [visibility, setVisibility] = useState<Visibility>('public')
+  const [joinType, setJoinType] = useState<JoinType>('open')
   const [submitting, setSubmitting] = useState(false)
+
+  const previewColor = selectedColor || theme.accent
 
   const colorOptions = useMemo(
     () => [theme.accent, theme.coral, '#7F77DD', '#E24B4A', '#378ADD', '#BA7517'],
@@ -81,6 +85,13 @@ export default function CreateCommunityScreen() {
     init()
   }, [])
 
+  const handleVisibilityChange = (next: Visibility) => {
+    setVisibility(next)
+    if (next === 'public') {
+      setJoinType('open')
+    }
+  }
+
   const handleSubmit = async () => {
     if (!userId) return
 
@@ -88,6 +99,8 @@ export default function CreateCommunityScreen() {
       Alert.alert('Error', 'Please enter a community name.')
       return
     }
+
+    const resolvedJoinType: JoinType = visibility === 'private' ? 'invite_only' : joinType
 
     setSubmitting(true)
     try {
@@ -102,6 +115,7 @@ export default function CreateCommunityScreen() {
           icon: selectedIcon,
           color: selectedColor,
           visibility,
+          join_type: resolvedJoinType,
         })
         .select('id')
         .single()
@@ -114,6 +128,7 @@ export default function CreateCommunityScreen() {
       const { error: memberError } = await supabase.from('community_members').insert({
         user_id: userId,
         community_id: community.id,
+        status: 'accepted',
       })
 
       if (memberError) {
@@ -187,6 +202,19 @@ export default function CreateCommunityScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
+        <View style={styles.coverPreview}>
+          <View style={[styles.coverIconCircle, { backgroundColor: previewColor }]}>
+            <Ionicons
+              name={selectedIcon as keyof typeof Ionicons.glyphMap}
+              size={32}
+              color="#FFFFFF"
+            />
+          </View>
+          <Text style={styles.coverName} numberOfLines={2}>
+            {name.trim() || 'Community name'}
+          </Text>
+        </View>
+
         <Text style={styles.fieldLabel}>Community name</Text>
         <TextInput
           style={styles.input}
@@ -293,7 +321,7 @@ export default function CreateCommunityScreen() {
         <View style={styles.visibilityRow}>
           <TouchableOpacity
             style={[styles.visibilityCard, visibility === 'public' && { borderColor: theme.accent }]}
-            onPress={() => setVisibility('public')}
+            onPress={() => handleVisibilityChange('public')}
             activeOpacity={0.8}>
             <Ionicons name="globe" size={22} color={theme.accent} />
             <Text style={styles.visibilityTitle}>Public</Text>
@@ -301,13 +329,37 @@ export default function CreateCommunityScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.visibilityCard, visibility === 'private' && { borderColor: theme.accent }]}
-            onPress={() => setVisibility('private')}
+            onPress={() => handleVisibilityChange('private')}
             activeOpacity={0.8}>
             <Ionicons name="lock-closed" size={22} color={theme.accent} />
             <Text style={styles.visibilityTitle}>Private</Text>
             <Text style={styles.visibilitySubtitle}>Hidden from Discover, joinable via direct link</Text>
           </TouchableOpacity>
         </View>
+
+        {visibility === 'public' ? (
+          <>
+            <Text style={styles.fieldLabel}>Who can join</Text>
+            <View style={styles.visibilityRow}>
+              <TouchableOpacity
+                style={[styles.visibilityCard, joinType === 'open' && { borderColor: theme.accent }]}
+                onPress={() => setJoinType('open')}
+                activeOpacity={0.8}>
+                <Ionicons name="enter-outline" size={22} color={theme.accent} />
+                <Text style={styles.visibilityTitle}>Open</Text>
+                <Text style={styles.visibilitySubtitle}>Anyone can join instantly</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.visibilityCard, joinType === 'invite_only' && { borderColor: theme.accent }]}
+                onPress={() => setJoinType('invite_only')}
+                activeOpacity={0.8}>
+                <Ionicons name="mail-unread-outline" size={22} color={theme.accent} />
+                <Text style={styles.visibilityTitle}>Invite only</Text>
+                <Text style={styles.visibilitySubtitle}>You approve each join request</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : null}
 
         <PressableScale
           style={styles.submitButton}
@@ -356,6 +408,30 @@ const createStyles = (theme: Theme) =>
     scrollContent: {
       paddingHorizontal: 16,
       paddingBottom: 32,
+    },
+    coverPreview: {
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 16,
+      paddingVertical: 24,
+      paddingHorizontal: 16,
+      marginTop: 8,
+      gap: 12,
+    },
+    coverIconCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    coverName: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 20,
+      color: theme.text,
+      textAlign: 'center',
     },
     fieldLabel: {
       color: theme.textSecondary,

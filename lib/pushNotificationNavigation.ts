@@ -78,7 +78,8 @@ export function navigateFromPushNotification(router: Router, rawData: Record<str
       }
       break;
     }
-    case 'community_post': {
+    case 'community_post':
+    case 'community_join_request': {
       if (data.community_id) {
         router.push({ pathname: '/community/[id]', params: { id: data.community_id } });
         return;

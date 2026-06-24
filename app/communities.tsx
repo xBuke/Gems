@@ -6,7 +6,10 @@ import {
   canJoinMoreCommunities,
   fetchCommunities,
   fetchMyCommunities,
+  fetchMyMemberships,
   getCommunityMemberCount,
+  type CommunityJoinType,
+  type CommunityMemberStatus,
 } from '@/lib/communities'
 import { hapticLight, hapticSuccess } from '@/lib/haptics'
 import { shadows } from '@/lib/spacing'
@@ -37,6 +40,7 @@ type Community = {
   location_focus?: string | null
   icon: string
   color: string
+  join_type?: CommunityJoinType | null
   creator?: { username: string } | null
 }
 
@@ -50,6 +54,7 @@ export default function CommunitiesScreen() {
   const [myCommunities, setMyCommunities] = useState<Community[]>([])
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({})
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set())
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [joiningId, setJoiningId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -66,14 +71,28 @@ export default function CommunitiesScreen() {
     const premium = await checkIsPremium()
     setIsPremium(premium)
 
-    const [discover, mine] = await Promise.all([
+    const [discover, mine, memberships] = await Promise.all([
       fetchCommunities(),
       user ? fetchMyCommunities(user.id) : Promise.resolve([]),
+      user ? fetchMyMemberships(user.id) : Promise.resolve([]),
     ])
 
     setDiscoverCommunities(discover as Community[])
     setMyCommunities(mine as Community[])
-    setJoinedIds(new Set((mine as Community[]).map((c) => c.id)))
+    setJoinedIds(
+      new Set(
+        memberships
+          .filter((m: { community_id: string; status: CommunityMemberStatus }) => m.status === 'accepted')
+          .map((m: { community_id: string }) => m.community_id),
+      ),
+    )
+    setPendingIds(
+      new Set(
+        memberships
+          .filter((m: { community_id: string; status: CommunityMemberStatus }) => m.status === 'pending')
+          .map((m: { community_id: string }) => m.community_id),
+      ),
+    )
 
     const allIds = [...new Set([...(discover as Community[]).map((c) => c.id), ...(mine as Community[]).map((c) => c.id)])]
     const counts: Record<string, number> = {}
@@ -101,8 +120,9 @@ export default function CommunitiesScreen() {
     router.push('/create-community')
   }
 
-  const handleJoin = async (communityId: string) => {
-    if (!userId || joinedIds.has(communityId)) return
+  const handleJoin = async (community: Community) => {
+    const communityId = community.id
+    if (!userId || joinedIds.has(communityId) || pendingIds.has(communityId)) return
 
     const allowed = await canJoinMoreCommunities(userId)
     if (!allowed) {
@@ -117,12 +137,16 @@ export default function CommunitiesScreen() {
       return
     }
 
+    const isInviteOnly = community.join_type === 'invite_only'
+    const memberStatus = isInviteOnly ? 'pending' : 'accepted'
+
     setJoiningId(communityId)
     hapticLight()
     try {
       const { error } = await supabase.from('community_members').insert({
         user_id: userId,
         community_id: communityId,
+        status: memberStatus,
       })
 
       if (error) {
@@ -131,11 +155,15 @@ export default function CommunitiesScreen() {
       }
 
       hapticSuccess()
-      setJoinedIds((prev) => new Set(prev).add(communityId))
-      setMemberCounts((prev) => ({
-        ...prev,
-        [communityId]: (prev[communityId] ?? 0) + 1,
-      }))
+      if (isInviteOnly) {
+        setPendingIds((prev) => new Set(prev).add(communityId))
+      } else {
+        setJoinedIds((prev) => new Set(prev).add(communityId))
+        setMemberCounts((prev) => ({
+          ...prev,
+          [communityId]: (prev[communityId] ?? 0) + 1,
+        }))
+      }
     } finally {
       setJoiningId(null)
     }
@@ -143,7 +171,12 @@ export default function CommunitiesScreen() {
 
   const renderCommunityCard = (community: Community, showJoinButton: boolean) => {
     const isJoined = joinedIds.has(community.id)
+    const isPending = pendingIds.has(community.id)
+    const isInviteOnly = community.join_type === 'invite_only'
     const count = memberCounts[community.id] ?? 0
+
+    const joinLabel = isJoined ? 'Joined' : isPending ? 'Requested' : isInviteOnly ? 'Request to join' : 'Join'
+    const joinDisabled = isJoined || isPending || joiningId === community.id
 
     return (
       <TouchableOpacity
@@ -189,16 +222,28 @@ export default function CommunitiesScreen() {
 
           {showJoinButton && (
             <PressableScale
-              style={[styles.joinButton, isJoined && styles.joinedButton]}
+              style={[
+                styles.joinButton,
+                isJoined && styles.joinedButton,
+                isPending && styles.requestedButton,
+              ]}
               onPress={() => {
-                if (!isJoined) handleJoin(community.id)
+                if (!joinDisabled) handleJoin(community)
               }}
-              disabled={isJoined || joiningId === community.id}>
+              disabled={joinDisabled}>
               {joiningId === community.id ? (
-                <ActivityIndicator size="small" color={isJoined ? theme.accent : theme.accentText} />
+                <ActivityIndicator
+                  size="small"
+                  color={isJoined ? theme.accent : isPending ? theme.textSecondary : theme.accentText}
+                />
               ) : (
-                <Text style={[styles.joinButtonText, isJoined && styles.joinedButtonText]}>
-                  {isJoined ? 'Joined' : 'Join'}
+                <Text
+                  style={[
+                    styles.joinButtonText,
+                    isJoined && styles.joinedButtonText,
+                    isPending && styles.requestedButtonText,
+                  ]}>
+                  {joinLabel}
                 </Text>
               )}
             </PressableScale>
@@ -430,5 +475,12 @@ const createStyles = (theme: Theme) =>
     },
     joinedButtonText: {
       color: theme.accent,
+    },
+    requestedButton: {
+      backgroundColor: theme.bgTertiary,
+      borderWidth: 0,
+    },
+    requestedButtonText: {
+      color: theme.textSecondary,
     },
   })

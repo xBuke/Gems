@@ -20,6 +20,7 @@ export const fetchMyCommunityIds = async (userId: string | null): Promise<string
     .from('community_members')
     .select('community_id')
     .eq('user_id', userId)
+    .eq('status', 'accepted')
 
   return memberships?.map((m: { community_id: string }) => m.community_id) || []
 }
