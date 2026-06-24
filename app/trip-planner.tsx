@@ -9,6 +9,7 @@ import { navigateToGemWithSharedTransition } from '@/lib/gemSharedTransition';
 import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { shadows } from '@/lib/spacing';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -18,6 +19,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -432,15 +434,16 @@ export default function TripPlannerScreen() {
           })}
         </ScrollView>
 
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({ pressed }) => [
             styles.searchButton,
             searching && styles.searchButtonLoading,
             !destName && styles.searchButtonDisabled,
+            pressed && Platform.OS !== 'android' && { opacity: 0.8 },
           ]}
           disabled={!destName || searching}
           onPress={handleSearch}
-          activeOpacity={0.8}>
+          android_ripple={{ color: theme.accentSub, borderless: false }}>
           {searching ? (
             <View style={styles.searchButtonLoadingContent}>
               <SearchSpinner color={theme.accent} />
@@ -449,7 +452,7 @@ export default function TripPlannerScreen() {
           ) : (
             <Text style={styles.searchButtonText}>Search</Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
 
         {searching && (
           <View style={styles.resultsSection}>
@@ -723,6 +726,7 @@ const createStyles = (theme: Theme) =>
       borderRadius: 12,
       overflow: 'hidden',
       marginBottom: 10,
+      ...shadows.card,
     },
     listCardImageWrap: {
       width: 90,

@@ -9,6 +9,7 @@ import {
 } from '@/lib/onboarding'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
+import { hapticSuccess } from '@/lib/haptics'
 import { supabase } from '@/lib/supabase'
 import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
@@ -624,6 +625,7 @@ export default function OnboardingScreen() {
         .update({ is_premium: true, trial_ends_at: trialEnd.toISOString() })
         .eq('id', userId)
     }
+    hapticSuccess()
     animateStepChange(12)
   }
 

@@ -313,6 +313,7 @@ export default function PaywallScreen() {
             styles.ctaButton,
             { backgroundColor: isLifetime ? theme.coral : theme.accent },
           ]}
+          androidRippleColor={theme.accentSub}
           onPress={handlePurchase}>
           <Text style={styles.ctaButtonText}>{ctaText}</Text>
         </PressableScale>

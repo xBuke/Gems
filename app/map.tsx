@@ -27,6 +27,7 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  Pressable,
   Alert,
   ScrollView,
   StyleSheet,
@@ -786,8 +787,11 @@ export default function MapScreen() {
                   )}
                 </View>
 
-                <TouchableOpacity
-                  style={styles.checkInButton}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.checkInButton,
+                    pressed && Platform.OS !== 'android' && { opacity: 0.8 },
+                  ]}
                   onPress={() =>
                     navigateToGemWithSharedTransition(
                       router,
@@ -800,9 +804,9 @@ export default function MapScreen() {
                       reduceMotion,
                     )
                   }
-                  activeOpacity={0.8}>
+                  android_ripple={{ color: theme.accentSub, borderless: false }}>
                   <Text style={styles.checkInButtonText}>Check In</Text>
-                </TouchableOpacity>
+                </Pressable>
 
                 <View ref={sheetImageRef} style={styles.sheetImageWrap} collapsable={false}>
                   {selectedGem.image_url ? (

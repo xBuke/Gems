@@ -1671,6 +1671,7 @@ export default function ProfileScreen() {
                       ? styles.requestedButton
                       : styles.followButton
                 }
+                androidRippleColor={theme.accentSub}
                 onPress={isFollowing || isRequested ? handleUnfollow : handleFollow}
                 disabled={isRequested}>
                 <Text

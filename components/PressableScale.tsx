@@ -1,9 +1,16 @@
 import {
-  TouchableOpacity,
+  Platform,
+  Pressable,
   type GestureResponderEvent,
-  type TouchableOpacityProps,
+  type PressableProps,
+  type PressableStateCallbackType,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+
+type PressableScaleProps = PressableProps & {
+  androidRippleColor?: string;
+  activeOpacity?: number;
+};
 
 export const PressableScale = ({
   children,
@@ -11,9 +18,10 @@ export const PressableScale = ({
   onPressIn,
   onPressOut,
   activeOpacity,
+  androidRippleColor,
   disabled,
   ...props
-}: TouchableOpacityProps) => {
+}: PressableScaleProps) => {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -32,16 +40,29 @@ export const PressableScale = ({
     onPressOut?.(e);
   };
 
+  const resolveStyle = (state: PressableStateCallbackType) => {
+    const baseStyle = typeof style === 'function' ? style(state) : style;
+    if (activeOpacity != null && activeOpacity < 1 && state.pressed) {
+      return [baseStyle, { opacity: activeOpacity }];
+    }
+    return baseStyle;
+  };
+
   return (
-    <Animated.View style={[animatedStyle, style]}>
-      <TouchableOpacity
+    <Animated.View style={animatedStyle}>
+      <Pressable
         {...props}
         disabled={disabled}
-        activeOpacity={activeOpacity ?? 1}
+        style={resolveStyle}
+        android_ripple={
+          Platform.OS === 'android' && androidRippleColor
+            ? { color: androidRippleColor, borderless: false }
+            : undefined
+        }
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}>
         {children}
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 };

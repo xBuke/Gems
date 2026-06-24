@@ -8,7 +8,8 @@ import {
   fetchMyCommunities,
   getCommunityMemberCount,
 } from '@/lib/communities'
-import { hapticLight } from '@/lib/haptics'
+import { hapticLight, hapticSuccess } from '@/lib/haptics'
+import { shadows } from '@/lib/spacing'
 import { checkIsPremium } from '@/lib/paywall'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
@@ -129,6 +130,7 @@ export default function CommunitiesScreen() {
         return
       }
 
+      hapticSuccess()
       setJoinedIds((prev) => new Set(prev).add(communityId))
       setMemberCounts((prev) => ({
         ...prev,
@@ -343,6 +345,7 @@ const createStyles = (theme: Theme) =>
       borderRadius: 16,
       padding: 14,
       marginBottom: 10,
+      ...shadows.card,
     },
     cardTop: {
       flexDirection: 'row',

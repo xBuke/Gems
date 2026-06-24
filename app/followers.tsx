@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -241,8 +243,11 @@ export default function FollowersScreen() {
               : 'Follow';
 
         return (
-          <TouchableOpacity
-            style={buttonStyle}
+          <Pressable
+            style={({ pressed }) => [
+              buttonStyle,
+              pressed && Platform.OS !== 'android' && { opacity: 0.8 },
+            ]}
             onPress={() => {
               if (isFollowing) {
                 handleUnfollow(item.id, item.username);
@@ -250,15 +255,18 @@ export default function FollowersScreen() {
                 handleFollow(item.id);
               }
             }}
-            activeOpacity={0.8}>
+            android_ripple={{ color: theme.accentSub, borderless: false }}>
             <Text style={textStyle}>{label}</Text>
-          </TouchableOpacity>
+          </Pressable>
         );
       }
 
       return (
-        <TouchableOpacity
-          style={isFollowing ? styles.followingButton : styles.followButton}
+        <Pressable
+          style={({ pressed }) => [
+            isFollowing ? styles.followingButton : styles.followButton,
+            pressed && Platform.OS !== 'android' && { opacity: 0.8 },
+          ]}
           onPress={() => {
             if (isFollowing) {
               handleUnfollow(item.id, item.username);
@@ -266,11 +274,11 @@ export default function FollowersScreen() {
               handleFollow(item.id);
             }
           }}
-          activeOpacity={0.8}>
+          android_ripple={{ color: theme.accentSub, borderless: false }}>
           <Text style={isFollowing ? styles.followingButtonText : styles.followButtonText}>
             {isFollowing ? 'Following' : 'Follow'}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       );
     };
 

@@ -31,6 +31,7 @@ import {
   KeyboardAvoidingView,
   Linking,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -1011,11 +1012,19 @@ export default function GemDetailScreen() {
               <Ionicons name="navigate" size={18} color={theme.accent} />
               <Text style={styles.navigateButtonText}>Navigate</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.beenHereButton, visitVerified && styles.beenHereButtonVerified]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.beenHereButton,
+                visitVerified && styles.beenHereButtonVerified,
+                pressed && !visitVerified && Platform.OS !== 'android' && { opacity: 0.8 },
+              ]}
               onPress={handleBeenHere}
               disabled={visitVerified}
-              activeOpacity={0.8}>
+              android_ripple={
+                visitVerified
+                  ? undefined
+                  : { color: theme.accentSub, borderless: false }
+              }>
               <Ionicons
                 name={visitVerified ? 'checkmark-circle' : 'location'}
                 size={18}
@@ -1028,7 +1037,7 @@ export default function GemDetailScreen() {
                 ]}>
                 {visitVerified ? 'Check In ✓' : 'Check In'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <Text style={styles.commentsTitle}>Comments ({comments.length})</Text>

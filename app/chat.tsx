@@ -19,6 +19,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -515,13 +516,19 @@ export default function ChatScreen() {
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
             />
-            <TouchableOpacity
-              style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.sendButton,
+                !canSend && styles.sendButtonDisabled,
+                pressed && canSend && Platform.OS !== 'android' && { opacity: 0.8 },
+              ]}
               onPress={handleSend}
-              activeOpacity={0.8}
-              disabled={!canSend}>
+              disabled={!canSend}
+              android_ripple={
+                canSend ? { color: theme.accentSub, borderless: false } : undefined
+              }>
               <Ionicons name="send" size={18} color={canSend ? theme.background : theme.textTertiary} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>

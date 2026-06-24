@@ -11,6 +11,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -175,17 +176,25 @@ export default function EditHomeTownScreen() {
             )}
           </View>
 
-          <TouchableOpacity
-            style={[styles.saveButton, (!cityQuery.trim() || saving) && styles.saveButtonDisabled]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.saveButton,
+              (!cityQuery.trim() || saving) && styles.saveButtonDisabled,
+              pressed && cityQuery.trim() && !saving && Platform.OS !== 'android' && { opacity: 0.8 },
+            ]}
             disabled={!cityQuery.trim() || saving}
             onPress={handleSave}
-            activeOpacity={0.8}>
+            android_ripple={
+              cityQuery.trim() && !saving
+                ? { color: theme.accentSub, borderless: false }
+                : undefined
+            }>
             {saving ? (
               <ActivityIndicator size="small" color={theme.accentText} />
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
       </KeyboardAvoidingView>

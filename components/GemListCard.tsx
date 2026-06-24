@@ -2,6 +2,7 @@ import { CATEGORIES } from '@/lib/categories'
 import { formatCoordinates } from '@/lib/coordinates'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
+import { shadows } from '@/lib/spacing'
 import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
 import { useMemo } from 'react'
@@ -98,6 +99,7 @@ const createStyles = (theme: Theme) =>
       borderColor: theme.border,
       borderRadius: 12,
       overflow: 'hidden',
+      ...shadows.card,
     },
     listCardImageWrap: {
       width: 90,

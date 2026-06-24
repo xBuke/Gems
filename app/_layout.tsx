@@ -23,6 +23,8 @@ import { Platform, View } from 'react-native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+const DARK_HERO_STATUS_BAR_ROUTES = new Set(['map', 'onboarding', 'paywall', 'gem']);
+
 function OnboardingGate() {
   const router = useRouter();
   const segments = useSegments();
@@ -74,18 +76,25 @@ function OfflineShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Routes with dark imagery/backgrounds always need light status-bar content. */
-const LIGHT_STATUS_BAR_ROUTES = new Set(['map', 'onboarding', 'paywall', 'gem']);
-
 function AdaptiveStatusBar() {
   const segments = useSegments();
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
   const rootRoute = segments[0];
 
-  const forceLightContent = rootRoute != null && LIGHT_STATUS_BAR_ROUTES.has(rootRoute);
+  const forceLightContent =
+    rootRoute != null && DARK_HERO_STATUS_BAR_ROUTES.has(rootRoute);
   const style = forceLightContent ? 'light' : isDark ? 'light' : 'dark';
+  const backgroundColor =
+    forceLightContent ? darkTheme.background : theme.background;
 
-  return <StatusBar style={style} />;
+  return (
+    <StatusBar
+      style={style}
+      {...(Platform.OS === 'android'
+        ? { backgroundColor, translucent: false }
+        : {})}
+    />
+  );
 }
 
 function RootNavigator() {
