@@ -7,6 +7,8 @@ import {
   type CustomCategory,
 } from '@/lib/customCategories';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
+import RateAppSheet from '@/components/RateAppSheet';
+import { shouldShowRatingPrompt } from '@/lib/appRating';
 import { AppBottomSheetModal, type AppBottomSheetModalRef } from '@/components/AppBottomSheetModal';
 import { ModalEntryWrapper } from '@/components/ModalEntryWrapper';
 import { PressableScale } from '@/components/PressableScale';
@@ -118,6 +120,8 @@ export default function AddGemScreen() {
     null,
   );
   const [pendingSuccessRoute, setPendingSuccessRoute] = useState<string | null>(null);
+  const [rateAppSheetVisible, setRateAppSheetVisible] = useState(false);
+  const [pendingRatingAfterAchievement, setPendingRatingAfterAchievement] = useState(false);
   const [loadingGem, setLoadingGem] = useState(isEditMode);
   const [visibility, setVisibility] = useState<GemVisibility>('public');
   const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
@@ -412,16 +416,31 @@ export default function AddGemScreen() {
 
     const newAchievements = await checkAndUnlockAchievements(user.id);
     const successRoute = communityId ? '/community/' + communityId : '/map';
+    const showRatingPrompt = await shouldShowRatingPrompt(user.id);
 
     if (newAchievements.length > 0) {
       setUnlockedBadge(newAchievements[0]);
       setUnlockCoords({ latitude: finalLatitude, longitude: finalLongitude });
       setPendingSuccessRoute(successRoute);
+      setPendingRatingAfterAchievement(showRatingPrompt);
       Alert.alert('Gem dropped! 🎉');
+    } else if (showRatingPrompt) {
+      setPendingSuccessRoute(successRoute);
+      Alert.alert('Gem dropped! 🎉', undefined, [
+        { text: 'OK', onPress: () => setRateAppSheetVisible(true) },
+      ]);
     } else {
       Alert.alert('Gem dropped! 🎉', undefined, [{ text: 'OK', onPress: () => router.replace(successRoute) }]);
     }
   };
+
+  const handleRateAppSheetClose = useCallback(() => {
+    setRateAppSheetVisible(false);
+    if (pendingSuccessRoute) {
+      router.replace(pendingSuccessRoute);
+      setPendingSuccessRoute(null);
+    }
+  }, [pendingSuccessRoute, router]);
 
   const updateGem = async () => {
     if (!editGemId) return;
@@ -1099,12 +1118,19 @@ export default function AddGemScreen() {
         onClose={() => {
           setUnlockedBadge(null);
           setUnlockCoords(null);
+          if (pendingRatingAfterAchievement) {
+            setPendingRatingAfterAchievement(false);
+            setRateAppSheetVisible(true);
+            return;
+          }
           if (pendingSuccessRoute) {
             router.replace(pendingSuccessRoute);
             setPendingSuccessRoute(null);
           }
         }}
       />
+
+      <RateAppSheet visible={rateAppSheetVisible} onClose={handleRateAppSheetClose} />
 
       {userId ? (
         <GemPhotoPickerSheet

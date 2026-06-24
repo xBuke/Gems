@@ -1,3 +1,4 @@
+import { ensureInstallDateRecorded } from '@/lib/appRating';
 import { useAppFonts } from '@/lib/fonts';
 import { hasCompletedOnboarding, syncPendingPreferences } from '@/lib/onboarding';
 import {
@@ -149,6 +150,8 @@ export default function RootLayout() {
   const [fontsLoaded] = useAppFonts();
 
   useEffect(() => {
+    void ensureInstallDateRecorded();
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         startTracking(session.user.id);

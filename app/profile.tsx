@@ -27,6 +27,7 @@ import { useToast } from '@/lib/ToastContext';
 import { sendPushNotification } from '@/lib/sendPushNotification';
 import { supabase } from '@/lib/supabase';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
+import { BillingFailureCard } from '@/components/BillingFailureCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PressableScale } from '@/components/PressableScale';
@@ -1202,6 +1203,11 @@ export default function ProfileScreen() {
     selectedCity != null &&
     selectedCity.name !== profile.home_town;
 
+  // TODO: wire to RevenueCat billing issue webhook once integrated
+  const hasBillingFailure = false;
+  const billingGraceDaysRemaining = 7;
+  const showBillingFailureBanner = isOwnProfile && isPremium && hasBillingFailure;
+
   const renderLocaleExpertBadges = () => {
     if (localeBadges.length === 0) return null;
 
@@ -1510,6 +1516,10 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
         </View>
+
+        {showBillingFailureBanner ? (
+          <BillingFailureCard daysRemaining={billingGraceDaysRemaining} />
+        ) : null}
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
