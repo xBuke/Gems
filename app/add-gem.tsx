@@ -19,23 +19,29 @@ import { formatLatitude } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { resolveCityName } from '@/lib/reverseGeocode';
 import { hapticError, hapticLight, hapticSuccess } from '@/lib/haptics';
-import { compressImage } from '@/lib/imageCompress';
+import GemPhotoPickerSheet, {
+  THUMB_SIZE,
+  type GemPhotoPickerSheetRef,
+} from '@/components/GemPhotoPickerSheet';
 import { createGemSharePost } from '@/lib/communityPosts';
 import { deleteGem } from '@/lib/deleteGem';
+import {
+  fetchGemPhotos,
+  MAX_GEM_PHOTOS_PER_CONTRIBUTOR,
+  uploadAndInsertGemPhotos,
+  type LocalGemPhoto,
+} from '@/lib/gemPhotos';
 import type { GemVisibility } from '@/lib/gemVisibility';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModalProvider, BottomSheetView } from '@gorhom/bottom-sheet';
 import { addStreakBonus } from '@/lib/streak';
 import { useToast } from '@/lib/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -56,8 +62,6 @@ const STEP_INDICATOR_HEIGHT = 21;
 
 type LocationChoice = 'here' | 'else';
 
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
-
 const VISIBILITY_OPTIONS: { value: GemVisibility; label: string }[] = [
   { value: 'public', label: 'Public' },
   { value: 'friends', label: 'Friends' },
@@ -65,32 +69,6 @@ const VISIBILITY_OPTIONS: { value: GemVisibility; label: string }[] = [
 ];
 
 const DELETE_RED = '#F87171';
-
-const uploadImage = async (uri: string) => {
-  const fileName = `gem_${Date.now()}.jpg`;
-
-  const formData = new FormData();
-  formData.append('file', {
-    uri: uri,
-    name: fileName,
-    type: 'image/jpeg',
-  } as any);
-
-  const { error } = await supabase.storage
-    .from('gem-images')
-    .upload(fileName, formData, {
-      contentType: 'multipart/form-data',
-    });
-
-  if (error) {
-    console.error('Upload error:', error);
-    return null;
-  }
-
-  const { data: { publicUrl } } = supabase.storage.from('gem-images').getPublicUrl(fileName);
-
-  return publicUrl;
-};
 
 export default function AddGemScreen() {
   const { theme } = useTheme();
@@ -114,8 +92,9 @@ export default function AddGemScreen() {
     !Number.isNaN(parsedLat) &&
     !Number.isNaN(parsedLng);
 
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [ownerPhotos, setOwnerPhotos] = useState<LocalGemPhoto[]>([]);
+  const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
+  const photoPickerSheetRef = useRef<GemPhotoPickerSheetRef>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedMainCategory, setSelectedMainCategory] = useState<Category | null>(null);
@@ -188,8 +167,19 @@ export default function AddGemScreen() {
       setLatitude(gem.latitude);
       setLongitude(gem.longitude);
       setLocationDetected(true);
-      setExistingImageUrl(gem.image_url ?? null);
       setVisibility((gem.visibility as GemVisibility) ?? 'public');
+
+      const gemPhotos = await fetchGemPhotos(editGemId);
+      setOwnerPhotos(
+        gemPhotos
+          .filter((photo) => photo.contributor_id === user.id)
+          .map((photo) => ({
+            id: photo.id,
+            uri: photo.photo_url,
+            photoUrl: photo.photo_url,
+            isUploaded: true,
+          })),
+      );
 
       const tags = (gem.tags as string[] | null) ?? [];
       setSelectedTags(tags);
@@ -301,106 +291,6 @@ export default function AddGemScreen() {
     router.push({ pathname: '/map', params: { placeMode: 'true' } });
   };
 
-  const showPhotoTooLargeToast = (retry: () => void) => {
-    showToast({
-      type: 'error',
-      title: 'Upload failed',
-      message: 'Photo too large · max 10MB',
-      actionLabel: 'Retry',
-      onAction: retry,
-    });
-  };
-
-  const validatePhotoSize = async (uri: string, retry: () => void): Promise<boolean> => {
-    const info = await FileSystem.getInfoAsync(uri);
-    const size = info.exists && 'size' in info ? info.size ?? 0 : 0;
-    if (size > MAX_PHOTO_BYTES) {
-      showPhotoTooLargeToast(retry);
-      return false;
-    }
-    return true;
-  };
-
-  const openCamera = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera access is required to take a photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
-      base64: false,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      const assetSize = result.assets[0].fileSize;
-      if (assetSize && assetSize > MAX_PHOTO_BYTES) {
-        showPhotoTooLargeToast(openCamera);
-        return;
-      }
-      const valid = await validatePhotoSize(uri, openCamera);
-      if (!valid) return;
-      hapticLight();
-      setImageUri(uri);
-    }
-  };
-
-  const openGallery = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Gallery access is required to choose a photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 1,
-      base64: false,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      const assetSize = result.assets[0].fileSize;
-      if (assetSize && assetSize > MAX_PHOTO_BYTES) {
-        showPhotoTooLargeToast(openGallery);
-        return;
-      }
-      const valid = await validatePhotoSize(uri, openGallery);
-      if (!valid) return;
-      hapticLight();
-      setImageUri(uri);
-    }
-  };
-
-  const handleImagePress = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Take Photo', 'Choose from Gallery'],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            openCamera();
-          } else if (buttonIndex === 2) {
-            openGallery();
-          }
-        },
-      );
-    } else {
-      Alert.alert('Add Photo', 'Choose an option', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Take Photo', onPress: openCamera },
-        { text: 'Choose from Gallery', onPress: openGallery },
-      ]);
-    }
-  };
-
   const checkIfFirstInArea = async (lat: number, lng: number): Promise<boolean> => {
     const { data: nearbyGems } = await supabase
       .from('gems')
@@ -425,23 +315,14 @@ export default function AddGemScreen() {
       return;
     }
 
-    const compressedUri = imageUri ? await compressImage(imageUri) : null;
+    const pendingPhotoUris = ownerPhotos
+      .filter((photo) => !photo.isUploaded)
+      .map((photo) => photo.uri);
 
-    let imageUrl: string | null = null;
-    if (compressedUri) {
-      imageUrl = await uploadImage(compressedUri);
-      if (!imageUrl) {
-        hapticError();
-        showToast({
-          type: 'error',
-          title: 'Upload failed',
-          message: 'Could not upload photo',
-          actionLabel: 'Retry',
-          onAction: () => insertGem(verified),
-        });
-        return;
-      }
-    }
+    const firstExistingUrl =
+      ownerPhotos.find((photo) => photo.photoUrl)?.photoUrl ??
+      ownerPhotos.find((photo) => photo.isUploaded)?.uri ??
+      null;
 
     const finalLatitude = latitude!;
     const finalLongitude = longitude!;
@@ -461,7 +342,7 @@ export default function AddGemScreen() {
           latitude: finalLatitude,
           longitude: finalLongitude,
           user_id: user.id,
-          image_url: imageUrl,
+          image_url: firstExistingUrl,
           verified,
           is_local_pick: isLocal,
           is_first_in_area: isFirstInArea,
@@ -478,7 +359,7 @@ export default function AddGemScreen() {
           latitude: finalLatitude,
           longitude: finalLongitude,
           user_id: user.id,
-          image_url: imageUrl,
+          image_url: firstExistingUrl,
           verified,
           is_local_pick: isLocal,
           is_first_in_area: isFirstInArea,
@@ -495,6 +376,28 @@ export default function AddGemScreen() {
     if (error) {
       Alert.alert('Error', error.message);
       return;
+    }
+
+    if (newGem?.id && pendingPhotoUris.length > 0) {
+      const { photoUrls, error: photoError } = await uploadAndInsertGemPhotos(
+        newGem.id,
+        user.id,
+        pendingPhotoUris,
+      );
+
+      if (photoError) {
+        hapticError();
+        showToast({
+          type: 'error',
+          title: 'Photos not saved',
+          message: photoError,
+        });
+      } else if (photoUrls.length > 0 && !firstExistingUrl) {
+        await supabase
+          .from('gems')
+          .update({ image_url: photoUrls[0] })
+          .eq('id', newGem.id);
+      }
     }
 
     if (communityId && newGem?.id) {
@@ -529,32 +432,18 @@ export default function AddGemScreen() {
       return;
     }
 
-    let imageUrl = existingImageUrl;
-    if (imageUri) {
-      const compressedUri = await compressImage(imageUri);
-      const uploaded = await uploadImage(compressedUri);
-      if (!uploaded) {
-        hapticError();
-        showToast({
-          type: 'error',
-          title: 'Upload failed',
-          message: 'Could not upload photo',
-          actionLabel: 'Retry',
-          onAction: () => updateGem(),
-        });
-        return;
-      }
-      imageUrl = uploaded;
-    }
-
     const bestTime = customBestTime.trim() || selectedBestTime || null;
+    const coverImageUrl =
+      ownerPhotos.find((photo) => photo.photoUrl)?.photoUrl ??
+      ownerPhotos[0]?.uri ??
+      null;
 
     const basePayload = {
       title: name.trim(),
       description: description.trim(),
       tags: selectedTags.length > 0 ? selectedTags : null,
       best_time: bestTime,
-      image_url: imageUrl,
+      image_url: coverImageUrl,
       visibility,
     };
 
@@ -614,8 +503,7 @@ export default function AddGemScreen() {
     if (!editGemId) return;
 
     setDeleting(true);
-    const imageUrl = imageUri ? null : existingImageUrl;
-    const { error } = await deleteGem(editGemId, imageUrl);
+    const { error } = await deleteGem(editGemId, null);
     setDeleting(false);
     setDeleteSheetVisible(false);
     deleteSheetRef.current?.dismiss();
@@ -627,7 +515,7 @@ export default function AddGemScreen() {
 
     hapticSuccess();
     router.replace('/');
-  }, [editGemId, existingImageUrl, imageUri, router]);
+  }, [editGemId, router]);
 
   useEffect(() => {
     if (deleteSheetVisible) {
@@ -756,22 +644,56 @@ export default function AddGemScreen() {
   const addGemStep = !showForm ? 1 : selectedMainCategory || selectedCustomCategory ? 3 : 2;
   const addGemStepLabels = ['LOCATION', 'DETAILS', 'CATEGORY'] as const;
 
-  const displayImageUri = imageUri ?? existingImageUrl;
+  const atPhotoCap = ownerPhotos.length >= MAX_GEM_PHOTOS_PER_CONTRIBUTOR;
+
+  const openPhotoPicker = useCallback(() => {
+    setPhotoPickerVisible(true);
+  }, []);
+
+  const closePhotoPicker = useCallback(() => {
+    setPhotoPickerVisible(false);
+  }, []);
+
+  useEffect(() => {
+    if (photoPickerVisible) {
+      photoPickerSheetRef.current?.present();
+      return;
+    }
+    photoPickerSheetRef.current?.dismiss();
+  }, [photoPickerVisible]);
+
+  const refreshOwnerPhotos = useCallback(async () => {
+    if (!editGemId || !userId) return;
+    const gemPhotos = await fetchGemPhotos(editGemId);
+    setOwnerPhotos(
+      gemPhotos
+        .filter((photo) => photo.contributor_id === userId)
+        .map((photo) => ({
+          id: photo.id,
+          uri: photo.photo_url,
+          photoUrl: photo.photo_url,
+          isUploaded: true,
+        })),
+    );
+  }, [editGemId, userId]);
 
   if (isEditMode && loadingGem) {
     return (
       <ModalEntryWrapper>
-        <SafeAreaView style={styles.container} edges={['top']}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator color={theme.accent} size="large" />
-          </View>
-        </SafeAreaView>
+        <BottomSheetModalProvider>
+          <SafeAreaView style={styles.container} edges={['top']}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator color={theme.accent} size="large" />
+            </View>
+          </SafeAreaView>
+        </BottomSheetModalProvider>
       </ModalEntryWrapper>
     );
   }
 
   return (
     <ModalEntryWrapper>
+    <BottomSheetModalProvider>
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         {isEditMode ? (
@@ -896,43 +818,55 @@ export default function AddGemScreen() {
 
         {showForm && (
           <>
-            <TouchableOpacity style={styles.imagePicker} onPress={handleImagePress} activeOpacity={0.8}>
-              {displayImageUri ? (
-                <>
+            <View style={styles.photoSection}>
+              <View style={styles.photoSectionHeader}>
+                <Text style={styles.journalFieldLabel}>PHOTOS</Text>
+                {atPhotoCap ? <Text style={styles.photoCapIndicator}>5/5</Text> : null}
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.photoPreviewRow}>
+                {ownerPhotos.map((photo) => (
                   <Image
-                    source={{ uri: displayImageUri }}
-                    style={styles.selectedImage}
+                    key={photo.id}
+                    source={{ uri: photo.uri }}
+                    style={styles.photoThumbnail}
                     contentFit="cover"
-                    transition={200}
+                    transition={150}
                     cachePolicy="memory-disk"
                   />
-                  {isEditMode ? (
-                    <TouchableOpacity
-                      style={styles.replacePhotoPill}
-                      onPress={handleImagePress}
-                      activeOpacity={0.8}>
-                      <Ionicons name="camera" size={14} color="#FFFFFF" />
-                      <Text style={styles.replacePhotoText}>Replace photo</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.imageEditButton}
-                      onPress={handleImagePress}
-                      activeOpacity={0.8}>
-                      <Ionicons name="camera" size={16} color={theme.text} />
-                    </TouchableOpacity>
-                  )}
-                </>
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Ionicons name="camera" size={40} color={theme.accent} />
-                  <Text style={styles.imagePlaceholderTitle}>Add a photo</Text>
-                  <Text style={styles.imagePlaceholderSubtitle}>
-                    Tap to choose from library or camera
+                ))}
+                {!atPhotoCap ? (
+                  <TouchableOpacity
+                    style={styles.photoAddTile}
+                    onPress={openPhotoPicker}
+                    activeOpacity={0.8}>
+                    <Ionicons name="add" size={28} color={theme.textTertiary} />
+                  </TouchableOpacity>
+                ) : null}
+              </ScrollView>
+              {ownerPhotos.length === 0 ? (
+                <TouchableOpacity
+                  style={styles.photoEmptyPrompt}
+                  onPress={openPhotoPicker}
+                  activeOpacity={0.8}>
+                  <Ionicons name="camera" size={32} color={theme.accent} />
+                  <Text style={styles.photoEmptyTitle}>Add photos</Text>
+                  <Text style={styles.photoEmptySubtitle}>
+                    Show other explorers what makes this gem special
                   </Text>
-                </View>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.photoManageLink}
+                  onPress={openPhotoPicker}
+                  activeOpacity={0.7}>
+                  <Ionicons name="images-outline" size={16} color={theme.accent} />
+                  <Text style={styles.photoManageText}>Manage photos</Text>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
 
             <View style={styles.formSection}>
               <Text style={styles.journalFieldLabel}>GEM NAME</Text>
@@ -1172,6 +1106,23 @@ export default function AddGemScreen() {
         }}
       />
 
+      {userId ? (
+        <GemPhotoPickerSheet
+          ref={photoPickerSheetRef}
+          visible={photoPickerVisible}
+          onClose={closePhotoPicker}
+          gemId={isEditMode ? editGemId : null}
+          contributorId={userId}
+          photos={ownerPhotos}
+          onPhotosChange={setOwnerPhotos}
+          onPersistedPhotosChange={() => {
+            if (isEditMode) {
+              refreshOwnerPhotos();
+            }
+          }}
+        />
+      ) : null}
+
       {isEditMode && (
         <AppBottomSheetModal
           ref={deleteSheetRef}
@@ -1202,6 +1153,7 @@ export default function AddGemScreen() {
         </AppBottomSheetModal>
       )}
     </SafeAreaView>
+    </BottomSheetModalProvider>
     </ModalEntryWrapper>
   );
 }
@@ -1331,6 +1283,78 @@ const createStyles = (theme: Theme) =>
     fontSize: 10,
     color: theme.accent,
     opacity: 0.7,
+  },
+  photoSection: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  photoSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  photoCapIndicator: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.textTertiary,
+    fontFamily: 'SpaceMono-Regular',
+  },
+  photoPreviewRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  photoThumbnail: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: 12,
+    backgroundColor: theme.bgTertiary,
+  },
+  photoAddTile: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: theme.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.card,
+  },
+  photoEmptyPrompt: {
+    height: 160,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: theme.border,
+    borderStyle: 'dashed',
+    backgroundColor: theme.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  photoEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: theme.text,
+    marginTop: 8,
+  },
+  photoEmptySubtitle: {
+    fontSize: 12,
+    color: theme.textTertiary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  photoManageLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+  },
+  photoManageText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.accent,
   },
   imagePicker: {
     height: 220,

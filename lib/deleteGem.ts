@@ -1,3 +1,4 @@
+import { deleteAllGemPhotos, deletePhotoFromStorage } from './gemPhotos';
 import { supabase } from './supabase';
 
 export async function deleteGem(
@@ -5,11 +6,10 @@ export async function deleteGem(
   imageUrl: string | null,
 ): Promise<{ error: string | null }> {
   try {
+    await deleteAllGemPhotos(gemId);
+
     if (imageUrl) {
-      const fileName = imageUrl.split('/').pop();
-      if (fileName) {
-        await supabase.storage.from('gem-images').remove([fileName]);
-      }
+      await deletePhotoFromStorage(imageUrl);
     }
 
     const { error } = await supabase.from('gems').delete().eq('id', gemId);

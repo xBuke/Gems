@@ -6,7 +6,10 @@ import { checkAndUnlockAchievements } from '@/lib/gamification';
 import {
   type CommunityGemInfo,
 } from '@/lib/gemVisibility';
+import GemPhotoGallery from '@/components/GemPhotoGallery';
 import { deleteGem } from '@/lib/deleteGem';
+import { fetchGemPhotos, type GemPhoto } from '@/lib/gemPhotos';
+import { checkIsPremium } from '@/lib/paywall';
 import { blockUser, getMyBlockedUsers } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -144,6 +147,8 @@ export default function GemDetailScreen() {
     id: string;
   } | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [gemPhotos, setGemPhotos] = useState<GemPhoto[]>([]);
+  const [isPremium, setIsPremium] = useState(false);
   const [unlockedBadge, setUnlockedBadge] = useState<string | null>(null);
   const [unlockCoords, setUnlockCoords] = useState<{ latitude: number; longitude: number } | null>(
     null,
@@ -271,6 +276,12 @@ export default function GemDetailScreen() {
     }
   }, [gemId, blockedUserIds]);
 
+  const loadGemPhotos = useCallback(async () => {
+    if (!gemId) return;
+    const photos = await fetchGemPhotos(gemId);
+    setGemPhotos(photos);
+  }, [gemId]);
+
   const fetchGem = useCallback(async () => {
     if (!id) return;
 
@@ -286,9 +297,10 @@ export default function GemDetailScreen() {
       setGem(data);
       const { data: { user } } = await supabase.auth.getUser();
       setIsOwner(user?.id === data.user_id);
+      await loadGemPhotos();
     }
     setLoading(false);
-  }, [id]);
+  }, [id, loadGemPhotos]);
 
   const fetchLikes = useCallback(async () => {
     if (!gemId) return;
@@ -328,6 +340,7 @@ export default function GemDetailScreen() {
       fetchGem();
       fetchVisitCount();
       fetchLikes();
+      checkIsPremium().then(setIsPremium);
     }, [fetchBlockedUsers, fetchGem, fetchLikes]),
   );
 
@@ -534,7 +547,7 @@ export default function GemDetailScreen() {
 
     hapticMedium();
 
-    const { error } = await deleteGem(gemId, gem.image_url);
+    const { error } = await deleteGem(gemId, null);
     if (error) {
       Alert.alert('Error', error);
       return;
@@ -851,34 +864,25 @@ export default function GemDetailScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: scrollBottomInset }}>
-        <View style={styles.hero}>
-          <View
-            ref={imageDestRef}
-            collapsable={false}
-            style={[
-              styles.heroImageMeasure,
-              (isAnimating || showFlyingLayer) && styles.heroImageHidden,
-            ]}>
-            {gem.image_url ? (
-              <Image
-                source={{ uri: gem.image_url }}
-                style={styles.heroImage}
-                contentFit="cover"
-                transition={200}
-                cachePolicy="memory-disk"
-              />
-            ) : (
-              <View style={styles.heroPlaceholder}>
-                <Ionicons name="location-outline" size={64} color={theme.accent} />
-              </View>
-            )}
-          </View>
+        <View style={styles.heroBlock}>
+          <GemPhotoGallery
+            photos={gemPhotos}
+            gemId={gem.id}
+            currentUserId={currentUserId}
+            isOwner={isOwner}
+            isPremium={isPremium}
+            fallbackImageUrl={gem.image_url}
+            imageDestRef={imageDestRef}
+            heroHidden={isAnimating || showFlyingLayer}
+            onPhotosUpdated={loadGemPhotos}
+          />
 
           <View
             style={[
               styles.heroOverlay,
               (isAnimating || showFlyingLayer) && styles.heroOverlayHidden,
-            ]}>
+            ]}
+            pointerEvents="box-none">
             <Animated.View
               entering={
                 useSharedTransition && !reduceMotion
@@ -1274,6 +1278,9 @@ const createStyles = (theme: Theme) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
+  heroBlock: {
+    position: 'relative',
+  },
   hero: {
     height: 320,
     backgroundColor: theme.bgTertiary,
@@ -1315,9 +1322,11 @@ const createStyles = (theme: Theme) =>
   },
   heroOverlay: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
     right: 0,
+    height: 320,
+    justifyContent: 'flex-end',
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     padding: 16,
   },
