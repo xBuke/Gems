@@ -74,6 +74,20 @@ function OfflineShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** Routes with dark imagery/backgrounds always need light status-bar content. */
+const LIGHT_STATUS_BAR_ROUTES = new Set(['map', 'onboarding', 'paywall', 'gem']);
+
+function AdaptiveStatusBar() {
+  const segments = useSegments();
+  const { isDark } = useTheme();
+  const rootRoute = segments[0];
+
+  const forceLightContent = rootRoute != null && LIGHT_STATUS_BAR_ROUTES.has(rootRoute);
+  const style = forceLightContent ? 'light' : isDark ? 'light' : 'dark';
+
+  return <StatusBar style={style} />;
+}
+
 function RootNavigator() {
   const { theme } = useTheme();
   const reduceMotion = useReduceMotion();
@@ -117,7 +131,7 @@ function RootNavigator() {
         <Stack.Screen name="community/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
       </Stack>
-      <StatusBar style="auto" />
+      <AdaptiveStatusBar />
     </OfflineShell>
   );
 }

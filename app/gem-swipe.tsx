@@ -44,7 +44,7 @@ import Reanimated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 32;
@@ -354,6 +354,7 @@ export default function GemSwipeScreen() {
   const router = useRouter();
   const reduceMotion = useReduceMotion();
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -762,7 +763,7 @@ export default function GemSwipeScreen() {
             {deck.length} gem{deck.length !== 1 ? 's' : ''} remaining
           </Text>
 
-          <View style={styles.actionButtons}>
+          <View style={[styles.actionButtons, { paddingBottom: insets.bottom + 16 }]}>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: theme.card, borderColor: theme.danger }]}
               onPress={() => handleButtonPress('skip')}
@@ -894,7 +895,6 @@ const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       alignItems: 'center',
       gap: 28,
-      paddingBottom: 32,
       paddingTop: 8,
     },
     actionButton: {

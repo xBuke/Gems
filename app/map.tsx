@@ -61,6 +61,11 @@ const INITIAL_REGION = {
   longitudeDelta: 3,
 };
 
+/** Extra space below the safe-area top inset for floating map controls. */
+const MAP_TOP_CONTROL_EXTRA = 21;
+const MAP_FLOATING_CONTROL_HEIGHT = 44;
+const MAP_FILTER_GAP = 10;
+
 type Category = (typeof CATEGORIES)[number];
 
 type Gem = {
@@ -94,6 +99,8 @@ export default function MapScreen() {
     focusLng?: string;
   }>();
   const insets = useSafeAreaInsets();
+  const topControlTop = insets.top + MAP_TOP_CONTROL_EXTRA;
+  const filterTop = topControlTop + MAP_FLOATING_CONTROL_HEIGHT + MAP_FILTER_GAP;
   const mapRef = useRef<MapView>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const tapSheetRef = useRef<BottomSheet>(null);
@@ -506,18 +513,21 @@ export default function MapScreen() {
       </MapView>
 
       <TouchableOpacity
-        style={styles.backButton}
+        style={[styles.backButton, { top: topControlTop }]}
         onPress={() => goBackOrTab(router, 'index')}
         activeOpacity={0.8}>
         <Ionicons name="arrow-back" size={20} color={theme.text} />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocation} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.myLocationButton, { top: topControlTop }]}
+        onPress={handleMyLocation}
+        activeOpacity={0.8}>
         <Ionicons name="locate" size={22} color={theme.accent} />
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.placeButton}
+        style={[styles.placeButton, { top: topControlTop }]}
         onPress={togglePlacingMode}
         activeOpacity={0.8}>
         <Text style={styles.placeButtonText}>
@@ -525,12 +535,22 @@ export default function MapScreen() {
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.layerButton} onPress={cycleMapType} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.layerButton, { top: topControlTop }]}
+        onPress={cycleMapType}
+        activeOpacity={0.8}>
         <Text style={styles.layerButtonText}>{currentMapType.label}</Text>
       </TouchableOpacity>
 
       {gemsLoading && (
-        <View style={{ position: 'absolute', top: 110, left: 0, right: 0, alignItems: 'center' }}>
+        <View
+          style={{
+            position: 'absolute',
+            top: topControlTop + MAP_FLOATING_CONTROL_HEIGHT + 2,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+          }}>
           <View style={{ backgroundColor: theme.card, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ActivityIndicator size="small" color={theme.accent} />
             <Text style={{ color: theme.text, fontSize: 12 }}>Loading gems...</Text>
@@ -539,7 +559,7 @@ export default function MapScreen() {
       )}
 
       {mapError && (
-        <View style={styles.mapErrorBanner}>
+        <View style={[styles.mapErrorBanner, { top: topControlTop + MAP_FLOATING_CONTROL_HEIGHT + 2 }]}>
           <Ionicons name="alert-circle-outline" size={14} color={theme.danger} />
           <Text style={styles.mapErrorText} numberOfLines={1}>
             {mapError}
@@ -552,7 +572,7 @@ export default function MapScreen() {
         </View>
       )}
 
-      <View style={styles.filterContainer}>
+      <View style={[styles.filterContainer, { top: filterTop }]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -863,7 +883,6 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     backButton: {
       position: 'absolute',
-      top: 68,
       left: 16,
       width: 44,
       height: 44,
@@ -876,7 +895,6 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     layerButton: {
       position: 'absolute',
-      top: 68,
       right: 16,
       backgroundColor: overlay,
       borderWidth: 0.5,
@@ -907,13 +925,11 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     filterContainer: {
       position: 'absolute',
-      top: 122,
       left: 0,
       right: 0,
     },
     placeButton: {
       position: 'absolute',
-      top: 68,
       right: 92,
       backgroundColor: overlay,
       borderWidth: 0.5,
@@ -931,7 +947,6 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     mapErrorBanner: {
       position: 'absolute',
-      top: 110,
       left: 16,
       right: 16,
       flexDirection: 'row',
@@ -970,7 +985,6 @@ const createStyles = (theme: Theme, overlay: string) =>
     },
     myLocationButton: {
       position: 'absolute',
-      top: 68,
       left: 68,
       width: 44,
       height: 44,

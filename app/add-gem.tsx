@@ -43,9 +43,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Category = (typeof CATEGORIES)[number];
+
+const HEADER_HEIGHT = 48;
+const STEP_INDICATOR_HEIGHT = 21;
 
 type LocationChoice = 'here' | 'else';
 
@@ -79,6 +82,7 @@ const uploadImage = async (uri: string) => {
 
 export default function AddGemScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
@@ -543,6 +547,9 @@ export default function AddGemScreen() {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={
+          Platform.OS === 'ios' ? insets.top + HEADER_HEIGHT + STEP_INDICATOR_HEIGHT : 0
+        }
         style={{ flex: 1 }}>
       <ScrollView
         style={styles.scrollView}

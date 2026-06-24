@@ -25,7 +25,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const HEADER_HEIGHT = 48;
 
 const RADIUS_OPTIONS = [10, 25, 50, 100, 200] as const;
 
@@ -123,6 +125,7 @@ function TripPlannerResultCard({
 
 export default function TripPlannerScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const reduceMotion = useReduceMotion();
@@ -319,6 +322,7 @@ export default function TripPlannerScreen() {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + HEADER_HEIGHT : 0}
         style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
