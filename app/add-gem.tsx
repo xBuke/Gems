@@ -25,6 +25,8 @@ import GemPhotoPickerSheet, {
   THUMB_SIZE,
   type GemPhotoPickerSheetRef,
 } from '@/components/GemPhotoPickerSheet';
+import { PermissionDeniedBanner } from '@/components/PermissionDeniedBanner';
+import { useAppForegroundPermissionRecheck } from '@/hooks/useAppForegroundPermissionRecheck';
 import { createGemSharePost } from '@/lib/communityPosts';
 import { deleteGem } from '@/lib/deleteGem';
 import {
@@ -40,6 +42,7 @@ import { useToast } from '@/lib/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -96,6 +99,7 @@ export default function AddGemScreen() {
 
   const [ownerPhotos, setOwnerPhotos] = useState<LocalGemPhoto[]>([]);
   const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
+  const [cameraPermissionDenied, setCameraPermissionDenied] = useState(false);
   const photoPickerSheetRef = useRef<GemPhotoPickerSheetRef>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -675,6 +679,25 @@ export default function AddGemScreen() {
     setPhotoPickerVisible(false);
   }, []);
 
+  const handleCameraPermissionDenied = useCallback(() => {
+    setCameraPermissionDenied(true);
+  }, []);
+
+  const checkCameraGranted = useCallback(async () => {
+    const { status } = await ImagePicker.getCameraPermissionsAsync();
+    return status === 'granted';
+  }, []);
+
+  const handleCameraPermissionGranted = useCallback(() => {
+    setCameraPermissionDenied(false);
+  }, []);
+
+  useAppForegroundPermissionRecheck(
+    checkCameraGranted,
+    handleCameraPermissionGranted,
+    cameraPermissionDenied,
+  );
+
   useEffect(() => {
     if (photoPickerVisible) {
       photoPickerSheetRef.current?.present();
@@ -867,7 +890,12 @@ export default function AddGemScreen() {
                   </TouchableOpacity>
                 ) : null}
               </ScrollView>
-              {ownerPhotos.length === 0 ? (
+              {cameraPermissionDenied && ownerPhotos.length === 0 ? (
+                <PermissionDeniedBanner
+                  title="Camera access needed"
+                  description="Enable camera access in Settings to add photos."
+                />
+              ) : ownerPhotos.length === 0 ? (
                 <TouchableOpacity
                   style={styles.photoEmptyPrompt}
                   onPress={openPhotoPicker}
@@ -887,6 +915,12 @@ export default function AddGemScreen() {
                   <Text style={styles.photoManageText}>Manage photos</Text>
                 </TouchableOpacity>
               )}
+              {cameraPermissionDenied && ownerPhotos.length > 0 ? (
+                <PermissionDeniedBanner
+                  title="Camera access needed"
+                  description="Enable camera access in Settings to add photos."
+                />
+              ) : null}
             </View>
 
             <View style={styles.formSection}>
@@ -1148,6 +1182,7 @@ export default function AddGemScreen() {
               refreshOwnerPhotos();
             }
           }}
+          onCameraPermissionDenied={handleCameraPermissionDenied}
         />
       ) : null}
 

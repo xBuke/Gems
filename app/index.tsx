@@ -1,6 +1,7 @@
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { DiscoverListCard } from '@/components/DiscoverListCard';
+import { PermissionDeniedBanner } from '@/components/PermissionDeniedBanner';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { requireAuth } from '@/lib/authGuard';
 import { CATEGORIES } from '@/lib/categories';
@@ -28,6 +29,7 @@ import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useAppForegroundPermissionRecheck } from '@/hooks/useAppForegroundPermissionRecheck';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -49,6 +51,7 @@ const DISCOVER_GEM_SELECT =
   '*, profiles!gems_user_id_fkey(username, avatar_url), communities(name, icon, color)';
 
 const PAGE_SIZE = 20;
+const POPULAR_SORT_BATCH = 60;
 
 type Gem = {
   id: string;
@@ -172,6 +175,11 @@ export default function DiscoverScreen() {
   const [loadingMoreNearby, setLoadingMoreNearby] = useState(false);
   const [followingGems, setFollowingGems] = useState<GemWithProfile[]>([]);
   const [locationAvailable, setLocationAvailable] = useState(false);
+  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
+  const [popularGems, setPopularGems] = useState<GemWithProfile[]>([]);
+  const [popularPage, setPopularPage] = useState(0);
+  const [hasMorePopular, setHasMorePopular] = useState(true);
+  const [loadingMorePopular, setLoadingMorePopular] = useState(false);
   const [userCoords, setUserCoords] = useState<UserCoords | null>(null);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [activeMainCategory, setActiveMainCategory] = useState<Category | null>(null);
@@ -367,10 +375,12 @@ export default function DiscoverScreen() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setLocationAvailable(false);
+          setLocationPermissionDenied(status === 'denied');
           setUserCoords(null);
           return;
         }
 
+        setLocationPermissionDenied(false);
         const location = await Location.getCurrentPositionAsync({});
         locationCoords = {
           latitude: location.coords.latitude,
@@ -431,6 +441,79 @@ export default function DiscoverScreen() {
         setHasMoreNearby(data.length === PAGE_SIZE);
         fetchLikeCounts(nearby);
       }
+    },
+    [fetchLikeCounts],
+  );
+
+  const fetchPopularGems = useCallback(
+    async (page = 0, myCommunityIds: string[] = []) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const blocked = user ? await getMyBlockedUsers(user.id) : [];
+      const blockedIds = new Set<string>(
+        blocked.map((b: { blocked_id: string }) => b.blocked_id),
+      );
+
+      const from = page * POPULAR_SORT_BATCH;
+      const to = from + POPULAR_SORT_BATCH - 1;
+
+      let query = supabase
+        .from('gems')
+        .select(DISCOVER_GEM_SELECT)
+        .eq('is_private', false)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      query = applyCommunityGemFilter(query, myCommunityIds);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.log('Fetch error:', error);
+        setFeedError('Something went wrong loading your feed. Pull down to refresh.');
+        return;
+      }
+
+      setFeedError(null);
+
+      if (!data) return;
+
+      const filtered = filterBlocked(data as GemWithProfile[], blockedIds);
+      const gemIds = filtered.map((gem) => gem.id);
+
+      const counts: Record<string, number> = {};
+      for (const gemId of gemIds) counts[gemId] = 0;
+
+      if (gemIds.length > 0) {
+        const { data: likes } = await supabase
+          .from('gem_likes')
+          .select('gem_id')
+          .in('gem_id', gemIds);
+
+        if (likes) {
+          for (const row of likes) {
+            counts[row.gem_id] = (counts[row.gem_id] ?? 0) + 1;
+          }
+        }
+      }
+
+      const sorted = [...filtered].sort((a, b) => {
+        const likeDiff = (counts[b.id] ?? 0) - (counts[a.id] ?? 0);
+        if (likeDiff !== 0) return likeDiff;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
+      if (page === 0) {
+        setPopularGems(sorted);
+      } else {
+        setPopularGems((prev) => {
+          const existingIds = new Set(prev.map((g) => g.id));
+          const newGems = sorted.filter((g) => !existingIds.has(g.id));
+          return [...prev, ...newGems];
+        });
+      }
+
+      setHasMorePopular(data.length === POPULAR_SORT_BATCH);
+      fetchLikeCounts(sorted as Gem[]);
     },
     [fetchLikeCounts],
   );
@@ -584,6 +667,8 @@ export default function DiscoverScreen() {
     setHasMoreRecent(true);
     setNearbyPage(0);
     setHasMoreNearby(true);
+    setPopularPage(0);
+    setHasMorePopular(true);
 
     fetchMysteryGem();
     await Promise.all([
@@ -593,6 +678,11 @@ export default function DiscoverScreen() {
       fetchAllGems(),
       fetchNearbyGems(0, myCommunityIds),
     ]);
+
+    const { status: locationStatus } = await Location.getForegroundPermissionsAsync();
+    if (locationStatus === 'denied') {
+      await fetchPopularGems(0, myCommunityIds);
+    }
     checkUnreadMessages();
     checkUnreadNotifications();
 
@@ -603,7 +693,7 @@ export default function DiscoverScreen() {
       setCustomCategories(categories);
     };
     loadCustomCategories();
-  }, [checkUnreadMessages, checkUnreadNotifications, fetchLikeCounts, fetchRecentGems, fetchNearbyGems]);
+  }, [checkUnreadMessages, checkUnreadNotifications, fetchLikeCounts, fetchPopularGems, fetchRecentGems, fetchNearbyGems]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -647,6 +737,40 @@ export default function DiscoverScreen() {
     setNearbyPage(nextPage);
     setLoadingMoreNearby(false);
   }, [loadingMoreNearby, hasMoreNearby, nearbyPage, fetchNearbyGems, userCoords]);
+
+  const handleLoadMorePopular = useCallback(async () => {
+    if (loadingMorePopular || !hasMorePopular) return;
+    setLoadingMorePopular(true);
+    const nextPage = popularPage + 1;
+    const { data: { user } } = await supabase.auth.getUser();
+    const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+    await fetchPopularGems(nextPage, myCommunityIds);
+    setPopularPage(nextPage);
+    setLoadingMorePopular(false);
+  }, [loadingMorePopular, hasMorePopular, popularPage, fetchPopularGems]);
+
+  const checkLocationGranted = useCallback(async () => {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    return status === 'granted';
+  }, []);
+
+  const handleLocationPermissionGranted = useCallback(async () => {
+    setLocationPermissionDenied(false);
+    setPopularGems([]);
+    setPopularPage(0);
+    setHasMorePopular(true);
+    setNearbyPage(0);
+    setHasMoreNearby(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
+    await fetchNearbyGems(0, myCommunityIds);
+  }, [fetchNearbyGems]);
+
+  useAppForegroundPermissionRecheck(
+    checkLocationGranted,
+    handleLocationPermissionGranted,
+    locationPermissionDenied,
+  );
 
   useEffect(() => {
     checkIsPremium().then(setIsPremium);
@@ -825,6 +949,11 @@ export default function DiscoverScreen() {
   const filteredNearbyGems = useMemo(
     () => nearbyGems.filter((gem) => matchesSearch(gem, searchQuery)),
     [nearbyGems, searchQuery],
+  );
+
+  const filteredPopularGems = useMemo(
+    () => sortByPreferences(popularGems.filter((gem) => matchesSearch(gem, searchQuery))),
+    [popularGems, searchQuery, sortByPreferences],
   );
 
   const filteredFollowingGems = useMemo(() => {
@@ -1179,7 +1308,43 @@ export default function DiscoverScreen() {
         </>
       )}
 
-      {locationAvailable && (
+      {locationPermissionDenied ? (
+        <>
+          <PermissionDeniedBanner
+            title="Location access needed"
+            description="To find gems near you, enable location in Settings."
+          />
+          <Text style={styles.popularGloballyTitle}>POPULAR GLOBALLY</Text>
+          {filteredPopularGems.length === 0 ? (
+            <EmptyState
+              icon={searchQuery.trim() ? 'search-outline' : 'earth-outline'}
+              title={searchQuery.trim() ? 'No gems match your search' : 'No gems yet'}
+              subtitle={
+                searchQuery.trim()
+                  ? 'Try a different search term'
+                  : 'Be the first to drop a gem!'
+              }
+            />
+          ) : (
+            <>
+              {filteredPopularGems.map((gem, index) =>
+                renderListCard(gem, undefined, false, index),
+              )}
+              {hasMorePopular && !searchQuery.trim() && (
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={handleLoadMorePopular}
+                  disabled={loadingMorePopular}
+                  activeOpacity={0.8}>
+                  <Text style={styles.loadMoreButtonText}>
+                    {loadingMorePopular ? 'Loading...' : 'Load More'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </>
+      ) : locationAvailable ? (
         <>
           <Text style={styles.sectionTitle}>Near You</Text>
           {filteredNearbyGems.length === 0 ? (
@@ -1224,7 +1389,7 @@ export default function DiscoverScreen() {
             </>
           )}
         </>
-      )}
+      ) : null}
     </>
   );
 
@@ -1746,6 +1911,14 @@ const createStyles = (theme: Theme) =>
     fontSize: 16,
     fontWeight: '600',
     color: theme.text,
+    marginBottom: 12,
+  },
+  popularGloballyTitle: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: 9,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: theme.textTertiary,
     marginBottom: 12,
   },
   sectionTitleRow: {

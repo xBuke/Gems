@@ -48,6 +48,7 @@ type GemPhotoPickerSheetProps = {
   photos: LocalGemPhoto[];
   onPhotosChange: (photos: LocalGemPhoto[]) => void;
   onPersistedPhotosChange?: (photos: GemPhoto[]) => void;
+  onCameraPermissionDenied?: () => void;
 };
 
 const makeLocalId = () => `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -64,6 +65,7 @@ const GemPhotoPickerSheet = forwardRef<GemPhotoPickerSheetRef, GemPhotoPickerShe
       photos,
       onPhotosChange,
       onPersistedPhotosChange,
+      onCameraPermissionDenied,
     },
     forwardedRef,
   ) {
@@ -187,7 +189,7 @@ const GemPhotoPickerSheet = forwardRef<GemPhotoPickerSheetRef, GemPhotoPickerShe
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera access is required to take a photo.');
+      onCameraPermissionDenied?.();
       return;
     }
 

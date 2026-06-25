@@ -30,12 +30,16 @@ import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import { BillingFailureCard } from '@/components/BillingFailureCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { PermissionDeniedBanner } from '@/components/PermissionDeniedBanner';
 import { PressableScale } from '@/components/PressableScale';
 import ReportSheet from '@/components/ReportSheet';
 import { SkeletonCard } from '@/components/SkeletonCard';
+import { useAppForegroundPermissionRecheck } from '@/hooks/useAppForegroundPermissionRecheck';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment, type ReactNode } from 'react';
 import {
@@ -57,6 +61,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const IMAGE_PLACEHOLDER = '#1A5C3A';
+const NOTIFICATION_BANNER_DISMISSED_KEY = 'notification_permission_banner_dismissed';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -346,6 +351,8 @@ export default function ProfileScreen() {
   const [expandedPanel, setExpandedPanel] = useState<AccordionPanel | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [notificationPermissionDenied, setNotificationPermissionDenied] = useState(false);
+  const [notificationBannerDismissed, setNotificationBannerDismissed] = useState(true);
   const [unlockedAchievementTypes, setUnlockedAchievementTypes] = useState<string[]>([]);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [showAllCategories, setShowAllCategories] = useState(false);
@@ -728,6 +735,51 @@ export default function ProfileScreen() {
       fetchExplorationProgress();
       fetchLocaleBadges();
     }, [fetchCategoryMastery, fetchExplorationProgress, fetchLocaleBadges]),
+  );
+
+  const refreshNotificationPermissionState = useCallback(async () => {
+    if (!isOwnProfile) {
+      setNotificationPermissionDenied(false);
+      return;
+    }
+
+    const { status } = await Notifications.getPermissionsAsync();
+    const denied = status === 'denied';
+    setNotificationPermissionDenied(denied);
+
+    if (denied) {
+      const dismissed = await AsyncStorage.getItem(NOTIFICATION_BANNER_DISMISSED_KEY);
+      setNotificationBannerDismissed(dismissed === 'true');
+    } else {
+      await AsyncStorage.removeItem(NOTIFICATION_BANNER_DISMISSED_KEY);
+      setNotificationBannerDismissed(false);
+    }
+  }, [isOwnProfile]);
+
+  useEffect(() => {
+    void refreshNotificationPermissionState();
+  }, [refreshNotificationPermissionState]);
+
+  const checkNotificationGranted = useCallback(async () => {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  }, []);
+
+  const handleNotificationPermissionGranted = useCallback(async () => {
+    await AsyncStorage.removeItem(NOTIFICATION_BANNER_DISMISSED_KEY);
+    setNotificationPermissionDenied(false);
+    setNotificationBannerDismissed(false);
+  }, []);
+
+  const handleDismissNotificationBanner = useCallback(async () => {
+    await AsyncStorage.setItem(NOTIFICATION_BANNER_DISMISSED_KEY, 'true');
+    setNotificationBannerDismissed(true);
+  }, []);
+
+  useAppForegroundPermissionRecheck(
+    checkNotificationGranted,
+    handleNotificationPermissionGranted,
+    isOwnProfile,
   );
 
   useEffect(() => {
@@ -1207,6 +1259,8 @@ export default function ProfileScreen() {
   const hasBillingFailure = false;
   const billingGraceDaysRemaining = 7;
   const showBillingFailureBanner = isOwnProfile && isPremium && hasBillingFailure;
+  const showNotificationBanner =
+    isOwnProfile && notificationPermissionDenied && !notificationBannerDismissed;
 
   const renderLocaleExpertBadges = () => {
     if (localeBadges.length === 0) return null;
@@ -1527,6 +1581,15 @@ export default function ProfileScreen() {
 
         {showBillingFailureBanner ? (
           <BillingFailureCard daysRemaining={billingGraceDaysRemaining} />
+        ) : null}
+
+        {showNotificationBanner ? (
+          <PermissionDeniedBanner
+            title="Notifications are off"
+            description="Turn on notifications to hear about new followers, comments, and nearby gems."
+            dismissible
+            onDismiss={handleDismissNotificationBanner}
+          />
         ) : null}
 
         <View style={styles.statsRow}>
