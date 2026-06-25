@@ -117,6 +117,7 @@ function RootNavigator() {
         }}>
         <Stack.Screen name="index" options={tabOptions} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="follow-suggestions" options={{ headerShown: false }} />
         <Stack.Screen name="auth" />
         <Stack.Screen name="map" options={{ headerShown: false, ...tabOptions }} />
         <Stack.Screen name="notifications" options={{ headerShown: false, ...tabOptions }} />

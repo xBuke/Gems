@@ -632,7 +632,7 @@ export default function OnboardingScreen() {
   const finishOnboarding = async () => {
     await AsyncStorage.setItem(ONBOARDING_SEEN_KEY, 'true')
     if (userId) {
-      router.replace('/')
+      router.replace('/follow-suggestions')
     } else {
       router.replace('/auth')
     }
