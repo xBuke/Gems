@@ -6,7 +6,7 @@ import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
@@ -42,12 +42,19 @@ type IconName = (typeof ICON_OPTIONS)[number]
 type Visibility = 'private' | 'public'
 type JoinType = 'open' | 'invite_only'
 
+const isIconName = (value: string): value is IconName =>
+  (ICON_OPTIONS as readonly string[]).includes(value)
+
 export default function CreateCommunityScreen() {
   const { theme } = useTheme()
   const styles = useMemo(() => createStyles(theme), [theme])
   const router = useRouter()
+  const { communityId: communityIdParam } = useLocalSearchParams<{ communityId?: string }>()
+  const editCommunityId = Array.isArray(communityIdParam) ? communityIdParam[0] : communityIdParam
+  const isEditMode = !!editCommunityId
 
-  const [checkingPremium, setCheckingPremium] = useState(true)
+  const [checkingPremium, setCheckingPremium] = useState(!isEditMode)
+  const [loadingCommunity, setLoadingCommunity] = useState(isEditMode)
   const [isPremium, setIsPremium] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -69,6 +76,73 @@ export default function CreateCommunityScreen() {
 
   useEffect(() => {
     const init = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (isEditMode && editCommunityId) {
+        setLoadingCommunity(true)
+
+        if (!user) {
+          setLoadingCommunity(false)
+          Alert.alert('Error', 'You must be logged in to edit a community.', [
+            { text: 'OK', onPress: () => router.back() },
+          ])
+          return
+        }
+
+        setUserId(user.id)
+
+        const { data: community, error } = await supabase
+          .from('communities')
+          .select(
+            'id, creator_id, name, description, location_focus, category, icon, color, visibility, join_type',
+          )
+          .eq('id', editCommunityId)
+          .single()
+
+        if (error || !community) {
+          setLoadingCommunity(false)
+          Alert.alert('Error', 'Could not load this community.', [
+            { text: 'OK', onPress: () => router.back() },
+          ])
+          return
+        }
+
+        if (community.creator_id !== user.id) {
+          setLoadingCommunity(false)
+          Alert.alert('Error', 'You can only edit communities you created.', [
+            { text: 'OK', onPress: () => router.back() },
+          ])
+          return
+        }
+
+        setName(community.name ?? '')
+        setDescription(community.description ?? '')
+        setLocationFocus(community.location_focus ?? '')
+
+        const categoryExists = CATEGORIES.some((cat) => cat.id === community.category)
+        setSelectedCategory(
+          categoryExists && community.category ? community.category : CATEGORIES[0].id,
+        )
+
+        setSelectedIcon(
+          community.icon && isIconName(community.icon) ? community.icon : 'people',
+        )
+        setSelectedColor(community.color ?? theme.accent)
+
+        const nextVisibility: Visibility =
+          community.visibility === 'private' ? 'private' : 'public'
+        setVisibility(nextVisibility)
+
+        const nextJoinType: JoinType =
+          community.join_type === 'invite_only' ? 'invite_only' : 'open'
+        setJoinType(nextVisibility === 'private' ? 'invite_only' : nextJoinType)
+
+        setLoadingCommunity(false)
+        return
+      }
+
       setCheckingPremium(true)
       const premium = await checkIsPremium()
       setIsPremium(premium)
@@ -76,31 +150,67 @@ export default function CreateCommunityScreen() {
 
       if (!premium) return
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
       if (user) setUserId(user.id)
     }
 
     init()
-  }, [])
+  }, [editCommunityId, isEditMode, router, theme.accent])
 
   const handleVisibilityChange = (next: Visibility) => {
     setVisibility(next)
     if (next === 'public') {
       setJoinType('open')
+    } else {
+      setJoinType('invite_only')
+    }
+  }
+
+  const validateForm = () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter a community name.')
+      return false
+    }
+    return true
+  }
+
+  const buildCommunityPayload = () => {
+    const resolvedJoinType: JoinType = visibility === 'private' ? 'invite_only' : joinType
+
+    return {
+      name: name.trim(),
+      description: description.trim() || null,
+      location_focus: locationFocus.trim() || null,
+      category: selectedCategory,
+      icon: selectedIcon,
+      color: selectedColor,
+      visibility,
+      join_type: resolvedJoinType,
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    if (!userId || !editCommunityId || !validateForm()) return
+
+    setSubmitting(true)
+    try {
+      const { error } = await supabase
+        .from('communities')
+        .update(buildCommunityPayload())
+        .eq('id', editCommunityId)
+
+      if (error) {
+        Alert.alert('Error', error.message)
+        return
+      }
+
+      router.replace('/community/' + editCommunityId)
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleSubmit = async () => {
-    if (!userId) return
-
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a community name.')
-      return
-    }
-
-    const resolvedJoinType: JoinType = visibility === 'private' ? 'invite_only' : joinType
+    if (!userId || !validateForm()) return
 
     setSubmitting(true)
     try {
@@ -108,14 +218,7 @@ export default function CreateCommunityScreen() {
         .from('communities')
         .insert({
           creator_id: userId,
-          name: name.trim(),
-          description: description.trim() || null,
-          location_focus: locationFocus.trim() || null,
-          category: selectedCategory,
-          icon: selectedIcon,
-          color: selectedColor,
-          visibility,
-          join_type: resolvedJoinType,
+          ...buildCommunityPayload(),
         })
         .select('id')
         .single()
@@ -142,6 +245,18 @@ export default function CreateCommunityScreen() {
     }
   }
 
+  if (isEditMode && loadingCommunity) {
+    return (
+      <ModalEntryWrapper>
+        <SafeAreaView style={styles.container} edges={['top']}>
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={theme.accent} />
+          </View>
+        </SafeAreaView>
+      </ModalEntryWrapper>
+    )
+  }
+
   if (checkingPremium) {
     return (
       <ModalEntryWrapper>
@@ -154,7 +269,7 @@ export default function CreateCommunityScreen() {
     )
   }
 
-  if (!isPremium) {
+  if (!isEditMode && !isPremium) {
     return (
       <ModalEntryWrapper>
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -188,11 +303,33 @@ export default function CreateCommunityScreen() {
     <ModalEntryWrapper>
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Community</Text>
-        <View style={styles.headerSide} />
+        {isEditMode ? (
+          <>
+            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.headerAction}>
+              <Text style={styles.headerActionText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Edit Community</Text>
+            <TouchableOpacity
+              onPress={handleSaveEdit}
+              activeOpacity={0.7}
+              style={styles.headerAction}
+              disabled={submitting}>
+              {submitting ? (
+                <ActivityIndicator color={theme.accent} size="small" />
+              ) : (
+                <Text style={[styles.headerActionText, styles.headerSaveText]}>Save</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
+              <Ionicons name="arrow-back" size={22} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>New Community</Text>
+            <View style={styles.headerSide} />
+          </>
+        )}
       </View>
 
       <KeyboardAvoidingView
@@ -361,16 +498,18 @@ export default function CreateCommunityScreen() {
           </>
         ) : null}
 
-        <PressableScale
-          style={styles.submitButton}
-          onPress={handleSubmit}
-          disabled={submitting}>
-          {submitting ? (
-            <ActivityIndicator color={theme.accentText} />
-          ) : (
-            <Text style={styles.submitButtonText}>Create Community</Text>
-          )}
-        </PressableScale>
+        {!isEditMode ? (
+          <PressableScale
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={submitting}>
+            {submitting ? (
+              <ActivityIndicator color={theme.accentText} />
+            ) : (
+              <Text style={styles.submitButtonText}>Create Community</Text>
+            )}
+          </PressableScale>
+        ) : null}
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -399,6 +538,19 @@ const createStyles = (theme: Theme) =>
     headerSide: {
       width: 22,
       alignItems: 'center',
+    },
+    headerAction: {
+      minWidth: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerActionText: {
+      fontSize: 15,
+      color: theme.textSecondary,
+    },
+    headerSaveText: {
+      color: theme.accent,
+      fontWeight: '600',
     },
     headerTitle: {
       fontSize: 17,

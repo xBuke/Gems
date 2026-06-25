@@ -1,10 +1,17 @@
+import { AppBottomSheetModal } from '@/components/AppBottomSheetModal'
 import { CommunityPostCommentThread } from '@/components/CommunityPostCommentThread'
 import { CommunityPostReactionBar } from '@/components/CommunityPostReactionBar'
 import { EmptyState } from '@/components/EmptyState'
 import { GemListCard } from '@/components/GemListCard'
 import { requireAuth } from '@/lib/authGuard'
 import { CATEGORIES } from '@/lib/categories'
-import { canJoinMoreCommunities, getCommunityMemberCount, type CommunityJoinType, type CommunityMemberStatus } from '@/lib/communities'
+import {
+  canJoinMoreCommunities,
+  getCommunityMemberCount,
+  type CommunityJoinType,
+  type CommunityMemberRole,
+  type CommunityMemberStatus,
+} from '@/lib/communities'
 import {
   buildReactionSummary,
   formatPostTimeAgo,
@@ -16,6 +23,8 @@ import {
   type ReactionType,
 } from '@/lib/communityPosts'
 import { hapticLight, hapticSuccess } from '@/lib/haptics'
+import { blockUser } from '@/lib/safety'
+import { useToast } from '@/lib/ToastContext'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
@@ -48,7 +57,7 @@ const COMMUNITY_HEADER_HEIGHT = 56
 const INFO_SECTION_HEIGHT = 80
 const TAB_BAR_HEIGHT = 44
 
-type DetailTab = 'feed' | 'chat'
+type DetailTab = 'feed' | 'chat' | 'manage'
 
 type Community = {
   id: string
@@ -66,6 +75,15 @@ type Community = {
 type PendingRequest = {
   id: string
   user_id: string
+  created_at: string
+  profiles?: { username: string; avatar_url: string | null } | null
+}
+
+type AcceptedMember = {
+  id: string
+  user_id: string
+  role: CommunityMemberRole
+  created_at: string
   profiles?: { username: string; avatar_url: string | null } | null
 }
 
@@ -126,17 +144,24 @@ export default function CommunityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const { theme } = useTheme()
+  const { showToast } = useToast()
   const styles = useMemo(() => createStyles(theme), [theme])
   const insets = useSafeAreaInsets()
 
   const [loading, setLoading] = useState(true)
   const [loadingFeed, setLoadingFeed] = useState(true)
   const [loadingChat, setLoadingChat] = useState(true)
+  const [loadingManage, setLoadingManage] = useState(true)
   const [community, setCommunity] = useState<Community | null>(null)
   const [memberCount, setMemberCount] = useState(0)
   const [membershipStatus, setMembershipStatus] = useState<CommunityMemberStatus | null>(null)
+  const [myRole, setMyRole] = useState<CommunityMemberRole | null>(null)
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
+  const [acceptedMembers, setAcceptedMembers] = useState<AcceptedMember[]>([])
   const [actingOnRequestId, setActingOnRequestId] = useState<string | null>(null)
+  const [actingOnMemberId, setActingOnMemberId] = useState<string | null>(null)
+  const [memberActionTarget, setMemberActionTarget] = useState<AcceptedMember | null>(null)
+  const [memberSheetVisible, setMemberSheetVisible] = useState(false)
   const [myId, setMyId] = useState<string | null>(null)
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [reactions, setReactions] = useState<ReactionRow[]>([])
@@ -153,9 +178,12 @@ export default function CommunityDetailScreen() {
   const listRef = useRef<FlatList>(null)
   const chatItems = useMemo(() => buildChatItems(messages), [messages])
   const isCreator = myId != null && community?.creator_id === myId
+  const isModerator = myRole === 'moderator' && membershipStatus === 'accepted'
+  const canManage = isCreator || isModerator
   const isMember = membershipStatus === 'accepted'
   const isPending = membershipStatus === 'pending'
   const isInviteOnly = community?.join_type === 'invite_only'
+  const pinnedPosts = useMemo(() => posts.filter((post) => post.is_pinned), [posts])
 
   const categoryLabel = useMemo(() => {
     if (!community?.category) return null
@@ -245,6 +273,7 @@ export default function CommunityDetailScreen() {
     setLoading(true)
     setLoadingFeed(true)
     setLoadingChat(true)
+    setLoadingManage(true)
 
     const {
       data: { user },
@@ -260,6 +289,7 @@ export default function CommunityDetailScreen() {
     if (!communityData) {
       setLoadingFeed(false)
       setLoadingChat(false)
+      setLoadingManage(false)
       setLoading(false)
       return
     }
@@ -269,31 +299,57 @@ export default function CommunityDetailScreen() {
     const count = await getCommunityMemberCount(id)
     setMemberCount(count)
 
+    let membershipStatusValue: CommunityMemberStatus | null = null
+    let membershipRole: CommunityMemberRole | null = null
     if (user) {
       const { data: membership } = await supabase
         .from('community_members')
-        .select('id, status')
+        .select('id, status, role')
         .eq('community_id', id)
         .eq('user_id', user.id)
         .maybeSingle()
 
-      setMembershipStatus((membership?.status as CommunityMemberStatus | undefined) ?? null)
+      membershipStatusValue = (membership?.status as CommunityMemberStatus | undefined) ?? null
+      membershipRole = (membership?.role as CommunityMemberRole | undefined) ?? null
+      setMembershipStatus(membershipStatusValue)
+      setMyRole(membershipRole)
     } else {
       setMembershipStatus(null)
+      setMyRole(null)
     }
 
     const communityRecord = communityData as Community
-    if (user && communityRecord.creator_id === user.id && communityRecord.join_type === 'invite_only') {
+    const userCanManage =
+      !!user &&
+      (communityRecord.creator_id === user.id ||
+        (membershipRole === 'moderator' && membershipStatusValue === 'accepted'))
+
+    if (userCanManage && communityRecord.join_type === 'invite_only') {
       const { data: pendingData } = await supabase
         .from('community_members')
-        .select('id, user_id, profiles!community_members_user_id_fkey(username, avatar_url)')
+        .select('id, user_id, created_at, profiles!community_members_user_id_fkey(username, avatar_url)')
         .eq('community_id', id)
         .eq('status', 'pending')
+        .order('created_at', { ascending: true })
 
       setPendingRequests((pendingData ?? []) as PendingRequest[])
     } else {
       setPendingRequests([])
     }
+
+    if (userCanManage) {
+      const { data: membersData } = await supabase
+        .from('community_members')
+        .select('id, user_id, role, created_at, profiles!community_members_user_id_fkey(username, avatar_url)')
+        .eq('community_id', id)
+        .eq('status', 'accepted')
+        .order('created_at', { ascending: true })
+
+      setAcceptedMembers((membersData ?? []) as AcceptedMember[])
+    } else {
+      setAcceptedMembers([])
+    }
+    setLoadingManage(false)
 
     await fetchPosts()
     setLoadingFeed(false)
@@ -318,6 +374,12 @@ export default function CommunityDetailScreen() {
       loadData()
     }, [loadData]),
   )
+
+  useEffect(() => {
+    if (!canManage && activeTab === 'manage') {
+      setActiveTab('feed')
+    }
+  }, [canManage, activeTab])
 
   useEffect(() => {
     if (!id) return
@@ -449,8 +511,9 @@ export default function CommunityDetailScreen() {
             }
 
             setMembershipStatus(null)
+            setMyRole(null)
             setMemberCount((prev) => Math.max(0, prev - 1))
-            if (activeTab === 'chat') setActiveTab('feed')
+            if (activeTab === 'chat' || activeTab === 'manage') setActiveTab('feed')
           } finally {
             setLeaving(false)
           }
@@ -529,16 +592,21 @@ export default function CommunityDetailScreen() {
             <Text style={styles.pendingRequestAvatarText}>{username[0]?.toUpperCase() ?? '?'}</Text>
           </View>
         )}
-        <Text style={styles.pendingRequestUsername} numberOfLines={1}>
-          @{username}
-        </Text>
+        <View style={styles.pendingRequestInfo}>
+          <Text style={styles.pendingRequestUsername} numberOfLines={1}>
+            @{username}
+          </Text>
+          <Text style={styles.pendingRequestTime}>
+            Requested {formatPostTimeAgo(request.created_at)}
+          </Text>
+        </View>
         <View style={styles.pendingRequestActions}>
           <TouchableOpacity
             style={styles.declineRequestButton}
             onPress={() => handleDeclineRequest(request)}
             disabled={isActing}
             activeOpacity={0.8}>
-            <Text style={styles.declineRequestButtonText}>Decline</Text>
+            <Text style={styles.declineRequestButtonText}>Deny</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.approveRequestButton}
@@ -557,10 +625,108 @@ export default function CommunityDetailScreen() {
   }
 
   const handleSettingsPress = () => {
-    Alert.alert('Community Options', undefined, [
-      { text: 'Delete Community', style: 'destructive', onPress: handleDeleteCommunity },
+    if (!community) return
+    router.push({ pathname: '/create-community', params: { communityId: community.id } })
+  }
+
+  const canPromoteMember = (member: AcceptedMember) =>
+    isCreator && member.user_id !== myId && member.role !== 'moderator'
+
+  const canRemoveMember = (member: AcceptedMember) => {
+    if (!community || member.user_id === myId) return false
+    if (member.user_id === community.creator_id) return false
+    if (isCreator) return true
+    if (isModerator && member.role === 'member') return true
+    return false
+  }
+
+  const openMemberActions = (member: AcceptedMember) => {
+    setMemberActionTarget(member)
+    setMemberSheetVisible(true)
+  }
+
+  const closeMemberActions = () => {
+    setMemberSheetVisible(false)
+    setMemberActionTarget(null)
+  }
+
+  const handlePromoteMember = async (member: AcceptedMember) => {
+    closeMemberActions()
+    setActingOnMemberId(member.id)
+    try {
+      const { error } = await supabase
+        .from('community_members')
+        .update({ role: 'moderator' })
+        .eq('id', member.id)
+
+      if (error) {
+        Alert.alert('Error', error.message)
+        return
+      }
+
+      hapticSuccess()
+      setAcceptedMembers((prev) =>
+        prev.map((row) => (row.id === member.id ? { ...row, role: 'moderator' } : row)),
+      )
+      showToast({ type: 'success', title: `@${member.profiles?.username ?? 'user'} is now a moderator` })
+    } finally {
+      setActingOnMemberId(null)
+    }
+  }
+
+  const handleRemoveMember = (member: AcceptedMember) => {
+    const username = member.profiles?.username ?? 'user'
+    closeMemberActions()
+    Alert.alert(`Remove @${username} from this community?`, undefined, [
       { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          setActingOnMemberId(member.id)
+          try {
+            const { error } = await supabase.from('community_members').delete().eq('id', member.id)
+
+            if (error) {
+              Alert.alert('Error', error.message)
+              return
+            }
+
+            hapticLight()
+            setAcceptedMembers((prev) => prev.filter((row) => row.id !== member.id))
+            setMemberCount((prev) => Math.max(0, prev - 1))
+            showToast({ type: 'success', title: `@${username} was removed` })
+          } finally {
+            setActingOnMemberId(null)
+          }
+        },
+      },
     ])
+  }
+
+  const handleBlockMember = (member: AcceptedMember) => {
+    if (!myId) return
+    const username = member.profiles?.username ?? 'user'
+    closeMemberActions()
+    Alert.alert(
+      `Block @${username}?`,
+      "They won't be able to see your content and you won't see theirs.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await blockUser(myId, member.user_id)
+            if (error) {
+              Alert.alert('Error', error.message)
+              return
+            }
+            showToast({ type: 'success', title: `@${username} blocked` })
+          },
+        },
+      ],
+    )
   }
 
   const handleAddGem = async () => {
@@ -648,8 +814,10 @@ export default function CommunityDetailScreen() {
     }
   }
 
-  const handleTogglePin = async (post: CommunityPost) => {
-    if (!myId || post.author_id !== myId) return
+  const handleTogglePin = async (post: CommunityPost, asManager = false) => {
+    if (!myId) return
+    if (!asManager && post.author_id !== myId) return
+    if (asManager && !canManage) return
 
     const nextPinned = !post.is_pinned
     const { error } = await supabase
@@ -842,6 +1010,206 @@ export default function CommunityDetailScreen() {
     }
 
     return renderMessage(item.data)
+  }
+
+  const renderManageMember = (member: AcceptedMember) => {
+    const username = member.profiles?.username ?? 'unknown'
+    const avatarUrl = member.profiles?.avatar_url
+    const isCommunityCreator = member.user_id === community?.creator_id
+    const isActing = actingOnMemberId === member.id
+
+    return (
+      <View key={member.id} style={styles.manageMemberRow}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.manageMemberAvatar} contentFit="cover" />
+        ) : (
+          <View style={styles.manageMemberAvatarPlaceholder}>
+            <Text style={styles.manageMemberAvatarText}>{username[0]?.toUpperCase() ?? '?'}</Text>
+          </View>
+        )}
+        <View style={styles.manageMemberInfo}>
+          <View style={styles.manageMemberNameRow}>
+            <Text style={styles.manageMemberUsername} numberOfLines={1}>
+              @{username}
+            </Text>
+            {member.role === 'moderator' ? (
+              <Text style={styles.modBadge}>MOD</Text>
+            ) : null}
+            {isCommunityCreator ? (
+              <View style={styles.creatorBadgeSmall}>
+                <Ionicons name="diamond" size={8} color={theme.accent} />
+                <Text style={styles.creatorBadgeSmallText}>CREATOR</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.manageMemberJoined}>Joined {formatPostTimeAgo(member.created_at)}</Text>
+        </View>
+        {member.user_id !== myId ? (
+          <TouchableOpacity
+            onPress={() => openMemberActions(member)}
+            disabled={isActing}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+            style={styles.manageMemberMenuButton}>
+            {isActing ? (
+              <ActivityIndicator size="small" color={theme.textSecondary} />
+            ) : (
+              <Ionicons name="ellipsis-horizontal" size={18} color={theme.textSecondary} />
+            )}
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    )
+  }
+
+  const renderPinnedPostSummary = (post: CommunityPost) => {
+    const username = post.author?.username ?? 'unknown'
+    const preview =
+      post.post_type === 'text'
+        ? post.content?.trim() || 'Text post'
+        : post.gem?.title
+          ? `Shared gem: ${post.gem.title}`
+          : 'Shared a gem'
+
+    return (
+      <View key={post.id} style={styles.pinnedPostCard}>
+        <View style={styles.pinnedPostInfo}>
+          <Text style={styles.pinnedPostAuthor}>@{username}</Text>
+          <Text style={styles.pinnedPostPreview} numberOfLines={2}>
+            {preview}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.unpinButton}
+          onPress={() => handleTogglePin(post, true)}
+          activeOpacity={0.8}>
+          <Text style={styles.unpinButtonText}>Unpin</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  const renderManage = () => {
+    if (loadingManage) {
+      return (
+        <View style={styles.tabLoading}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      )
+    }
+
+    return (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.manageContent}
+        keyboardShouldPersistTaps="handled">
+        {isInviteOnly ? (
+          <View style={styles.manageSection}>
+            <Text style={styles.manageSectionTitle}>
+              Join requests{pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ''}
+            </Text>
+            {pendingRequests.length === 0 ? (
+              <Text style={styles.manageSectionEmpty}>No pending requests</Text>
+            ) : (
+              pendingRequests.map(renderPendingRequest)
+            )}
+          </View>
+        ) : null}
+
+        <View style={styles.manageSection}>
+          <Text style={styles.manageSectionTitle}>Pinned post</Text>
+          {pinnedPosts.length === 0 ? (
+            <Text style={styles.manageSectionEmpty}>No pinned posts</Text>
+          ) : (
+            pinnedPosts.map(renderPinnedPostSummary)
+          )}
+        </View>
+
+        <View style={styles.manageSection}>
+          <Text style={styles.manageSectionTitle}>Members ({acceptedMembers.length})</Text>
+          {acceptedMembers.length === 0 ? (
+            <Text style={styles.manageSectionEmpty}>No members yet</Text>
+          ) : (
+            acceptedMembers.map(renderManageMember)
+          )}
+        </View>
+
+        {isCreator ? (
+          <View style={styles.manageSection}>
+            <Text style={styles.manageSectionTitle}>Community settings</Text>
+            <TouchableOpacity
+              style={styles.manageSettingsRow}
+              onPress={handleSettingsPress}
+              activeOpacity={0.7}>
+              <Text style={styles.manageSettingsRowText}>Edit community info</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.manageSettingsRow}
+              onPress={handleDeleteCommunity}
+              activeOpacity={0.7}>
+              <Text style={styles.manageSettingsRowDanger}>Delete community</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.danger} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </ScrollView>
+    )
+  }
+
+  const renderMemberActionSheet = () => {
+    if (!memberActionTarget) return null
+    const username = memberActionTarget.profiles?.username ?? 'user'
+    const showPromote = canPromoteMember(memberActionTarget)
+    const showRemove = canRemoveMember(memberActionTarget)
+    const showBlock = memberActionTarget.user_id !== myId
+
+    return (
+      <AppBottomSheetModal
+        visible={memberSheetVisible}
+        onClose={closeMemberActions}
+        snapPoints={showPromote ? ['34%'] : ['28%']}>
+        <View style={styles.memberSheetContent}>
+          {showPromote ? (
+            <TouchableOpacity
+              style={styles.memberSheetRow}
+              onPress={() => handlePromoteMember(memberActionTarget)}
+              activeOpacity={0.7}>
+              <Ionicons name="shield-outline" size={20} color={theme.text} />
+              <Text style={styles.memberSheetRowText}>Promote to moderator</Text>
+            </TouchableOpacity>
+          ) : null}
+          {showRemove ? (
+            <TouchableOpacity
+              style={styles.memberSheetRow}
+              onPress={() => handleRemoveMember(memberActionTarget)}
+              activeOpacity={0.7}>
+              <Ionicons name="person-remove-outline" size={20} color={theme.danger} />
+              <Text style={[styles.memberSheetRowText, styles.memberSheetRowDanger]}>
+                Remove from community
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          {showBlock ? (
+            <TouchableOpacity
+              style={styles.memberSheetRow}
+              onPress={() => handleBlockMember(memberActionTarget)}
+              activeOpacity={0.7}>
+              <Ionicons name="ban-outline" size={20} color={theme.danger} />
+              <Text style={[styles.memberSheetRowText, styles.memberSheetRowDanger]}>
+                Block @{username}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={styles.memberSheetCancel}
+            onPress={closeMemberActions}
+            activeOpacity={0.7}>
+            <Text style={styles.memberSheetCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </AppBottomSheetModal>
+    )
   }
 
   const renderFeed = () => {
@@ -1044,13 +1412,7 @@ export default function CommunityDetailScreen() {
           </Text>
         </View>
 
-        {isCreator ? (
-          <TouchableOpacity onPress={handleSettingsPress} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
-            <Ionicons name="ellipsis-horizontal" size={22} color={theme.text} />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.headerSide} />
-        )}
+        <View style={styles.headerSide} />
       </View>
 
       <View style={styles.infoSection}>
@@ -1065,6 +1427,15 @@ export default function CommunityDetailScreen() {
             <Ionicons name="people" size={12} color={theme.textSecondary} />
             <Text style={styles.chipText}>{memberCount}</Text>
           </View>
+          {community.creator?.username ? (
+            <View style={styles.creatorChip}>
+              <Text style={styles.creatorChipUsername}>@{community.creator.username}</Text>
+              <View style={styles.creatorBadge}>
+                <Ionicons name="diamond" size={10} color={theme.accent} />
+                <Text style={styles.creatorBadgeText}>CREATOR</Text>
+              </View>
+            </View>
+          ) : null}
           {community.location_focus ? (
             <View style={styles.chip}>
               <Ionicons name="location" size={12} color={theme.accent} />
@@ -1104,31 +1475,33 @@ export default function CommunityDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {isCreator && isInviteOnly && pendingRequests.length > 0 ? (
-        <View style={styles.pendingRequestsSection}>
-          <Text style={styles.pendingRequestsTitle}>
-            Join requests ({pendingRequests.length})
-          </Text>
-          {pendingRequests.map(renderPendingRequest)}
-        </View>
-      ) : null}
-
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'feed' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'feed' && styles.tabActive, canManage && styles.tabCompact]}
           onPress={() => setActiveTab('feed')}
           activeOpacity={0.8}>
           <Text style={[styles.tabText, activeTab === 'feed' && styles.tabTextActive]}>Feed</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'chat' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'chat' && styles.tabActive, canManage && styles.tabCompact]}
           onPress={() => setActiveTab('chat')}
           activeOpacity={0.8}>
           <Text style={[styles.tabText, activeTab === 'chat' && styles.tabTextActive]}>Chat</Text>
         </TouchableOpacity>
+        {canManage ? (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'manage' && styles.tabActive, styles.tabCompact]}
+            onPress={() => setActiveTab('manage')}
+            activeOpacity={0.8}>
+            <Text style={[styles.tabText, activeTab === 'manage' && styles.tabTextActive]}>Manage</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      <View style={styles.tabContent}>{activeTab === 'feed' ? renderFeed() : renderChat()}</View>
+      <View style={styles.tabContent}>
+        {activeTab === 'feed' ? renderFeed() : activeTab === 'chat' ? renderChat() : renderManage()}
+      </View>
+      {renderMemberActionSheet()}
     </SafeAreaView>
   )
 }
@@ -1217,6 +1590,60 @@ const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
       maxWidth: 120,
     },
+    creatorChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: theme.accentSub,
+      borderWidth: 0.5,
+      borderColor: theme.accent,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      maxWidth: '100%',
+    },
+    creatorChipUsername: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
+      fontSize: 11,
+      color: theme.textSecondary,
+      flexShrink: 1,
+    },
+    creatorBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      backgroundColor: theme.accent + '25',
+      borderRadius: 8,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    creatorBadgeText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 8,
+      color: theme.accent,
+      letterSpacing: 0.5,
+    },
+    creatorBadgeSmall: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      backgroundColor: theme.accent + '25',
+      borderRadius: 6,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+    },
+    creatorBadgeSmallText: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 8,
+      color: theme.accent,
+      letterSpacing: 0.5,
+    },
+    modBadge: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 8,
+      color: theme.accent,
+      letterSpacing: 0.5,
+    },
     categoryChip: {
       backgroundColor: theme.accentSub,
       borderColor: theme.accent,
@@ -1275,6 +1702,10 @@ const createStyles = (theme: Theme) =>
       alignItems: 'center',
       gap: 10,
     },
+    pendingRequestInfo: {
+      flex: 1,
+      gap: 2,
+    },
     pendingRequestAvatar: {
       width: 36,
       height: 36,
@@ -1294,10 +1725,14 @@ const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
     },
     pendingRequestUsername: {
-      flex: 1,
       fontFamily: 'SpaceGrotesk-Bold',
       fontSize: 13,
       color: theme.text,
+    },
+    pendingRequestTime: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      color: theme.textTertiary,
     },
     pendingRequestActions: {
       flexDirection: 'row',
@@ -1357,6 +1792,9 @@ const createStyles = (theme: Theme) =>
     tabActive: {
       backgroundColor: theme.accent,
     },
+    tabCompact: {
+      paddingVertical: 8,
+    },
     tabText: {
       fontSize: 14,
       fontWeight: '500',
@@ -1368,6 +1806,160 @@ const createStyles = (theme: Theme) =>
     },
     tabContent: {
       flex: 1,
+    },
+    manageContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 32,
+      gap: 16,
+    },
+    manageSection: {
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 12,
+      padding: 12,
+      gap: 10,
+    },
+    manageSectionTitle: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 13,
+      color: theme.text,
+    },
+    manageSectionEmpty: {
+      fontSize: 13,
+      color: theme.textTertiary,
+    },
+    pinnedPostCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: theme.bgTertiary,
+      borderRadius: 10,
+      padding: 10,
+    },
+    pinnedPostInfo: {
+      flex: 1,
+      gap: 4,
+    },
+    pinnedPostAuthor: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 12,
+      color: theme.text,
+    },
+    pinnedPostPreview: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      lineHeight: 17,
+    },
+    unpinButton: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    unpinButtonText: {
+      fontFamily: 'SpaceGrotesk-SemiBold',
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    manageMemberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 4,
+    },
+    manageMemberAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+    },
+    manageMemberAvatarPlaceholder: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.bgTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    manageMemberAvatarText: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 14,
+      color: theme.textSecondary,
+    },
+    manageMemberInfo: {
+      flex: 1,
+      gap: 2,
+    },
+    manageMemberNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexWrap: 'wrap',
+    },
+    manageMemberUsername: {
+      fontFamily: 'SpaceGrotesk-Bold',
+      fontSize: 13,
+      color: theme.text,
+      flexShrink: 1,
+    },
+    manageMemberJoined: {
+      fontFamily: 'SpaceMono-Regular',
+      fontSize: 10,
+      color: theme.textTertiary,
+    },
+    manageMemberMenuButton: {
+      width: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    manageSettingsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 12,
+      borderTopWidth: 0.5,
+      borderTopColor: theme.border,
+    },
+    manageSettingsRowText: {
+      fontSize: 15,
+      color: theme.text,
+      fontWeight: '500',
+    },
+    manageSettingsRowDanger: {
+      fontSize: 15,
+      color: theme.danger,
+      fontWeight: '500',
+    },
+    memberSheetContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 24,
+    },
+    memberSheetRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      paddingVertical: 14,
+      borderBottomWidth: 0.5,
+      borderBottomColor: theme.border,
+    },
+    memberSheetRowText: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.text,
+    },
+    memberSheetRowDanger: {
+      color: theme.danger,
+    },
+    memberSheetCancel: {
+      alignItems: 'center',
+      paddingVertical: 16,
+      marginTop: 4,
+    },
+    memberSheetCancelText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.textSecondary,
     },
     tabLoading: {
       flex: 1,

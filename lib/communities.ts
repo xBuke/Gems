@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 
 export type CommunityJoinType = 'open' | 'invite_only'
 export type CommunityMemberStatus = 'pending' | 'accepted'
+export type CommunityMemberRole = 'member' | 'moderator'
 
 export const fetchCommunities = async () => {
   const { data } = await supabase
