@@ -421,7 +421,7 @@ export default function SettingsScreen() {
           <SettingItem icon="information-circle-outline" label="Version" value="1.0.0" theme={theme} />
           <SettingItem
             icon="star-outline"
-            label="Rate Hidden Gems"
+            label="Rate Abdita Gems"
             showChevron
             onPress={() => {
               // TODO: Replace with real App Store/Play Store URL once published

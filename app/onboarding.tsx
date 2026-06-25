@@ -80,7 +80,7 @@ const STORY_STEPS: StoryStepDef[] = [
     fallbackCoords: [46.3057, 16.3366],
   },
   {
-    text: 'Hidden Gems is where that happens.',
+    text: 'Abdita Gems is where that happens.',
     gradient: ['#1a0e28', '#241438', '#1a102a', '#0e0818'],
     fallbackCoords: [43.5081, 16.4402],
   },
@@ -217,7 +217,7 @@ const TRIAL_FEATURES = [
   'Communities',
   'No ads',
   'Custom categories',
-  'Hidden Gems cat.',
+  'Abdita Gems cat.',
 ] as const
 
 const TRIAL_HERO_GRADIENT_RAD = ((160 - 90) * Math.PI) / 180
@@ -996,7 +996,7 @@ export default function OnboardingScreen() {
           <ScrollView
             contentContainerStyle={styles.trialBody}
             showsVerticalScrollIndicator={false}>
-            <Text style={styles.trialTitle}>Try Hidden Gems Premium</Text>
+            <Text style={styles.trialTitle}>Try Abdita Gems Premium</Text>
             <Text style={styles.trialPricing}>
               €0 today · €5.99/month after · cancel anytime
             </Text>

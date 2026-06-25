@@ -22,7 +22,7 @@ type PayPlan = 'monthly' | 'yearly' | 'lifetime';
 const DISCOVER_FEATURES = [
   { emoji: '🃏', label: 'Gem Swipe' },
   { emoji: '🗺', label: 'Trip Planner' },
-  { emoji: '💎', label: 'Hidden Gems category' },
+  { emoji: '💎', label: 'Abdita Gems category' },
 ] as const;
 
 const CREATE_FEATURES = [
@@ -188,7 +188,7 @@ export default function PaywallScreen() {
             <View style={styles.diamondGlowRing} />
             <Text style={styles.diamondEmoji}>💎</Text>
           </View>
-          <Text style={styles.title}>Hidden Gems Premium</Text>
+          <Text style={styles.title}>Abdita Gems Premium</Text>
           <Text style={styles.subtitle}>Unlock the full explorer experience</Text>
         </View>
 

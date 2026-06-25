@@ -45,7 +45,7 @@ export default function RateAppSheet({ visible, onClose }: RateAppSheetProps) {
       <BottomSheetView style={styles.content}>
         <Pressable onPress={(event) => event.stopPropagation()}>
           <Text style={styles.emoji}>💎</Text>
-          <Text style={styles.title}>Enjoying Hidden Gems?</Text>
+          <Text style={styles.title}>Enjoying Abdita Gems?</Text>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((star) => (
               <Text key={star} style={styles.star}>

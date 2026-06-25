@@ -151,7 +151,7 @@ export default function FullScreenPhotoViewer({
 
     try {
       await Share.share({
-        message: `Check out ${gemTitle} on Hidden Gems! 📍`,
+        message: `Check out ${gemTitle} on Abdita Gems! 📍`,
       });
     } catch {
       // User dismissed share sheet

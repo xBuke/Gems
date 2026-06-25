@@ -10,9 +10,9 @@ type DocType = 'privacy' | 'terms';
 
 const PRIVACY_POLICY_TEXT = `**Last updated: June 2026**
 
-Hidden Gems ("we," "our," or "us") respects your privacy. This Privacy Policy explains what information we collect, how we use it, and the choices you have. It applies to the Hidden Gems mobile application and any related services (together, the "Service").
+Abdita Gems ("we," "our," or "us") respects your privacy. This Privacy Policy explains what information we collect, how we use it, and the choices you have. It applies to the Abdita Gems mobile application and any related services (together, the "Service").
 
-By using Hidden Gems, you agree to the collection and use of information as described in this policy. If you do not agree, please do not use the Service.
+By using Abdita Gems, you agree to the collection and use of information as described in this policy. If you do not agree, please do not use the Service.
 
 ## 1. Information We Collect
 
@@ -52,8 +52,8 @@ We may share information in the following circumstances:
 
 - **With other users**: your username, profile photo, public gems, comments, likes, and follower/following lists are visible to other users according to your privacy settings. Liked and visited gems are only visible to others if you choose to make them public in your profile settings.
 - **Service providers**: we use third-party providers to operate the Service, including Supabase (database, authentication, file storage), Apple App Store / Google Play (app distribution and in-app purchases), RevenueCat (subscription management, once integrated), and email delivery providers.
-- **Legal reasons**: if required by law, subpoena, or to protect the rights, property, or safety of Hidden Gems, our users, or the public
-- **Business transfers**: if Hidden Gems is involved in a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction. We will notify you of any such change.
+- **Legal reasons**: if required by law, subpoena, or to protect the rights, property, or safety of Abdita Gems, our users, or the public
+- **Business transfers**: if Abdita Gems is involved in a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction. We will notify you of any such change.
 
 We do not share your precise location with other users. Other users only see the location of gems you choose to make public, not your real-time position.
 
@@ -73,7 +73,7 @@ If you are located in the European Economic Area, UK, or Switzerland, you have t
 If you are a California resident, you have the right to know what personal information we collect, request deletion or correction, opt out of sale/sharing (we do not sell personal information), and not be discriminated against for exercising these rights.
 
 ### 4.4 Exercising your rights
-To exercise any of these rights, contact us at **support@hiddengems.app**. We will respond within the timeframe required by applicable law. You can also delete your account directly from Settings → Delete Account.
+To exercise any of these rights, contact us at **support@abditagems.app**. We will respond within the timeframe required by applicable law. You can also delete your account directly from Settings → Delete Account.
 
 ## 5. Data Retention
 
@@ -85,7 +85,7 @@ We use industry-standard security measures, including encryption in transit and 
 
 ## 7. Children's Privacy
 
-Hidden Gems is not directed to children under 16, and we do not knowingly collect personal information from children under 16. If we learn that we have collected such information, we will delete it promptly. If you believe a child has provided us with personal information, please contact us.
+Abdita Gems is not directed to children under 16, and we do not knowingly collect personal information from children under 16. If we learn that we have collected such information, we will delete it promptly. If you believe a child has provided us with personal information, please contact us.
 
 ## 8. International Data Transfers
 
@@ -103,17 +103,17 @@ We may update this Privacy Policy from time to time. If we make material changes
 
 If you have questions about this Privacy Policy or how we handle your data, contact us at:
 
-**Email:** support@hiddengems.app`;
+**Email:** support@abditagems.app`;
 
 const TERMS_OF_SERVICE_TEXT = `**Last updated: June 2026**
 
-Welcome to Hidden Gems. These Terms of Service ("Terms") govern your access to and use of the Hidden Gems mobile application and related services (the "Service"), operated by Hidden Gems ("we," "our," or "us").
+Welcome to Abdita Gems. These Terms of Service ("Terms") govern your access to and use of the Abdita Gems mobile application and related services (the "Service"), operated by Abdita Gems ("we," "our," or "us").
 
 By creating an account or using the Service, you agree to these Terms. If you do not agree, do not use the Service.
 
 ## 1. Eligibility
 
-You must be at least 16 years old to use Hidden Gems. By using the Service, you represent that you meet this requirement and that you have the legal capacity to enter into these Terms. If you are using the Service on behalf of a minor under your supervision, you are responsible for their compliance with these Terms.
+You must be at least 16 years old to use Abdita Gems. By using the Service, you represent that you meet this requirement and that you have the legal capacity to enter into these Terms. If you are using the Service on behalf of a minor under your supervision, you are responsible for their compliance with these Terms.
 
 ## 2. Your Account
 
@@ -134,7 +134,7 @@ You are solely responsible for your User Content. You agree that your User Conte
 We may review, remove, or restrict access to any User Content, and suspend or terminate accounts, at our discretion, if we believe it violates these Terms or harms the Service, other users, or third parties. You can report content or users using the in-app reporting tools.
 
 ### 3.4 Location accuracy
-Hidden Gems uses location verification to encourage accurate pin placement. However, we do not guarantee the accuracy, safety, or legality of any location, gem, or activity suggested by other users. Always exercise your own judgment and follow local laws when visiting any location.
+Abdita Gems uses location verification to encourage accurate pin placement. However, we do not guarantee the accuracy, safety, or legality of any location, gem, or activity suggested by other users. Always exercise your own judgment and follow local laws when visiting any location.
 
 ## 4. Community Guidelines
 
@@ -143,7 +143,7 @@ When using social features (following, messaging, comments, communities), you ag
 ## 5. Subscriptions and Payments
 
 ### 5.1 Free and Premium tiers
-Hidden Gems offers a free tier with limited features and a Premium subscription (monthly, yearly, or lifetime) that unlocks additional features as described in the app.
+Abdita Gems offers a free tier with limited features and a Premium subscription (monthly, yearly, or lifetime) that unlocks additional features as described in the app.
 
 ### 5.2 Billing
 - Subscriptions are billed through the Apple App Store or Google Play and are subject to their respective terms.
@@ -158,7 +158,7 @@ Refund requests for subscriptions are handled by Apple or Google according to th
 
 ## 6. Intellectual Property
 
-The Service, including its design, branding, logos, and underlying software, is owned by Hidden Gems and protected by intellectual property laws. These Terms do not grant you any rights to our trademarks, logos, or branding.
+The Service, including its design, branding, logos, and underlying software, is owned by Abdita Gems and protected by intellectual property laws. These Terms do not grant you any rights to our trademarks, logos, or branding.
 
 ## 7. Termination
 
@@ -174,11 +174,11 @@ YOU USE THE SERVICE, AND VISIT ANY LOCATION DISCOVERED THROUGH THE SERVICE, AT Y
 
 ## 9. Limitation of Liability
 
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, HIDDEN GEMS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF THE SERVICE. OUR TOTAL LIABILITY FOR ANY CLAIM ARISING FROM THESE TERMS OR THE SERVICE SHALL NOT EXCEED THE AMOUNT YOU PAID US, IF ANY, IN THE 12 MONTHS PRECEDING THE CLAIM.
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, ABDITA GEMS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF THE SERVICE. OUR TOTAL LIABILITY FOR ANY CLAIM ARISING FROM THESE TERMS OR THE SERVICE SHALL NOT EXCEED THE AMOUNT YOU PAID US, IF ANY, IN THE 12 MONTHS PRECEDING THE CLAIM.
 
 ## 10. Indemnification
 
-You agree to indemnify and hold harmless Hidden Gems, its officers, employees, and agents from any claims, damages, or expenses arising from your use of the Service, your User Content, or your violation of these Terms.
+You agree to indemnify and hold harmless Abdita Gems, its officers, employees, and agents from any claims, damages, or expenses arising from your use of the Service, your User Content, or your violation of these Terms.
 
 ## 11. Governing Law and Disputes
 
@@ -192,7 +192,7 @@ We may update these Terms from time to time. If we make material changes, we wil
 
 Questions about these Terms can be sent to:
 
-**Email:** support@hiddengems.app`;
+**Email:** support@abditagems.app`;
 
 function FormattedLine({ text, style, boldStyle }: { text: string; style: object; boldStyle: object }) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);

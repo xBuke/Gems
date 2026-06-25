@@ -302,7 +302,7 @@ export default function AuthScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
             <CompassLogo theme={theme} />
-            <Text style={styles.title}>Hidden Gems</Text>
+            <Text style={styles.title}>Abdita Gems</Text>
             <Text style={styles.subtitle}>Discover secret places near you</Text>
 
             <SegmentedPill

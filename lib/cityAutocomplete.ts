@@ -4,7 +4,7 @@ export const searchCities = async (query: string): Promise<{ name: string; lat: 
   try {
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8&addressdetails=1`,
-      { headers: { 'User-Agent': 'HiddenGemsApp/1.0' } },
+      { headers: { 'User-Agent': 'AbditaGemsApp/1.0' } },
     )
     const data = await response.json()
 

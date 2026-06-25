@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "HiddenGems",
-    "slug": "HiddenGems",
+    "name": "AbditaGems",
+    "slug": "AbditaGems",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "hiddengems",
+    "scheme": "abditagems",
     "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/images/icon.png",
@@ -14,9 +14,11 @@
     },
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.abditagems.app"
     },
     "android": {
+      "package": "com.abditagems.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0D0D0D"

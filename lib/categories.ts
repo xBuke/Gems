@@ -71,7 +71,7 @@ export const CATEGORIES = [
   },
   {
     id: 'hidden',
-    name: 'Hidden Gems',
+    name: 'Abdita Gems',
     icon: 'diamond',
     color: '#FFD700',
     subcategories: ['Secret Passage', 'Underground Spot', 'Members Only', 'Local Secret', 'Off the Map', 'Locals-Only Spot', 'Forgotten Ruin', 'No-Signal Zone'],

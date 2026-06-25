@@ -7,7 +7,7 @@ export const resolveCityName = async (
   try {
     const response = await fetch(
       `${NOMINATIM_REVERSE}?lat=${latitude}&lon=${longitude}&format=json`,
-      { headers: { 'User-Agent': 'HiddenGemsApp/1.0' } },
+      { headers: { 'User-Agent': 'AbditaGemsApp/1.0' } },
     );
     const data = await response.json();
     const name =

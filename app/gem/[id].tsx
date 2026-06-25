@@ -559,7 +559,7 @@ export default function GemDetailScreen() {
 
     try {
       await Share.share({
-        message: `Check out ${gem.title} on Hidden Gems! 📍`,
+        message: `Check out ${gem.title} on Abdita Gems! 📍`,
       });
     } catch {
       // User dismissed share sheet
