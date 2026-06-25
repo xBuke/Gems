@@ -382,7 +382,7 @@ export default function SettingsScreen() {
         <View style={styles.sectionGroup}>
           <SettingItem
             icon="ban-outline"
-            label="Blocked Users"
+            label="Blocked & Muted Accounts"
             showChevron
             onPress={() => router.push('/blocked-users')}
             theme={theme}

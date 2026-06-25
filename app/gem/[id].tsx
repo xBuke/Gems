@@ -10,7 +10,7 @@ import GemPhotoGallery from '@/components/GemPhotoGallery';
 import { deleteGem } from '@/lib/deleteGem';
 import { fetchGemPhotos, type GemPhoto } from '@/lib/gemPhotos';
 import { checkIsPremium } from '@/lib/paywall';
-import { blockUser, getMyBlockedUsers } from '@/lib/safety';
+import { blockUser, getMyBlockedUsers, isUserMuted, muteUser, unmuteUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { formatCoordinates } from '@/lib/coordinates';
@@ -19,9 +19,11 @@ import { hapticLight, hapticMedium, hapticSuccess } from '@/lib/haptics';
 import { addStreakBonus } from '@/lib/streak';
 import { sendPushNotification } from '@/lib/sendPushNotification';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/lib/ToastContext';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import CheckInConfirmationSheet from '@/components/CheckInConfirmationSheet';
 import ReportSheet from '@/components/ReportSheet';
+import SafetyOptionsSheet from '@/components/SafetyOptionsSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
@@ -145,6 +147,15 @@ export default function GemDetailScreen() {
   const [reportTarget, setReportTarget] = useState<{
     type: 'gem' | 'comment';
     id: string;
+  } | null>(null);
+  const [safetyMenuVisible, setSafetyMenuVisible] = useState(false);
+  const [safetyMenuTarget, setSafetyMenuTarget] = useState<{
+    userId: string;
+    username: string;
+    reportLabel: string;
+    reportType: 'gem' | 'comment';
+    reportId: string;
+    isMuted: boolean;
   } | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [gemPhotos, setGemPhotos] = useState<GemPhoto[]>([]);
@@ -651,6 +662,39 @@ export default function GemDetailScreen() {
     );
   };
 
+  const { showToast } = useToast();
+
+  const handleToggleMute = async (mutedId: string, mutedUsername: string) => {
+    if (!currentUserId || !safetyMenuTarget) return;
+    if (safetyMenuTarget.isMuted) {
+      await unmuteUser(currentUserId, mutedId);
+      showToast({
+        type: 'success',
+        title: `Unmuted @${mutedUsername}`,
+      });
+    } else {
+      await muteUser(currentUserId, mutedId);
+      showToast({
+        type: 'success',
+        title: `Muted @${mutedUsername}`,
+      });
+    }
+    setSafetyMenuTarget((prev) => (prev ? { ...prev, isMuted: !prev.isMuted } : null));
+  };
+
+  const openSafetyMenu = async (target: {
+    userId: string;
+    username: string;
+    reportLabel: string;
+    reportType: 'gem' | 'comment';
+    reportId: string;
+  }) => {
+    if (!currentUserId) return;
+    const muted = await isUserMuted(currentUserId, target.userId);
+    setSafetyMenuTarget({ ...target, isMuted: muted });
+    setSafetyMenuVisible(true);
+  };
+
   const showGemMenu = () => {
     if (!gem) return;
 
@@ -682,59 +726,24 @@ export default function GemDetailScreen() {
     }
 
     const gemUsername = gem.profiles?.username ?? 'unknown';
-    const options = [`Report Gem`, `Block @${gemUsername}`, 'Cancel'];
-    const cancelIndex = 2;
-
-    const handleSelection = (index: number) => {
-      if (index === 0) openReportSheet('gem', gem.id);
-      if (index === 1) confirmBlockUser(gem.user_id, gemUsername);
-    };
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: 1 },
-        handleSelection,
-      );
-    } else {
-      Alert.alert('Options', undefined, [
-        { text: 'Report Gem', onPress: () => openReportSheet('gem', gem.id) },
-        {
-          text: `Block @${gemUsername}`,
-          style: 'destructive',
-          onPress: () => confirmBlockUser(gem.user_id, gemUsername),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-    }
+    openSafetyMenu({
+      userId: gem.user_id,
+      username: gemUsername,
+      reportLabel: 'Report Gem',
+      reportType: 'gem',
+      reportId: gem.id,
+    });
   };
 
   const showCommentMenu = (comment: Comment) => {
     const commentUsername = comment.profiles?.username ?? 'user';
-
-    const options = ['Report Comment', `Block @${commentUsername}`, 'Cancel'];
-    const cancelIndex = 2;
-
-    const handleSelection = (index: number) => {
-      if (index === 0) openReportSheet('comment', comment.id);
-      if (index === 1) confirmBlockUser(comment.user_id, commentUsername);
-    };
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: 1 },
-        handleSelection,
-      );
-    } else {
-      Alert.alert('Options', undefined, [
-        { text: 'Report Comment', onPress: () => openReportSheet('comment', comment.id) },
-        {
-          text: `Block @${commentUsername}`,
-          style: 'destructive',
-          onPress: () => confirmBlockUser(comment.user_id, commentUsername),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-    }
+    openSafetyMenu({
+      userId: comment.user_id,
+      username: commentUsername,
+      reportLabel: 'Report Comment',
+      reportType: 'comment',
+      reportId: comment.id,
+    });
   };
 
   if (loading) {
@@ -1181,6 +1190,22 @@ export default function GemDetailScreen() {
           />
         </View>
       </View>
+
+      {currentUserId && safetyMenuTarget && (
+        <SafetyOptionsSheet
+          visible={safetyMenuVisible}
+          onClose={() => {
+            setSafetyMenuVisible(false);
+            setSafetyMenuTarget(null);
+          }}
+          username={safetyMenuTarget.username}
+          reportLabel={safetyMenuTarget.reportLabel}
+          isMuted={safetyMenuTarget.isMuted}
+          onToggleMute={() => handleToggleMute(safetyMenuTarget.userId, safetyMenuTarget.username)}
+          onBlock={() => confirmBlockUser(safetyMenuTarget.userId, safetyMenuTarget.username)}
+          onReport={() => openReportSheet(safetyMenuTarget.reportType, safetyMenuTarget.reportId)}
+        />
+      )}
 
       {currentUserId && reportTarget && (
         <ReportSheet

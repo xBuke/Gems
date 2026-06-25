@@ -1,5 +1,5 @@
 import { EmptyState } from '@/components/EmptyState'
-import { getMyBlockedUsers, unblockUser } from '@/lib/safety'
+import { getMyBlockedUsers, getMyMutedUsers, unblockUser, unmuteUser } from '@/lib/safety'
 import { useTheme } from '@/lib/ThemeContext'
 import type { Theme } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
@@ -22,33 +22,48 @@ type BlockedUser = {
   blocked: { username: string } | null
 }
 
+type MutedUser = {
+  id: string
+  muted_id: string
+  muted: { username: string } | null
+}
+
+type TabKey = 'blocked' | 'muted'
+
 export default function BlockedUsersScreen() {
   const router = useRouter()
   const { theme } = useTheme()
   const styles = useMemo(() => createStyles(theme), [theme])
+  const [activeTab, setActiveTab] = useState<TabKey>('blocked')
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
+  const [mutedUsers, setMutedUsers] = useState<MutedUser[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
 
-  const fetchBlocked = useCallback(async () => {
+  const fetchLists = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       setBlockedUsers([])
+      setMutedUsers([])
       setLoading(false)
       return
     }
 
     setUserId(user.id)
-    const data = await getMyBlockedUsers(user.id)
-    setBlockedUsers(data as BlockedUser[])
+    const [blocked, muted] = await Promise.all([
+      getMyBlockedUsers(user.id),
+      getMyMutedUsers(user.id),
+    ])
+    setBlockedUsers(blocked as BlockedUser[])
+    setMutedUsers(muted as MutedUser[])
     setLoading(false)
   }, [])
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true)
-      fetchBlocked()
-    }, [fetchBlocked]),
+      fetchLists()
+    }, [fetchLists]),
   )
 
   const handleUnblock = async (blockedId: string) => {
@@ -57,7 +72,13 @@ export default function BlockedUsersScreen() {
     setBlockedUsers((prev) => prev.filter((b) => b.blocked_id !== blockedId))
   }
 
-  const renderItem = ({ item }: { item: BlockedUser }) => {
+  const handleUnmute = async (mutedId: string) => {
+    if (!userId) return
+    await unmuteUser(userId, mutedId)
+    setMutedUsers((prev) => prev.filter((m) => m.muted_id !== mutedId))
+  }
+
+  const renderBlockedItem = ({ item }: { item: BlockedUser }) => {
     const username = item.blocked?.username ?? 'Unknown'
     const initial = username.charAt(0).toUpperCase()
 
@@ -67,17 +88,42 @@ export default function BlockedUsersScreen() {
           <Text style={styles.avatarText}>{initial}</Text>
         </View>
         <Text style={styles.username} numberOfLines={1}>
-          {username}
+          @{username}
         </Text>
         <TouchableOpacity
-          style={styles.unblockButton}
+          style={styles.actionButton}
           onPress={() => handleUnblock(item.blocked_id)}
           activeOpacity={0.8}>
-          <Text style={styles.unblockText}>Unblock</Text>
+          <Text style={styles.actionText}>Unblock</Text>
         </TouchableOpacity>
       </View>
     )
   }
+
+  const renderMutedItem = ({ item }: { item: MutedUser }) => {
+    const username = item.muted?.username ?? 'Unknown'
+    const initial = username.charAt(0).toUpperCase()
+
+    return (
+      <View style={styles.userRow}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial}</Text>
+        </View>
+        <Text style={styles.username} numberOfLines={1}>
+          @{username}
+        </Text>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handleUnmute(item.muted_id)}
+          activeOpacity={0.8}>
+          <Text style={styles.actionText}>Unmute</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  const listData = activeTab === 'blocked' ? blockedUsers : mutedUsers
+  const isEmpty = !loading && listData.length === 0
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -85,25 +131,53 @@ export default function BlockedUsersScreen() {
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerSide}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Blocked Users</Text>
+        <Text style={styles.headerTitle}>Blocked & Muted</Text>
         <View style={styles.headerSide} />
+      </View>
+
+      <View style={styles.tabRow}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'blocked' && styles.tabActive]}
+          onPress={() => setActiveTab('blocked')}
+          activeOpacity={0.8}>
+          <Text style={[styles.tabText, activeTab === 'blocked' && styles.tabTextActive]}>
+            Blocked
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'muted' && styles.tabActive]}
+          onPress={() => setActiveTab('muted')}
+          activeOpacity={0.8}>
+          <Text style={[styles.tabText, activeTab === 'muted' && styles.tabTextActive]}>
+            Muted
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
-      ) : blockedUsers.length === 0 ? (
+      ) : isEmpty ? (
         <EmptyState
-          icon="shield-checkmark-outline"
-          title="No blocked users"
-          subtitle="You haven't blocked anyone"
+          icon={activeTab === 'blocked' ? 'shield-checkmark-outline' : 'volume-mute-outline'}
+          title={activeTab === 'blocked' ? 'No blocked users' : 'No muted users'}
+          subtitle={
+            activeTab === 'blocked'
+              ? "You haven't blocked anyone"
+              : "You haven't muted anyone"
+          }
         />
       ) : (
         <FlatList
-          data={blockedUsers}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
+          key={activeTab}
+          data={listData}
+          keyExtractor={(item) =>
+            activeTab === 'blocked'
+              ? (item as BlockedUser).blocked_id
+              : (item as MutedUser).muted_id
+          }
+          renderItem={activeTab === 'blocked' ? renderBlockedItem : renderMutedItem}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -133,6 +207,34 @@ const createStyles = (theme: Theme) =>
       fontFamily: 'SpaceGrotesk-Bold',
       color: theme.text,
     },
+    tabRow: {
+      flexDirection: 'row',
+      marginHorizontal: 16,
+      marginBottom: 8,
+      borderRadius: 10,
+      backgroundColor: theme.card,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      padding: 4,
+      gap: 4,
+    },
+    tab: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    tabActive: {
+      backgroundColor: theme.background,
+    },
+    tabText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    tabTextActive: {
+      color: theme.text,
+    },
     centered: {
       flex: 1,
       alignItems: 'center',
@@ -140,11 +242,6 @@ const createStyles = (theme: Theme) =>
       gap: 12,
       padding: 40,
       paddingTop: 60,
-    },
-    emptyText: {
-      fontSize: 15,
-      color: theme.textSecondary,
-      textAlign: 'center',
     },
     userRow: {
       flexDirection: 'row',
@@ -174,7 +271,7 @@ const createStyles = (theme: Theme) =>
       fontWeight: '600',
       color: theme.text,
     },
-    unblockButton: {
+    actionButton: {
       borderWidth: 0.5,
       borderColor: theme.border,
       borderRadius: 8,
@@ -182,7 +279,7 @@ const createStyles = (theme: Theme) =>
       paddingHorizontal: 14,
       backgroundColor: theme.card,
     },
-    unblockText: {
+    actionText: {
       fontSize: 13,
       fontWeight: '600',
       color: theme.text,

@@ -17,7 +17,7 @@ import {
 import { hapticLight, hapticSuccess } from '@/lib/haptics';
 import { compressImage } from '@/lib/imageCompress';
 import { checkIsPremium } from '@/lib/paywall';
-import { blockUser } from '@/lib/safety';
+import { blockUser, isUserMuted, muteUser, unmuteUser } from '@/lib/safety';
 import { navigateToGemWithSharedTransition } from '@/lib/gemSharedTransition';
 import { goBackOrTab, useTabRootBackHandler, useTabStackGesture } from '@/lib/navigationMotion';
 import { useReduceMotion } from '@/lib/ReduceMotionContext';
@@ -33,6 +33,7 @@ import { ErrorBanner } from '@/components/ErrorBanner';
 import { PermissionDeniedBanner } from '@/components/PermissionDeniedBanner';
 import { PressableScale } from '@/components/PressableScale';
 import ReportSheet from '@/components/ReportSheet';
+import SafetyOptionsSheet from '@/components/SafetyOptionsSheet';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { useAppForegroundPermissionRecheck } from '@/hooks/useAppForegroundPermissionRecheck';
 import { Ionicons } from '@expo/vector-icons';
@@ -345,6 +346,8 @@ export default function ProfileScreen() {
   const [followRequests, setFollowRequests] = useState<FollowRequest[]>([]);
   const [followRequestsExpanded, setFollowRequestsExpanded] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+  const [safetyMenuVisible, setSafetyMenuVisible] = useState(false);
+  const [isTargetMuted, setIsTargetMuted] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [likedGems, setLikedGems] = useState<Gem[]>([]);
   const [visitedGems, setVisitedGems] = useState<Gem[]>([]);
@@ -1092,69 +1095,50 @@ export default function ProfileScreen() {
     setFollowRequests((prev) => prev.filter((r) => r.follower_id !== followerId));
   };
 
-  const showProfileMenu = () => {
-    if (!userId || isOwnProfile) return;
+  const showProfileMenu = async () => {
+    if (!userId || isOwnProfile || !currentUserId) return;
+    const muted = await isUserMuted(currentUserId, userId);
+    setIsTargetMuted(muted);
+    setSafetyMenuVisible(true);
+  };
 
-    const options = ['Report User', 'Block User', 'Cancel'];
-    const cancelIndex = 2;
-
-    const handleSelection = (index: number) => {
-      if (index === 0) setReportVisible(true);
-      if (index === 1) {
-        Alert.alert(
-          `Block @${username}?`,
-          'They won\'t be able to see your content and you won\'t see theirs.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Block',
-              style: 'destructive',
-              onPress: async () => {
-                if (!currentUserId) return;
-                await blockUser(currentUserId, userId);
-                Alert.alert('Blocked', `@${username} has been blocked.`);
-                router.back();
-              },
-            },
-          ],
-        );
-      }
-    };
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: 1 },
-        handleSelection,
-      );
+  const handleToggleMute = async () => {
+    if (!currentUserId || !userId) return;
+    if (isTargetMuted) {
+      await unmuteUser(currentUserId, userId);
+      setIsTargetMuted(false);
+      showToast({
+        type: 'success',
+        title: `Unmuted @${username}`,
+      });
     } else {
-      Alert.alert('Options', undefined, [
-        { text: 'Report User', onPress: () => setReportVisible(true) },
+      await muteUser(currentUserId, userId);
+      setIsTargetMuted(true);
+      showToast({
+        type: 'success',
+        title: `Muted @${username}`,
+      });
+    }
+  };
+
+  const handleBlockUser = () => {
+    if (!currentUserId || !userId) return;
+    Alert.alert(
+      `Block @${username}?`,
+      'They won\'t be able to see your content and you won\'t see theirs.',
+      [
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Block User',
+          text: 'Block',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              `Block @${username}?`,
-              'They won\'t be able to see your content and you won\'t see theirs.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Block',
-                  style: 'destructive',
-                  onPress: async () => {
-                    if (!currentUserId) return;
-                    await blockUser(currentUserId, userId);
-                    Alert.alert('Blocked', `@${username} has been blocked.`);
-                    router.back();
-                  },
-                },
-              ],
-            );
+          onPress: async () => {
+            await blockUser(currentUserId, userId);
+            Alert.alert('Blocked', `@${username} has been blocked.`);
+            router.back();
           },
         },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-    }
+      ],
+    );
   };
 
   const handleDeleteGem = async (gemId: string, imageUrl: string | null) => {
@@ -2163,13 +2147,25 @@ export default function ProfileScreen() {
       )}
 
       {!isOwnProfile && currentUserId && userId && (
-        <ReportSheet
-          visible={reportVisible}
-          onClose={() => setReportVisible(false)}
-          targetType="user"
-          targetId={userId}
-          reporterId={currentUserId}
-        />
+        <>
+          <SafetyOptionsSheet
+            visible={safetyMenuVisible}
+            onClose={() => setSafetyMenuVisible(false)}
+            username={username}
+            reportLabel="Report User"
+            isMuted={isTargetMuted}
+            onToggleMute={handleToggleMute}
+            onBlock={handleBlockUser}
+            onReport={() => setReportVisible(true)}
+          />
+          <ReportSheet
+            visible={reportVisible}
+            onClose={() => setReportVisible(false)}
+            targetType="user"
+            targetId={userId}
+            reporterId={currentUserId}
+          />
+        </>
       )}
 
       <AchievementUnlockModal

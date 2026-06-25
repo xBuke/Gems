@@ -1,6 +1,7 @@
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { DiscoverListCard } from '@/components/DiscoverListCard';
+import { MutedGemRow } from '@/components/MutedGemRow';
 import { PermissionDeniedBanner } from '@/components/PermissionDeniedBanner';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { requireAuth } from '@/lib/authGuard';
@@ -20,7 +21,7 @@ import { getDistance } from '@/lib/distance';
 import { hapticSelection } from '@/lib/haptics';
 import { getMysteryGemOfTheWeek } from '@/lib/mysteryGem';
 import { navigateToTab } from '@/lib/navigationMotion';
-import { getMyBlockedUsers } from '@/lib/safety';
+import { getMyBlockedUsers, getMyMutedUsers, unmuteUser } from '@/lib/safety';
 import { consumeLastStreakResult } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +31,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAppForegroundPermissionRecheck } from '@/hooks/useAppForegroundPermissionRecheck';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react';
 import {
   Animated,
   RefreshControl,
@@ -192,6 +193,7 @@ export default function DiscoverScreen() {
   const [isPremium, setIsPremium] = useState(false);
   const [streakBannerText, setStreakBannerText] = useState<string | null>(null);
   const [feedError, setFeedError] = useState<string | null>(null);
+  const [mutedUserIds, setMutedUserIds] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const streakBannerOpacity = useRef(new Animated.Value(0)).current;
@@ -570,6 +572,8 @@ export default function DiscoverScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     const blocked = user ? await getMyBlockedUsers(user.id) : [];
     const blockedIds = new Set(blocked.map((b: { blocked_id: string }) => b.blocked_id));
+    const muted = user ? await getMyMutedUsers(user.id) : [];
+    setMutedUserIds(new Set(muted.map((m: { muted_id: string }) => m.muted_id)));
 
     const filterBlockedLocal = <T extends { user_id: string }>(gems: T[]): T[] =>
       gems.filter((g) => !blockedIds.has(g.user_id));
@@ -1081,12 +1085,46 @@ export default function DiscoverScreen() {
     );
   };
 
+  const handleUnmute = useCallback(async (mutedId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await unmuteUser(user.id, mutedId);
+    setMutedUserIds((prev) => {
+      const next = new Set(prev);
+      next.delete(mutedId);
+      return next;
+    });
+  }, []);
+
   const renderListCard = (
     gem: GemWithProfile,
     distanceMeters?: number | null,
     showBestTime = false,
     staggerIndex?: number,
   ) => {
+    const username = gem.profiles?.username ?? 'unknown';
+
+    if (mutedUserIds.has(gem.user_id)) {
+      const mutedRow = (
+        <MutedGemRow
+          imageUrl={gem.image_url}
+          username={username}
+          onUnmute={() => handleUnmute(gem.user_id)}
+        />
+      );
+
+      if (staggerIndex !== undefined) {
+        return (
+          <Reanimated.View
+            entering={FadeInDown.delay(staggerIndex * 60).duration(300)}>
+            {mutedRow}
+          </Reanimated.View>
+        );
+      }
+
+      return mutedRow;
+    }
+
     const card = (
       <DiscoverListCard
         gem={gem}
@@ -1104,26 +1142,34 @@ export default function DiscoverScreen() {
     if (staggerIndex !== undefined) {
       return (
         <Reanimated.View
-          key={gem.id}
           entering={FadeInDown.delay(staggerIndex * 60).duration(300)}>
           {card}
         </Reanimated.View>
       );
     }
 
-    return (
-      <View key={gem.id}>
-        {card}
-      </View>
-    );
+    return card;
   };
 
   const renderTrendingCard = (gem: GemWithProfile, index: number) => {
     const username = gem.profiles?.username ?? 'unknown';
 
+    if (mutedUserIds.has(gem.user_id)) {
+      return (
+        <Reanimated.View
+          entering={FadeInDown.delay(index * 60).duration(300)}>
+          <MutedGemRow
+            imageUrl={gem.image_url}
+            username={username}
+            onUnmute={() => handleUnmute(gem.user_id)}
+            compact
+          />
+        </Reanimated.View>
+      );
+    }
+
     return (
       <Reanimated.View
-        key={gem.id}
         entering={FadeInDown.delay(index * 60).duration(300)}>
       <TouchableOpacity
         style={styles.trendingCard}
@@ -1285,7 +1331,9 @@ export default function DiscoverScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.trendingRow}>
-            {filteredTrendingGems.map((gem, index) => renderTrendingCard(gem, index))}
+            {filteredTrendingGems.map((gem, index) => (
+              <Fragment key={gem.id}>{renderTrendingCard(gem, index)}</Fragment>
+            ))}
           </ScrollView>
         </>
       )}
@@ -1293,7 +1341,9 @@ export default function DiscoverScreen() {
       {filteredRecentGems.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Recently Added</Text>
-          {filteredRecentGems.map((gem, index) => renderListCard(gem, undefined, true, index))}
+          {filteredRecentGems.map((gem, index) => (
+            <Fragment key={gem.id}>{renderListCard(gem, undefined, true, index)}</Fragment>
+          ))}
           {hasMoreRecent && !searchQuery.trim() && (
             <TouchableOpacity
               style={styles.loadMoreButton}
@@ -1327,9 +1377,11 @@ export default function DiscoverScreen() {
             />
           ) : (
             <>
-              {filteredPopularGems.map((gem, index) =>
-                renderListCard(gem, undefined, false, index),
-              )}
+              {filteredPopularGems.map((gem, index) => (
+                <Fragment key={gem.id}>
+                  {renderListCard(gem, undefined, false, index)}
+                </Fragment>
+              ))}
               {hasMorePopular && !searchQuery.trim() && (
                 <TouchableOpacity
                   style={styles.loadMoreButton}
@@ -1374,7 +1426,9 @@ export default function DiscoverScreen() {
             </>
           ) : (
             <>
-              {filteredNearbyGems.map((gem) => renderListCard(gem, getGemDistance(gem)))}
+              {filteredNearbyGems.map((gem) => (
+                <Fragment key={gem.id}>{renderListCard(gem, getGemDistance(gem))}</Fragment>
+              ))}
               {hasMoreNearby && !searchQuery.trim() && (
                 <TouchableOpacity
                   style={styles.loadMoreButton}

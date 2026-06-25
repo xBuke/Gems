@@ -1,10 +1,12 @@
 import { formatCoordinates } from '@/lib/coordinates';
-import { blockUser } from '@/lib/safety';
+import { blockUser, isUserMuted, muteUser, unmuteUser } from '@/lib/safety';
 import { hapticLight } from '@/lib/haptics';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/lib/ToastContext';
 import ReportSheet from '@/components/ReportSheet';
+import SafetyOptionsSheet from '@/components/SafetyOptionsSheet';
 import { AppBottomSheetModal, type AppBottomSheetModalRef } from '@/components/AppBottomSheetModal';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
@@ -12,7 +14,6 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Dimensions,
@@ -122,7 +123,10 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  const { showToast } = useToast();
   const [reportVisible, setReportVisible] = useState(false);
+  const [safetyMenuVisible, setSafetyMenuVisible] = useState(false);
+  const [isTargetMuted, setIsTargetMuted] = useState(false);
   const [otherAvatarUrl, setOtherAvatarUrl] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [myGems, setMyGems] = useState<ShareableGem[]>([]);
@@ -332,65 +336,49 @@ export default function ChatScreen() {
     router.push('/profile?userId=' + userId);
   };
 
-  const showChatMenu = () => {
+  const showChatMenu = async () => {
     if (!myId || !userId) return;
+    const muted = await isUserMuted(myId, userId);
+    setIsTargetMuted(muted);
+    setSafetyMenuVisible(true);
+  };
 
-    const options = ['Report User', 'Block User', 'Cancel'];
-    const cancelIndex = 2;
-
-    const handleSelection = (index: number) => {
-      if (index === 0) setReportVisible(true);
-      if (index === 1) {
-        Alert.alert(
-          `Block ${displayName}?`,
-          'They won\'t be able to message you and you won\'t see their content.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Block',
-              style: 'destructive',
-              onPress: async () => {
-                await blockUser(myId, userId);
-                router.back();
-              },
-            },
-          ],
-        );
-      }
-    };
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: 1 },
-        handleSelection,
-      );
+  const handleToggleMute = async () => {
+    if (!myId || !userId) return;
+    if (isTargetMuted) {
+      await unmuteUser(myId, userId);
+      setIsTargetMuted(false);
+      showToast({
+        type: 'success',
+        title: `Unmuted @${displayName}`,
+      });
     } else {
-      Alert.alert('Options', undefined, [
-        { text: 'Report User', onPress: () => setReportVisible(true) },
+      await muteUser(myId, userId);
+      setIsTargetMuted(true);
+      showToast({
+        type: 'success',
+        title: `Muted @${displayName}`,
+      });
+    }
+  };
+
+  const handleBlockUser = () => {
+    if (!myId || !userId) return;
+    Alert.alert(
+      `Block ${displayName}?`,
+      'They won\'t be able to message you and you won\'t see their content.',
+      [
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Block User',
+          text: 'Block',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              `Block ${displayName}?`,
-              'They won\'t be able to message you and you won\'t see their content.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Block',
-                  style: 'destructive',
-                  onPress: async () => {
-                    await blockUser(myId, userId);
-                    router.back();
-                  },
-                },
-              ],
-            );
+          onPress: async () => {
+            await blockUser(myId, userId);
+            router.back();
           },
         },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-    }
+      ],
+    );
   };
 
   const displayName = username || 'User';
@@ -560,13 +548,25 @@ export default function ChatScreen() {
       </KeyboardAvoidingView>
 
       {myId && userId && (
-        <ReportSheet
-          visible={reportVisible}
-          onClose={() => setReportVisible(false)}
-          targetType="user"
-          targetId={userId}
-          reporterId={myId}
-        />
+        <>
+          <SafetyOptionsSheet
+            visible={safetyMenuVisible}
+            onClose={() => setSafetyMenuVisible(false)}
+            username={displayName}
+            reportLabel="Report User"
+            isMuted={isTargetMuted}
+            onToggleMute={handleToggleMute}
+            onBlock={handleBlockUser}
+            onReport={() => setReportVisible(true)}
+          />
+          <ReportSheet
+            visible={reportVisible}
+            onClose={() => setReportVisible(false)}
+            targetType="user"
+            targetId={userId}
+            reporterId={myId}
+          />
+        </>
       )}
 
       <AppBottomSheetModal

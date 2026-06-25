@@ -83,3 +83,33 @@ export const getMyBlockedUsers = async (userId: string) => {
     .eq('blocker_id', userId)
   return data || []
 }
+
+export const muteUser = async (muterId: string, mutedId: string) => {
+  return await supabase.from('muted_users').insert({ muter_id: muterId, muted_id: mutedId })
+}
+
+export const unmuteUser = async (muterId: string, mutedId: string) => {
+  return await supabase
+    .from('muted_users')
+    .delete()
+    .eq('muter_id', muterId)
+    .eq('muted_id', mutedId)
+}
+
+export const getMyMutedUsers = async (userId: string) => {
+  const { data } = await supabase
+    .from('muted_users')
+    .select('*, muted:profiles!muted_users_muted_id_fkey(username)')
+    .eq('muter_id', userId)
+  return data || []
+}
+
+export const isUserMuted = async (muterId: string, targetId: string): Promise<boolean> => {
+  const { data } = await supabase
+    .from('muted_users')
+    .select('muted_id')
+    .eq('muter_id', muterId)
+    .eq('muted_id', targetId)
+    .maybeSingle()
+  return !!data
+}
