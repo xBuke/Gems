@@ -1,4 +1,5 @@
 import { EmptyState } from '@/components/EmptyState';
+import { LoadMore, type LoadMoreStatus } from '@/components/LoadMore';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -9,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -35,48 +37,82 @@ export default function UserGemsScreen() {
   const { userId, username } = useLocalSearchParams<{ userId: string; username?: string }>();
   const [gems, setGems] = useState<Gem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [loadMoreStatus, setLoadMoreStatus] = useState<LoadMoreStatus>('idle');
+  const [paginationTriggered, setPaginationTriggered] = useState(false);
   const [page, setPage] = useState(0);
 
   const fetchGems = useCallback(
-    async (pageIndex: number, append: boolean) => {
+    async (pageIndex: number, options: { append?: boolean; isRefresh?: boolean } = {}) => {
+      const { append = false, isRefresh = false } = options;
       if (!userId) return;
 
-      if (pageIndex === 0) {
+      if (append) {
+        setLoadMoreStatus('loading');
+      } else if (!isRefresh) {
         setLoading(true);
-      } else {
-        setLoadingMore(true);
       }
 
       const from = pageIndex * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('gems')
         .select('id, title, image_url')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .range(from, to);
 
+      if (error) {
+        if (append) {
+          setLoadMoreStatus('error');
+        }
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       const nextGems = (data as Gem[] | null) ?? [];
+      const nextHasMore = nextGems.length === PAGE_SIZE;
+
       setGems((prev) => (append ? [...prev, ...nextGems] : nextGems));
-      setHasMore(nextGems.length === PAGE_SIZE);
+      setHasMore(nextHasMore);
       setPage(pageIndex);
+
+      if (append) {
+        setLoadMoreStatus(nextHasMore ? 'idle' : 'end');
+        setPaginationTriggered(true);
+      } else {
+        setPaginationTriggered(false);
+        setLoadMoreStatus('idle');
+      }
+
       setLoading(false);
-      setLoadingMore(false);
+      setRefreshing(false);
     },
     [userId],
   );
 
   useEffect(() => {
-    fetchGems(0, false);
+    fetchGems(0);
   }, [fetchGems]);
 
   const handleLoadMore = () => {
-    if (loadingMore || !hasMore) return;
-    fetchGems(page + 1, true);
+    if (!hasMore || loadMoreStatus === 'loading') return;
+    fetchGems(page + 1, { append: true });
   };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchGems(0, { isRefresh: true });
+  };
+
+  const footerStatus: LoadMoreStatus = (() => {
+    if (loadMoreStatus === 'loading' || loadMoreStatus === 'error') return loadMoreStatus;
+    if (!hasMore && paginationTriggered) return 'end';
+    return 'idle';
+  })();
 
   const renderItem = ({ item }: { item: Gem }) => (
     <TouchableOpacity
@@ -133,13 +169,17 @@ export default function UserGemsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.4}
+          onEndReachedThreshold={0.3}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />
+          }
           ListFooterComponent={
-            loadingMore ? (
-              <View style={styles.footerLoader}>
-                <ActivityIndicator color={theme.accent} />
-              </View>
-            ) : null
+            <LoadMore
+              status={footerStatus}
+              itemLabel="gems"
+              totalCount={footerStatus === 'end' ? gems.length : undefined}
+              onRetry={handleLoadMore}
+            />
           }
         />
       )}
@@ -202,9 +242,5 @@ const createStyles = (theme: Theme) =>
       backgroundColor: '#1A5C3A',
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    footerLoader: {
-      paddingVertical: 16,
-      alignItems: 'center',
     },
   });

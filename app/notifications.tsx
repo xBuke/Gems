@@ -1,3 +1,4 @@
+import { LoadMore, type LoadMoreStatus } from '@/components/LoadMore';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { hapticLight, hapticSuccess } from '@/lib/haptics';
@@ -12,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -97,6 +99,8 @@ const getTypeConfig = (theme: Theme) =>
 const NOTIFICATION_SELECT =
   '*, sender:profiles!notifications_sender_id_fkey(username, avatar_url), gem:gems(title, image_url), community:communities(name, icon, color)';
 
+const NOTIFICATION_PAGE_SIZE = 20;
+
 const timeAgo = (dateString: string) => {
   const now = new Date();
   const date = new Date(dateString);
@@ -152,6 +156,10 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadMoreStatus, setLoadMoreStatus] = useState<LoadMoreStatus>('idle');
+  const [paginationTriggered, setPaginationTriggered] = useState(false);
   const [followRequestStatus, setFollowRequestStatus] = useState<
     Record<string, 'accepted' | 'declined'>
   >({});
@@ -165,31 +173,70 @@ export default function NotificationsScreen() {
     [notifications, gemLikesEnabled],
   );
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (options?: { reset?: boolean; cursor?: string }) => {
+    const reset = options?.reset ?? true;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setCurrentUserId(null);
       setNotifications([]);
       setGemLikesEnabled(true);
+      setHasMore(false);
+      setLoadMoreStatus('idle');
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
     setCurrentUserId(user.id);
 
+    let notificationsQuery = supabase
+      .from('notifications')
+      .select(NOTIFICATION_SELECT)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(NOTIFICATION_PAGE_SIZE);
+
+    if (!reset && options?.cursor) {
+      notificationsQuery = notificationsQuery.lt('created_at', options.cursor);
+    }
+
     const [notificationsResult, preferences] = await Promise.all([
-      supabase
-        .from('notifications')
-        .select(NOTIFICATION_SELECT)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      ensureNotificationPreferences(user.id),
+      notificationsQuery,
+      reset ? ensureNotificationPreferences(user.id) : Promise.resolve(null),
     ]);
 
-    setGemLikesEnabled(preferences.gem_likes_enabled);
-    if (notificationsResult.data) setNotifications(notificationsResult.data);
+    if (reset && preferences) {
+      setGemLikesEnabled(preferences.gem_likes_enabled);
+    }
+
+    if (notificationsResult.error) {
+      if (reset) {
+        setLoading(false);
+        setRefreshing(false);
+      } else {
+        setLoadMoreStatus('error');
+      }
+      return;
+    }
+
+    const page = (notificationsResult.data as Notification[] | null) ?? [];
+
+    if (reset) {
+      setNotifications(page);
+      setPaginationTriggered(false);
+      setLoadMoreStatus('idle');
+    } else {
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map((n) => n.id));
+        const newItems = page.filter((n) => !existingIds.has(n.id));
+        return [...prev, ...newItems];
+      });
+      setLoadMoreStatus(page.length < NOTIFICATION_PAGE_SIZE ? 'end' : 'idle');
+    }
+
+    setHasMore(page.length === NOTIFICATION_PAGE_SIZE);
     setLoading(false);
+    setRefreshing(false);
   }, []);
 
   const markAllReadOnVisit = useCallback(async () => {
@@ -206,15 +253,42 @@ export default function NotificationsScreen() {
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
+    fetchNotifications({ reset: true });
   }, [fetchNotifications]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchNotifications();
+      fetchNotifications({ reset: true });
       markAllReadOnVisit();
     }, [fetchNotifications, markAllReadOnVisit]),
   );
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchNotifications({ reset: true });
+  }, [fetchNotifications]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (!hasMore || loadMoreStatus === 'loading') return;
+
+    const lastNotification = notifications[notifications.length - 1];
+    if (!lastNotification) return;
+
+    setPaginationTriggered(true);
+    setLoadMoreStatus('loading');
+
+    await fetchNotifications({ reset: false, cursor: lastNotification.created_at });
+  }, [hasMore, loadMoreStatus, notifications, fetchNotifications]);
+
+  const handleLoadMoreRetry = useCallback(() => {
+    handleLoadMore();
+  }, [handleLoadMore]);
+
+  const footerStatus: LoadMoreStatus = (() => {
+    if (loadMoreStatus === 'loading' || loadMoreStatus === 'error') return loadMoreStatus;
+    if (!hasMore && paginationTriggered) return 'end';
+    return 'idle';
+  })();
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -587,6 +661,19 @@ export default function NotificationsScreen() {
             </View>
           )}
           showsVerticalScrollIndicator={false}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />
+          }
+          ListFooterComponent={
+            <LoadMore
+              status={footerStatus}
+              itemLabel="notifications"
+              totalCount={footerStatus === 'end' ? notifications.length : undefined}
+              onRetry={handleLoadMoreRetry}
+            />
+          }
         />
       )}
     </SafeAreaView>

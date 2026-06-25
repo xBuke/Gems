@@ -1,8 +1,9 @@
 import { HighlightText } from '@/components/HighlightText';
+import { LoadMore, type LoadMoreStatus } from '@/components/LoadMore';
 import { ModalEntryWrapper } from '@/components/ModalEntryWrapper';
 import { CATEGORIES } from '@/lib/categories';
 import {
-  runGlobalSearch,
+  runGlobalSearchPage,
   type SearchFilter,
   type SearchResult,
 } from '@/lib/globalSearch';
@@ -24,6 +25,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -172,6 +174,11 @@ export default function SearchScreen() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [searchPage, setSearchPage] = useState(0);
+  const [loadMoreStatus, setLoadMoreStatus] = useState<LoadMoreStatus>('idle');
+  const [paginationTriggered, setPaginationTriggered] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
@@ -196,26 +203,52 @@ export default function SearchScreen() {
   }, []);
 
   const executeSearch = useCallback(
-    async (searchQuery: string, filter: SearchFilter) => {
+    async (searchQuery: string, filter: SearchFilter, page = 0, append = false) => {
       const trimmed = searchQuery.trim();
       if (trimmed.length < MIN_QUERY_LENGTH) {
         setResults([]);
+        setHasMore(false);
+        setLoadMoreStatus('idle');
         setLoading(false);
+        setRefreshing(false);
         return;
       }
 
       const requestId = ++searchRequestRef.current;
-      setLoading(true);
+      if (!append) {
+        setLoading(true);
+      }
 
       try {
-        const nextResults = await runGlobalSearch(trimmed, filter, userCoords);
+        const { results: nextResults, hasMore: nextHasMore } = await runGlobalSearchPage(
+          trimmed,
+          filter,
+          userCoords,
+          page,
+        );
         if (requestId !== searchRequestRef.current) return;
-        setResults(nextResults);
-        const updated = await saveRecentSearch(trimmed);
-        setRecentSearches(updated);
+
+        setResults((prev) => (append ? [...prev, ...nextResults] : nextResults));
+        setHasMore(nextHasMore);
+        setSearchPage(page);
+
+        if (append) {
+          setLoadMoreStatus(nextHasMore ? 'idle' : 'end');
+        } else {
+          setPaginationTriggered(false);
+          setLoadMoreStatus('idle');
+          const updated = await saveRecentSearch(trimmed);
+          setRecentSearches(updated);
+        }
+      } catch {
+        if (requestId !== searchRequestRef.current) return;
+        if (append) {
+          setLoadMoreStatus('error');
+        }
       } finally {
         if (requestId === searchRequestRef.current) {
           setLoading(false);
+          setRefreshing(false);
         }
       }
     },
@@ -228,19 +261,47 @@ export default function SearchScreen() {
     const trimmed = query.trim();
     if (trimmed.length < MIN_QUERY_LENGTH) {
       setResults([]);
+      setHasMore(false);
+      setSearchPage(0);
+      setLoadMoreStatus('idle');
+      setPaginationTriggered(false);
       setLoading(false);
       return;
     }
 
     setLoading(true);
     debounceRef.current = setTimeout(() => {
-      executeSearch(trimmed, activeFilter);
+      executeSearch(trimmed, activeFilter, 0, false);
     }, 400);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, activeFilter, executeSearch]);
+
+  const handleLoadMore = useCallback(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < MIN_QUERY_LENGTH || !hasMore || loadMoreStatus === 'loading') {
+      return;
+    }
+
+    setPaginationTriggered(true);
+    setLoadMoreStatus('loading');
+    executeSearch(trimmed, activeFilter, searchPage + 1, true);
+  }, [query, hasMore, loadMoreStatus, activeFilter, searchPage, executeSearch]);
+
+  const handleRefresh = useCallback(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < MIN_QUERY_LENGTH) return;
+    setRefreshing(true);
+    executeSearch(trimmed, activeFilter, 0, false);
+  }, [query, activeFilter, executeSearch]);
+
+  const footerStatus: LoadMoreStatus = (() => {
+    if (loadMoreStatus === 'loading' || loadMoreStatus === 'error') return loadMoreStatus;
+    if (!hasMore && paginationTriggered && results.length > 0) return 'end';
+    return 'idle';
+  })();
 
   const handleRecentPress = (term: string) => {
     setQuery(term);
@@ -405,6 +466,19 @@ export default function SearchScreen() {
               ListEmptyComponent={listEmptyComponent}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.resultsContent}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.3}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />
+              }
+              ListFooterComponent={
+                <LoadMore
+                  status={footerStatus}
+                  itemLabel="results"
+                  totalCount={footerStatus === 'end' ? results.length : undefined}
+                  onRetry={handleLoadMore}
+                />
+              }
             />
           )}
         </KeyboardAvoidingView>

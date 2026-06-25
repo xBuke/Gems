@@ -36,6 +36,11 @@ export type PlaceSearchResult = {
 
 export type SearchResult = GemSearchResult | PersonSearchResult | PlaceSearchResult;
 
+export type SearchPageResult = {
+  results: SearchResult[];
+  hasMore: boolean;
+};
+
 const RESULT_LIMIT = 20;
 const MIN_QUERY_LENGTH = 2;
 
@@ -88,6 +93,7 @@ type ProfileSearchRow = {
 export const searchGems = async (
   query: string,
   userCoords: { latitude: number; longitude: number } | null,
+  offset = 0,
 ): Promise<GemSearchResult[]> => {
   const q = sanitizeIlike(query);
   if (q.length < MIN_QUERY_LENGTH) return [];
@@ -99,13 +105,16 @@ export const searchGems = async (
   const blocked = user ? await getMyBlockedUsers(user.id) : [];
   const blockedIds = new Set(blocked.map((row: { blocked_id: string }) => row.blocked_id));
 
+  const from = offset;
+  const to = offset + RESULT_LIMIT - 1;
+
   let gemQuery = supabase
     .from('gems')
     .select('id, title, image_url, category, city_name, latitude, longitude, user_id, created_at')
     .eq('is_private', false)
     .or(`title.ilike.%${q}%,description.ilike.%${q}%`)
     .order('created_at', { ascending: false })
-    .limit(RESULT_LIMIT);
+    .range(from, to);
 
   gemQuery = applyCommunityGemFilter(gemQuery, myCommunityIds);
 
@@ -131,7 +140,7 @@ export const searchGems = async (
   }));
 };
 
-export const searchPeople = async (query: string): Promise<PersonSearchResult[]> => {
+export const searchPeople = async (query: string, offset = 0): Promise<PersonSearchResult[]> => {
   const q = sanitizeIlike(query);
   if (q.length < MIN_QUERY_LENGTH) return [];
 
@@ -141,11 +150,14 @@ export const searchPeople = async (query: string): Promise<PersonSearchResult[]>
   const blocked = user ? await getMyBlockedUsers(user.id) : [];
   const blockedIds = new Set(blocked.map((row: { blocked_id: string }) => row.blocked_id));
 
+  const from = offset;
+  const to = offset + RESULT_LIMIT - 1;
+
   const { data, error } = await supabase
     .from('profiles')
     .select('id, username, avatar_url')
     .ilike('username', `%${q}%`)
-    .limit(RESULT_LIMIT);
+    .range(from, to);
 
   if (error || !data) return [];
 
@@ -163,7 +175,7 @@ export const searchPeople = async (query: string): Promise<PersonSearchResult[]>
   }));
 };
 
-export const searchPlaces = async (query: string): Promise<PlaceSearchResult[]> => {
+export const searchPlaces = async (query: string, offset = 0): Promise<PlaceSearchResult[]> => {
   const q = sanitizeIlike(query);
   if (q.length < MIN_QUERY_LENGTH) return [];
 
@@ -172,13 +184,15 @@ export const searchPlaces = async (query: string): Promise<PlaceSearchResult[]> 
   } = await supabase.auth.getUser();
   const myCommunityIds = await fetchMyCommunityIds(user?.id ?? null);
 
+  const gemFetchLimit = Math.min(200 + offset * 50, 500);
+
   let placeQuery = supabase
     .from('gems')
     .select('city_name, latitude, longitude')
     .eq('is_private', false)
     .not('city_name', 'is', null)
     .ilike('city_name', `%${q}%`)
-    .limit(200);
+    .limit(gemFetchLimit);
 
   placeQuery = applyCommunityGemFilter(placeQuery, myCommunityIds);
 
@@ -212,7 +226,7 @@ export const searchPlaces = async (query: string): Promise<PlaceSearchResult[]> 
       longitude: info.longitude,
     }))
     .sort((a, b) => b.gemCount - a.gemCount)
-    .slice(0, RESULT_LIMIT);
+    .slice(offset, offset + RESULT_LIMIT);
 };
 
 export const runGlobalSearch = async (
@@ -220,26 +234,47 @@ export const runGlobalSearch = async (
   filter: SearchFilter,
   userCoords: { latitude: number; longitude: number } | null,
 ): Promise<SearchResult[]> => {
+  const { results } = await runGlobalSearchPage(query, filter, userCoords, 0);
+  return results;
+};
+
+export const runGlobalSearchPage = async (
+  query: string,
+  filter: SearchFilter,
+  userCoords: { latitude: number; longitude: number } | null,
+  page = 0,
+): Promise<SearchPageResult> => {
   const q = sanitizeIlike(query);
-  if (q.length < MIN_QUERY_LENGTH) return [];
+  if (q.length < MIN_QUERY_LENGTH) return { results: [], hasMore: false };
+
+  const offset = page * RESULT_LIMIT;
 
   if (filter === 'gems') {
-    return searchGems(q, userCoords);
+    const results = await searchGems(q, userCoords, offset);
+    return { results, hasMore: results.length === RESULT_LIMIT };
   }
 
   if (filter === 'people') {
-    return searchPeople(q);
+    const results = await searchPeople(q, offset);
+    return { results, hasMore: results.length === RESULT_LIMIT };
   }
 
   if (filter === 'places') {
-    return searchPlaces(q);
+    const results = await searchPlaces(q, offset);
+    return { results, hasMore: results.length === RESULT_LIMIT };
   }
 
   const [gems, people, places] = await Promise.all([
-    searchGems(q, userCoords),
-    searchPeople(q),
-    searchPlaces(q),
+    searchGems(q, userCoords, offset),
+    searchPeople(q, offset),
+    searchPlaces(q, offset),
   ]);
 
-  return [...gems, ...people, ...places];
+  const results = [...gems, ...people, ...places];
+  const hasMore =
+    gems.length === RESULT_LIMIT ||
+    people.length === RESULT_LIMIT ||
+    places.length === RESULT_LIMIT;
+
+  return { results, hasMore };
 };
