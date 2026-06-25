@@ -106,12 +106,18 @@ const buildChatItems = (messages: Message[]): ChatItem[] => {
   return items.reverse();
 };
 
+const resolveRouteParam = (value: string | string[] | undefined): string =>
+  (Array.isArray(value) ? value[0] : value) ?? '';
+
 export default function ChatScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const { userId, username } = useLocalSearchParams<{ userId: string; username: string }>();
+  const { userId: userIdParam, username: usernameParam } =
+    useLocalSearchParams<{ userId?: string | string[]; username?: string | string[] }>();
+  const userId = useMemo(() => resolveRouteParam(userIdParam), [userIdParam]);
+  const username = useMemo(() => resolveRouteParam(usernameParam), [usernameParam]);
   const [myId, setMyId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -178,42 +184,62 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!myId || !userId) return;
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    const channelName = `messages-${myId}-${userId}`;
 
-    channel = supabase
-      .channel('messages-' + myId + '-' + userId)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${myId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          if (
-            newMessage.sender_id === userId ||
-            (newMessage.sender_id === myId && newMessage.receiver_id === userId)
-          ) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMessage.id)) return prev;
-              return [...prev, newMessage];
-            });
-            if (newMessage.sender_id === userId) {
-              supabase
-                .from('messages')
-                .update({ read: true })
-                .eq('receiver_id', myId)
-                .eq('sender_id', userId);
+    const setupRealtime = async () => {
+      const existing = supabase
+        .getChannels()
+        .find((ch) => ch.topic === `realtime:${channelName}`);
+      if (existing) {
+        await supabase.removeChannel(existing);
+      }
+
+      if (cancelled) return;
+
+      supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `receiver_id=eq.${myId}`,
+          },
+          (payload) => {
+            const newMessage = payload.new as Message;
+            if (
+              newMessage.sender_id === userId ||
+              (newMessage.sender_id === myId && newMessage.receiver_id === userId)
+            ) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === newMessage.id)) return prev;
+                return [...prev, newMessage];
+              });
+              if (newMessage.sender_id === userId) {
+                void supabase
+                  .from('messages')
+                  .update({ read: true })
+                  .eq('receiver_id', myId)
+                  .eq('sender_id', userId);
+              }
             }
-          }
-        },
-      )
-      .subscribe();
+          },
+        )
+        .subscribe();
+    };
+
+    void setupRealtime();
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      cancelled = true;
+      const stale = supabase
+        .getChannels()
+        .find((ch) => ch.topic === `realtime:${channelName}`);
+      if (stale) {
+        void supabase.removeChannel(stale);
+      }
     };
   }, [myId, userId]);
 
@@ -367,7 +393,7 @@ export default function ChatScreen() {
     }
   };
 
-  const displayName = typeof username === 'string' ? username : 'User';
+  const displayName = username || 'User';
   const initial = displayName.charAt(0).toUpperCase();
   const canSend = inputText.trim().length > 0 && !sending;
 

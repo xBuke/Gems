@@ -1181,9 +1181,10 @@ export default function ProfileScreen() {
     const proceed = await requireAuth();
     if (!proceed) return;
 
+    const targetUserId = Array.isArray(userId) ? userId[0] : userId;
     router.push({
       pathname: '/chat',
-      params: { userId, username },
+      params: { userId: targetUserId, username },
     });
   };
 
