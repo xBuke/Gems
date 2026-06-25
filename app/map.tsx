@@ -17,6 +17,12 @@ import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { BottomSheetHandle } from '@/components/BottomSheetHandle';
+import { ClusterMiniPanel } from '@/components/ClusterMiniPanel';
+import { MapPin } from '@/components/MapPin';
+import {
+  pickMostLikedThumbnail,
+  resolveGemsFromClusterLeaves,
+} from '@/lib/mapClustering';
 import BottomSheet, { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -35,13 +41,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { MapType, Marker, Region } from 'react-native-maps';
+import ClusteredMapView from 'react-native-map-clustering';
+import RNMapView, { MapType, Marker, Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const getCategoryColor = (category: string, accentFallback: string) => {
-  const match = CATEGORIES.find((c) => c.id === category);
-  return match?.color ?? accentFallback;
-};
 
 const formatDistanceKm = (meters: number) => {
   const km = meters / 1000;
@@ -81,6 +83,20 @@ type Gem = {
   verified?: boolean;
 };
 
+type MapGem = Gem & { likeCount: number };
+
+type SelectedCluster = {
+  coordinate: { latitude: number; longitude: number };
+  gems: MapGem[];
+};
+
+type ClusterRenderPayload = {
+  id: number;
+  geometry: { coordinates: [number, number] };
+  onPress: () => void;
+  properties: { point_count: number };
+};
+
 type TapLocation = {
   latitude: number;
   longitude: number;
@@ -102,19 +118,29 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const topControlTop = insets.top + MAP_TOP_CONTROL_EXTRA;
   const filterTop = topControlTop + MAP_FLOATING_CONTROL_HEIGHT + MAP_FILTER_GAP;
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<RNMapView>(null);
+  const superClusterRef = useRef<{ getLeaves: (id: number, limit: number) => unknown[] } | null>(
+    null,
+  );
+  const markerGemsRef = useRef<MapGem[]>([]);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const tapSheetRef = useRef<BottomSheet>(null);
   const sheetImageRef = useRef<View>(null);
   const sheetTitleRef = useRef<View>(null);
   const reduceMotion = useReduceMotion();
   const regionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clusterZoomAnimatingRef = useRef(false);
+  const clusterZoomAnimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchedRegionRef = useRef<Region | null>(null);
   const snapPoints = useMemo(() => ['30%', '65%'], []);
   const tapSnapPoints = useMemo(() => ['32%'], []);
   const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [gemsLoading, setGemsLoading] = useState(true);
+  const [currentRegion, setCurrentRegion] = useState<Region>(INITIAL_REGION);
+  const [selectedCluster, setSelectedCluster] = useState<SelectedCluster | null>(null);
+  const [clusterPanelPoint, setClusterPanelPoint] = useState<{ x: number; y: number } | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [selectedGem, setSelectedGem] = useState<Gem | null>(null);
   const [selectedLikeCount, setSelectedLikeCount] = useState(0);
@@ -137,6 +163,25 @@ export default function MapScreen() {
       setPlacingMode(true);
     }
   }, [placeMode]);
+
+  const fetchLikeCounts = useCallback(async (gemList: Gem[]) => {
+    if (gemList.length === 0) {
+      setLikeCounts({});
+      return;
+    }
+
+    const gemIds = gemList.map((gem) => gem.id);
+    const { data } = await supabase.from('gem_likes').select('gem_id').in('gem_id', gemIds);
+
+    const counts: Record<string, number> = {};
+    for (const gemId of gemIds) counts[gemId] = 0;
+    if (data) {
+      for (const row of data) {
+        counts[row.gem_id] = (counts[row.gem_id] ?? 0) + 1;
+      }
+    }
+    setLikeCounts(counts);
+  }, []);
 
   const fetchVisibleGems = useCallback(async (region: Region) => {
     try {
@@ -169,13 +214,14 @@ export default function MapScreen() {
       if (data) {
         setGems(data);
         lastFetchedRegionRef.current = region;
+        void fetchLikeCounts(data);
       }
     } catch {
       setMapError('Could not load gems for this area.');
     } finally {
       setGemsLoading(false);
     }
-  }, []);
+  }, [fetchLikeCounts]);
 
   useEffect(() => {
     const lat = focusLat ? parseFloat(focusLat) : NaN;
@@ -195,6 +241,21 @@ export default function MapScreen() {
 
   const handleRegionChangeComplete = useCallback(
     (region: Region) => {
+      setCurrentRegion(region);
+
+      if (selectedCluster && !clusterZoomAnimatingRef.current) {
+        mapRef.current
+          ?.pointForCoordinate(selectedCluster.coordinate)
+          .then((point: { x: number; y: number }) => {
+            if (point) {
+              setClusterPanelPoint({ x: point.x, y: point.y });
+            }
+          })
+          .catch(() => {
+            setClusterPanelPoint(null);
+          });
+      }
+
       if (regionDebounceRef.current) {
         clearTimeout(regionDebounceRef.current);
       }
@@ -213,7 +274,7 @@ export default function MapScreen() {
         fetchVisibleGems(region);
       }, 500);
     },
-    [fetchVisibleGems],
+    [fetchVisibleGems, selectedCluster],
   );
 
   useEffect(() => {
@@ -230,6 +291,9 @@ export default function MapScreen() {
     return () => {
       if (regionDebounceRef.current) {
         clearTimeout(regionDebounceRef.current);
+      }
+      if (clusterZoomAnimTimeoutRef.current) {
+        clearTimeout(clusterZoomAnimTimeoutRef.current);
       }
     };
   }, [fetchVisibleGems]);
@@ -385,6 +449,13 @@ export default function MapScreen() {
     return true;
   });
 
+  const visibleGemsWithLikes = useMemo<MapGem[]>(
+    () => visibleGems.map((gem) => ({ ...gem, likeCount: likeCounts[gem.id] ?? 0 })),
+    [visibleGems, likeCounts],
+  );
+
+  markerGemsRef.current = visibleGemsWithLikes;
+
   const cycleMapType = () => {
     setMapTypeIndex((prev) => (prev + 1) % MAP_TYPES.length);
   };
@@ -436,18 +507,139 @@ export default function MapScreen() {
 
       bottomSheetRef.current?.close();
       setSelectedGem(null);
+      setSelectedCluster(null);
+      setClusterPanelPoint(null);
     },
     [placingMode],
   );
 
-  const handleMarkerPress = (gem: Gem, e: { stopPropagation?: () => void }) => {
+  const updateClusterPanelPosition = useCallback(
+    (coordinate: { latitude: number; longitude: number }) => {
+      mapRef.current
+        ?.pointForCoordinate(coordinate)
+        .then((point: { x: number; y: number }) => {
+          if (point) {
+            setClusterPanelPoint({ x: point.x, y: point.y });
+          }
+        })
+        .catch(() => {
+          setClusterPanelPoint(null);
+        });
+    },
+    [],
+  );
+
+  const handleClusterPress = useCallback(
+    (
+      cluster: ClusterRenderPayload,
+      children?: { properties: { index: number } }[],
+    ) => {
+      hapticLight();
+      if (placingMode || tapLocation) return;
+
+      const gems = resolveGemsFromClusterLeaves(children, markerGemsRef.current);
+      if (gems.length < 2) return;
+
+      bottomSheetRef.current?.close();
+      setSelectedGem(null);
+
+      const coordinate = {
+        latitude: cluster.geometry.coordinates[1],
+        longitude: cluster.geometry.coordinates[0],
+      };
+
+      setSelectedCluster({ coordinate, gems });
+      updateClusterPanelPosition(coordinate);
+    },
+    [placingMode, tapLocation, updateClusterPanelPosition],
+  );
+
+  const handleSinglePinPress = (gem: MapGem, e: { stopPropagation?: () => void }) => {
     hapticLight();
     if (placingMode || tapLocation) return;
 
     e.stopPropagation?.();
-    setSelectedGem(gem);
-    bottomSheetRef.current?.snapToIndex(0);
+    setSelectedCluster(null);
+    setClusterPanelPoint(null);
+    bottomSheetRef.current?.close();
+    router.push({ pathname: '/gem/[id]', params: { id: gem.id } });
   };
+
+  const handleZoomToCluster = useCallback(() => {
+    const cluster = selectedCluster;
+    const map = mapRef.current;
+    if (!cluster || !map) return;
+
+    const { latitude, longitude } = cluster.coordinate;
+    const baseLatDelta = currentRegion.latitudeDelta;
+    const baseLngDelta = currentRegion.longitudeDelta;
+
+    const latitudeDelta =
+      Number.isFinite(baseLatDelta) && baseLatDelta > 0
+        ? Math.max(baseLatDelta * 0.35, 0.01)
+        : 0.05;
+    const longitudeDelta =
+      Number.isFinite(baseLngDelta) && baseLngDelta > 0
+        ? Math.max(baseLngDelta * 0.35, 0.01)
+        : 0.05;
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      !Number.isFinite(latitudeDelta) ||
+      !Number.isFinite(longitudeDelta)
+    ) {
+      return;
+    }
+
+    const region: Region = {
+      latitude,
+      longitude,
+      latitudeDelta,
+      longitudeDelta,
+    };
+
+    if (clusterZoomAnimTimeoutRef.current) {
+      clearTimeout(clusterZoomAnimTimeoutRef.current);
+    }
+
+    clusterZoomAnimatingRef.current = true;
+    map.animateToRegion(region, 400);
+    clusterZoomAnimTimeoutRef.current = setTimeout(() => {
+      clusterZoomAnimatingRef.current = false;
+      clusterZoomAnimTimeoutRef.current = null;
+    }, 500);
+  }, [selectedCluster, currentRegion]);
+
+  const renderCluster = useCallback(
+    (cluster: ClusterRenderPayload) => {
+      const count = cluster.properties.point_count;
+      const leaves =
+        (superClusterRef.current?.getLeaves(cluster.id, Infinity) as
+          | { properties: { index: number } }[]
+          | undefined) ?? [];
+      const gems = resolveGemsFromClusterLeaves(leaves, markerGemsRef.current);
+      const thumbnailUrl = pickMostLikedThumbnail(gems);
+
+      return (
+        <Marker
+          key={`cluster-${cluster.id}`}
+          coordinate={{
+            longitude: cluster.geometry.coordinates[0],
+            latitude: cluster.geometry.coordinates[1],
+          }}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            cluster.onPress(e);
+          }}
+          tracksViewChanges={false}
+          zIndex={count + 1000}>
+          <MapPin count={count} thumbnailUrl={thumbnailUrl} theme={theme} />
+        </Marker>
+      );
+    },
+    [theme],
+  );
 
   const selectedGemDistance =
     selectedGem && userCoords
@@ -484,7 +676,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView
+      <ClusteredMapView
         ref={mapRef}
         style={styles.map}
         initialRegion={INITIAL_REGION}
@@ -493,25 +685,51 @@ export default function MapScreen() {
         showsMyLocationButton={false}
         followsUserLocation={false}
         onPress={handleMapPress}
-        onRegionChangeComplete={handleRegionChangeComplete}>
-        {visibleGems.map((gem) => (
+        onRegionChangeComplete={handleRegionChangeComplete}
+        preserveClusterPressBehavior
+        renderCluster={renderCluster}
+        onClusterPress={handleClusterPress}
+        superClusterRef={superClusterRef}
+        tracksViewChanges={false}
+        radius={48}>
+        {visibleGemsWithLikes.map((gem) => (
           <Marker
             key={gem.id}
+            identifier={gem.id}
             coordinate={{ latitude: gem.latitude, longitude: gem.longitude }}
-            onPress={(e) => handleMarkerPress(gem, e)}
-            stopPropagation>
-            <View
-              style={[styles.marker, { backgroundColor: getCategoryColor(gem.category, theme.accent) }]}>
-              <Text style={styles.markerText}>{gem.category.charAt(0)}</Text>
-            </View>
+            onPress={(e) => handleSinglePinPress(gem, e)}
+            tracksViewChanges={false}
+            zIndex={1}>
+            <MapPin count={1} thumbnailUrl={gem.image_url ?? null} theme={theme} />
           </Marker>
         ))}
         {tapLocation && (
-          <Marker coordinate={tapLocation}>
+          <Marker
+            coordinate={tapLocation}
+            {...({ cluster: false } as Record<string, unknown>)}>
             <Ionicons name="location" size={48} color={theme.accent} />
           </Marker>
         )}
-      </MapView>
+      </ClusteredMapView>
+
+      {selectedCluster && !placingMode && !tapLocation ? (
+        <ClusterMiniPanel
+          gems={selectedCluster.gems}
+          theme={theme}
+          overlay={overlay}
+          screenPoint={clusterPanelPoint}
+          onDismiss={() => {
+            setSelectedCluster(null);
+            setClusterPanelPoint(null);
+          }}
+          onZoomIn={handleZoomToCluster}
+          onGemPress={(gemId) => {
+            setSelectedCluster(null);
+            setClusterPanelPoint(null);
+            router.push({ pathname: '/gem/[id]', params: { id: gemId } });
+          }}
+        />
+      ) : null}
 
       <TouchableOpacity
         style={[styles.backButton, { top: topControlTop }]}
@@ -972,20 +1190,6 @@ const createStyles = (theme: Theme, overlay: string) =>
       fontSize: 12,
       fontWeight: '600',
       color: theme.accent,
-    },
-    marker: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      borderWidth: 2,
-      borderColor: theme.text,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    markerText: {
-      color: theme.text,
-      fontSize: 13,
-      fontWeight: '700',
     },
     myLocationButton: {
       position: 'absolute',
