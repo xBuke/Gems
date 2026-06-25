@@ -412,7 +412,9 @@ export default function AddGemScreen() {
     }
 
     hapticSuccess();
-    await addStreakBonus(user.id, 10);
+    if (newGem?.id) {
+      await addStreakBonus(user.id, 10, 'gem_created', newGem.id);
+    }
 
     const newAchievements = await checkAndUnlockAchievements(user.id);
     const successRoute = communityId ? '/community/' + communityId : '/map';

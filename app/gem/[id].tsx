@@ -406,16 +406,18 @@ export default function GemDetailScreen() {
     if (!user) return;
 
     const resolvedGemId = Array.isArray(id) ? id[0] : id;
-    const { error } = await supabase
+    const { data: newComment, error } = await supabase
       .from('comments')
       .insert({
         gem_id: resolvedGemId,
         user_id: user.id,
         content: text,
         parent_comment_id: replyingTo?.id ?? null,
-      });
+      })
+      .select('id')
+      .single();
 
-    if (!error) {
+    if (!error && newComment) {
       hapticSuccess();
       if (gem && user.id !== gem.user_id) {
         await supabase.from('notifications').insert({
@@ -444,7 +446,7 @@ export default function GemDetailScreen() {
       setCommentText('');
       setReplyingTo(null);
       fetchComments();
-      await addStreakBonus(user.id, 3);
+      await addStreakBonus(user.id, 3, 'comment_posted', newComment.id);
     }
   };
 
@@ -482,7 +484,7 @@ export default function GemDetailScreen() {
         });
       }
 
-      await addStreakBonus(user.id, 2);
+      await addStreakBonus(user.id, 2, 'gem_liked', gemId);
       const newAchievements = await checkAndUnlockAchievements(user.id);
       if (newAchievements.length > 0) {
         setUnlockedBadge(newAchievements[0]);
@@ -615,7 +617,7 @@ export default function GemDetailScreen() {
       setCheckedInAt(new Date());
       setCheckInSheetVisible(true);
 
-      await addStreakBonus(user.id, 5);
+      await addStreakBonus(user.id, 5, 'verified_checkin', resolvedGemId);
       const newAchievements = await checkAndUnlockAchievements(user.id);
       if (newAchievements.length > 0) {
         setUnlockedBadge(newAchievements[0]);

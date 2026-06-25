@@ -61,14 +61,16 @@ export const updateStreak = async (userId: string) => {
   return result
 }
 
-export const addStreakBonus = async (userId: string, points: number) => {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('streak_points')
-    .eq('id', userId)
-    .single()
-
-  await supabase.from('profiles').update({
-    streak_points: (profile?.streak_points || 0) + points
-  }).eq('id', userId)
+export const addStreakBonus = async (
+  userId: string,
+  points: number,
+  reason: string,
+  relatedId?: string,
+) => {
+  await supabase.rpc('award_points', {
+    p_user_id: userId,
+    p_points: points,
+    p_reason: reason,
+    p_related_id: relatedId ?? null,
+  })
 }

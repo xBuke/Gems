@@ -1513,6 +1513,14 @@ export default function ProfileScreen() {
                 </Text>
               </>
             )}
+            <TouchableOpacity
+              style={styles.leaderboardLink}
+              onPress={() => router.push('/leaderboard')}
+              activeOpacity={0.7}>
+              <Ionicons name="trophy-outline" size={14} color={theme.accent} />
+              <Text style={styles.leaderboardLinkText}>View Leaderboard</Text>
+              <Text style={styles.leaderboardChevron}>›</Text>
+            </TouchableOpacity>
           </View>
           <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
         </View>
@@ -2269,6 +2277,25 @@ const createStyles = (theme: Theme) =>
     fontSize: 10,
     color: theme.textSecondary,
     marginTop: 6,
+  },
+  leaderboardLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 0.5,
+    borderTopColor: theme.border,
+  },
+  leaderboardLinkText: {
+    flex: 1,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontSize: 13,
+    color: theme.accent,
+  },
+  leaderboardChevron: {
+    fontSize: 16,
+    color: theme.textTertiary,
   },
   achievementsPreview: {
     marginHorizontal: 20,

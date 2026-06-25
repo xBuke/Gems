@@ -129,6 +129,7 @@ function RootNavigator() {
         <Stack.Screen name="blocked-users" options={{ headerShown: false }} />
         <Stack.Screen name="edit-hometown" options={modalOptions} />
         <Stack.Screen name="followers" options={{ headerShown: false }} />
+        <Stack.Screen name="leaderboard" options={{ headerShown: false }} />
         <Stack.Screen name="user-gems" options={{ headerShown: false }} />
         <Stack.Screen name="gem/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="paywall" options={modalOptions} />
