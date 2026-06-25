@@ -38,6 +38,10 @@ type GemPhotoGalleryProps = {
   imageDestRef?: RefObject<RNView | null>;
   heroHidden?: boolean;
   onPhotosUpdated: () => void;
+  gemTitle?: string;
+  gemCategory?: string;
+  gemUsername?: string;
+  likeCount?: number;
 };
 
 export default function GemPhotoGallery({
@@ -50,6 +54,10 @@ export default function GemPhotoGallery({
   imageDestRef,
   heroHidden,
   onPhotosUpdated,
+  gemTitle,
+  gemCategory,
+  gemUsername,
+  likeCount,
 }: GemPhotoGalleryProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -284,6 +292,12 @@ export default function GemPhotoGallery({
         photos={displayUrls}
         initialIndex={viewerIndex}
         onClose={() => setViewerVisible(false)}
+        gemId={gemId}
+        currentUserId={currentUserId}
+        gemTitle={gemTitle}
+        gemCategory={gemCategory}
+        gemUsername={gemUsername}
+        likeCount={likeCount}
       />
 
       {currentUserId ? (

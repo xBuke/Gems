@@ -862,6 +862,10 @@ export default function GemDetailScreen() {
             imageDestRef={imageDestRef}
             heroHidden={isAnimating || showFlyingLayer}
             onPhotosUpdated={loadGemPhotos}
+            gemTitle={gem.title}
+            gemCategory={gem.category}
+            gemUsername={username}
+            likeCount={likeCount}
           />
 
           <View
