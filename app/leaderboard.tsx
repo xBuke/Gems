@@ -14,11 +14,12 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type LeaderboardPeriod = 'weekly' | 'monthly' | 'all_time';
+type LeaderboardPeriod = 'friends' | 'weekly' | 'monthly' | 'all_time';
 
 type LeaderboardRow = {
   rank: number;
@@ -34,12 +35,17 @@ type MyRankRow = {
 };
 
 const PERIOD_LABELS: Record<LeaderboardPeriod, string> = {
+  friends: 'among friends',
   weekly: 'this week',
   monthly: 'this month',
   all_time: 'all time',
 };
 
 const EMPTY_MESSAGES: Record<LeaderboardPeriod, { title: string; subtitle: string }> = {
+  friends: {
+    title: 'No friends on the board yet',
+    subtitle: 'Follow people back to see them here',
+  },
   weekly: {
     title: 'No activity yet this week',
     subtitle: 'Be the first explorer on the board!',
@@ -68,9 +74,10 @@ function getRankDisplay(rank: number) {
 export default function LeaderboardScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [activePeriod, setActivePeriod] = useState<LeaderboardPeriod>('weekly');
+  const [activePeriod, setActivePeriod] = useState<LeaderboardPeriod>('friends');
   const [entries, setEntries] = useState<LeaderboardRow[]>([]);
   const [myRank, setMyRank] = useState<MyRankRow | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -87,8 +94,13 @@ export default function LeaderboardScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     setCurrentUserId(user?.id ?? null);
 
+    const leaderboardParams =
+      period === 'friends'
+        ? { p_period: period, p_limit: 50, p_user_id: user?.id ?? null }
+        : { p_period: period, p_limit: 50 };
+
     const [leaderboardResult, myRankResult] = await Promise.all([
-      supabase.rpc('get_leaderboard', { p_period: period, p_limit: 50 }),
+      supabase.rpc('get_leaderboard', leaderboardParams),
       user
         ? supabase.rpc('get_my_rank', { p_user_id: user.id, p_period: period })
         : Promise.resolve({ data: null, error: null }),
@@ -184,6 +196,7 @@ export default function LeaderboardScreen() {
       <View style={styles.pillWrapper}>
         <SegmentedPill
           tabs={[
+            { key: 'friends', label: 'Friends' },
             { key: 'weekly', label: 'Weekly' },
             { key: 'monthly', label: 'Monthly' },
             { key: 'all_time', label: 'All-Time' },
@@ -191,7 +204,7 @@ export default function LeaderboardScreen() {
           activeKey={activePeriod}
           onChange={(key) => setActivePeriod(key as LeaderboardPeriod)}
           theme={theme}
-          width={320}
+          width={windowWidth - 32}
         />
       </View>
 
