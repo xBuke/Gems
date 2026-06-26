@@ -18,7 +18,12 @@ export type ClusterGemPreview = {
   title: string;
   image_url?: string | null;
   likeCount: number;
+  commentCount: number;
+  shareCount: number;
 };
+
+const engagementScore = (gem: ClusterGemPreview) =>
+  gem.likeCount + gem.commentCount + gem.shareCount;
 
 type ClusterMiniPanelProps = {
   gems: ClusterGemPreview[];
@@ -48,7 +53,7 @@ export const ClusterMiniPanel = memo(function ClusterMiniPanel({
   onGemPress,
 }: ClusterMiniPanelProps) {
   const count = gems.length;
-  const sorted = [...gems].sort((a, b) => b.likeCount - a.likeCount);
+  const sorted = [...gems].sort((a, b) => engagementScore(b) - engagementScore(a));
   const styles = createStyles(theme, overlay);
   const scrollEnabled = sorted.length > NUM_COLUMNS * VISIBLE_ROW_COUNT;
 

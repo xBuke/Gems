@@ -1,6 +1,7 @@
 import { AppBottomSheetModal, type AppBottomSheetModalRef } from '@/components/AppBottomSheetModal';
 import { CompassIcon } from '@/components/CompassIcon';
 import { formatCoordinates } from '@/lib/coordinates';
+import { shouldTrackGemShare, trackGemShare } from '@/lib/gemShareTracking';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
@@ -17,6 +18,7 @@ import {
 type CheckInConfirmationSheetProps = {
   visible: boolean;
   onClose: () => void;
+  gemId: string;
   gemTitle: string;
   latitude: number;
   longitude: number;
@@ -35,6 +37,7 @@ const formatCheckInTimestamp = (date: Date): string => {
 export default function CheckInConfirmationSheet({
   visible,
   onClose,
+  gemId,
   gemTitle,
   latitude,
   longitude,
@@ -62,7 +65,10 @@ export default function CheckInConfirmationSheet({
 
   const handleShare = async () => {
     try {
-      await Share.share({ message: `Just checked in at ${gemTitle}! 📍` });
+      const result = await Share.share({ message: `Just checked in at ${gemTitle}! 📍` });
+      if (shouldTrackGemShare(result)) {
+        trackGemShare(gemId);
+      }
     } catch {
       // User dismissed share sheet
     }

@@ -10,12 +10,13 @@ import GemPhotoGallery from '@/components/GemPhotoGallery';
 import { deleteGem } from '@/lib/deleteGem';
 import { fetchGemPhotos, type GemPhoto } from '@/lib/gemPhotos';
 import { checkIsPremium } from '@/lib/paywall';
-import { isWishlistLimitError, showWishlistLimitReached } from '@/lib/wishlist';
+import { showWishlistLimitReached, addGemToWishlist } from '@/lib/wishlist';
+import { performGemCheckIn } from '@/lib/gemCheckIn';
+import { shouldTrackGemShare, trackGemShare } from '@/lib/gemShareTracking';
 import { blockUser, getMyBlockedUsers, isUserMuted, muteUser, unmuteUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
 import { formatCoordinates } from '@/lib/coordinates';
-import { getDistance } from '@/lib/distance';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/lib/haptics';
 import { addStreakBonus } from '@/lib/streak';
 import { sendPushNotification } from '@/lib/sendPushNotification';
@@ -27,7 +28,6 @@ import ReportSheet from '@/components/ReportSheet';
 import SafetyOptionsSheet from '@/components/SafetyOptionsSheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter, useFocusEffect, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -553,17 +553,17 @@ export default function GemDetailScreen() {
       return;
     }
 
-    const { error } = await supabase.from('wishlist').insert({ gem_id: gemId, user_id: user.id });
+    const result = await addGemToWishlist(gemId, user.id);
 
-    if (error) {
-      if (isWishlistLimitError(error)) {
+    if (!result.ok) {
+      if (result.reason === 'limit_reached') {
         showWishlistLimitReached(router);
         return;
       }
       showToast({
         type: 'error',
         title: 'Could not save',
-        message: error.message,
+        message: result.message ?? 'Something went wrong',
       });
       return;
     }
@@ -622,9 +622,12 @@ export default function GemDetailScreen() {
     if (!gem) return;
 
     try {
-      await Share.share({
+      const result = await Share.share({
         message: `Check out ${gem.title} on Abdita Gems! 📍`,
       });
+      if (shouldTrackGemShare(result)) {
+        trackGemShare(gem.id);
+      }
     } catch {
       // User dismissed share sheet
     }
@@ -646,62 +649,36 @@ export default function GemDetailScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const location = await Location.getCurrentPositionAsync({});
     const isPremiumUser = await checkIsPremium();
+    const resolvedGemId = Array.isArray(id) ? id[0] : id;
 
-    if (!isPremiumUser) {
-      const distance = getDistance(
-        location.coords.latitude,
-        location.coords.longitude,
-        gem.latitude,
-        gem.longitude,
-      );
+    const result = await performGemCheckIn({
+      gemId: resolvedGemId,
+      userId: user.id,
+      gemOwnerId: gem.user_id,
+      category: gem.category,
+      latitude: gem.latitude,
+      longitude: gem.longitude,
+      isPremium: isPremiumUser,
+    });
 
-      if (distance > 1000) {
+    if (!result.ok) {
+      if (result.reason === 'too_far') {
         Alert.alert('You need to be within 1km to verify your visit');
-        return;
       }
+      return;
     }
 
-    const resolvedGemId = Array.isArray(id) ? id[0] : id;
-    const { error } = await supabase.from('gem_visits').upsert(
-      {
-        gem_id: resolvedGemId,
-        user_id: user.id,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        category: gem.category,
-      },
-      { onConflict: 'gem_id,user_id' },
-    );
+    hapticSuccess();
+    setVisitVerified(true);
+    setVisitCount(result.visitCount);
+    setCheckInDisplayCount(result.visitCount);
+    setCheckedInAt(result.checkedInAt);
+    setCheckInSheetVisible(true);
 
-    if (!error) {
-      hapticSuccess();
-      await supabase.from('notifications').insert({
-        user_id: gem.user_id,
-        sender_id: user.id,
-        type: 'visit',
-        gem_id: resolvedGemId,
-        read: false,
-      });
-      setVisitVerified(true);
-
-      const { count } = await supabase
-        .from('gem_visits')
-        .select('*', { count: 'exact', head: true })
-        .eq('gem_id', resolvedGemId);
-      const updatedCount = count ?? visitCount + 1;
-      setVisitCount(updatedCount);
-      setCheckInDisplayCount(updatedCount);
-      setCheckedInAt(new Date());
-      setCheckInSheetVisible(true);
-
-      await addStreakBonus(user.id, 5, 'verified_checkin', resolvedGemId);
-      const newAchievements = await checkAndUnlockAchievements(user.id);
-      if (newAchievements.length > 0) {
-        setUnlockedBadge(newAchievements[0]);
-        setUnlockCoords({ latitude: gem.latitude, longitude: gem.longitude });
-      }
+    if (result.newAchievements.length > 0) {
+      setUnlockedBadge(result.newAchievements[0]);
+      setUnlockCoords({ latitude: gem.latitude, longitude: gem.longitude });
     }
   };
 
@@ -1319,6 +1296,7 @@ export default function GemDetailScreen() {
       <CheckInConfirmationSheet
         visible={checkInSheetVisible}
         onClose={() => setCheckInSheetVisible(false)}
+        gemId={gem.id}
         gemTitle={gem.title}
         latitude={gem.latitude}
         longitude={gem.longitude}

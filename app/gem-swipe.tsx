@@ -1,4 +1,5 @@
 import { AppBottomSheetModal, type AppBottomSheetModalRef } from '@/components/AppBottomSheetModal';
+import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import { FullScreenError } from '@/components/FullScreenError';
 import { CompassIcon } from '@/components/CompassIcon';
 import { EmptyState } from '@/components/EmptyState';
@@ -11,8 +12,11 @@ import {
   fetchMyCommunityIds,
   GEM_SELECT_WITH_COMMUNITY,
 } from '@/lib/gemVisibility';
+import { performGemCheckIn } from '@/lib/gemCheckIn';
 import { checkIsPremium } from '@/lib/paywall';
-import { hapticLight, hapticMedium } from '@/lib/haptics';
+import { addGemToWishlist, showWishlistLimitReached } from '@/lib/wishlist';
+import type { AchievementType } from '@/lib/gamification';
+import { hapticLight, hapticMedium, hapticSuccess } from '@/lib/haptics';
 import { navigateToGemWithSharedTransition, type GemTransitionRefs } from '@/lib/gemSharedTransition';
 import { useReduceMotion } from '@/lib/ReduceMotionContext';
 import { useToast } from '@/lib/ToastContext';
@@ -54,6 +58,8 @@ const VELOCITY_THRESHOLD = 800;
 
 const SWIPE_RADIUS_OPTIONS = [10, 25, 50, 100, 200] as const;
 
+type SwipeAction = 'save' | 'skip' | 'checkin' | 'wishlist';
+
 type Gem = {
   id: string;
   title: string;
@@ -86,8 +92,8 @@ type SwipeCardProps = {
   distanceMeters: number | null;
   theme: Theme;
   isDark: boolean;
-  onSwipeComplete: (action: 'save' | 'skip') => void;
-  triggerRef: React.MutableRefObject<((action: 'save' | 'skip') => void) | null>;
+  onSwipeComplete: (action: SwipeAction) => void;
+  triggerRef: React.MutableRefObject<((action: SwipeAction) => void) | null>;
   promoteOnMount?: boolean;
   transitionRefs?: GemTransitionRefs;
 };
@@ -102,7 +108,7 @@ function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, trigge
   const username = gem.profiles?.username ?? 'unknown';
 
   const finishSwipe = useCallback(
-    (action: 'save' | 'skip') => {
+    (action: SwipeAction) => {
       onSwipeComplete(action);
       translateX.value = 0;
       translateY.value = 0;
@@ -112,15 +118,24 @@ function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, trigge
   );
 
   const animateOffScreen = useCallback(
-    (action: 'save' | 'skip') => {
+    (action: SwipeAction) => {
       if (isAnimating.value) return;
       isAnimating.value = true;
-      const target = action === 'save' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5;
-      translateX.value = withTiming(target, { duration: 280 }, () => {
+
+      if (action === 'save' || action === 'skip') {
+        const target = action === 'save' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5;
+        translateX.value = withTiming(target, { duration: 280 }, () => {
+          runOnJS(finishSwipe)(action);
+        });
+        return;
+      }
+
+      const target = action === 'checkin' ? -SCREEN_HEIGHT * 1.5 : SCREEN_HEIGHT * 1.5;
+      translateY.value = withTiming(target, { duration: 280 }, () => {
         runOnJS(finishSwipe)(action);
       });
     },
-    [finishSwipe, isAnimating, translateX],
+    [finishSwipe, isAnimating, translateX, translateY],
   );
 
   useEffect(() => {
@@ -140,11 +155,47 @@ function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, trigge
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
       if (isAnimating.value) return;
-      translateX.value = event.translationX;
-      translateY.value = event.translationY * 0.15;
+
+      const isVerticalDominant = Math.abs(event.translationY) > Math.abs(event.translationX);
+      if (isVerticalDominant) {
+        translateY.value = event.translationY;
+        translateX.value = event.translationX * 0.15;
+      } else {
+        translateX.value = event.translationX;
+        translateY.value = event.translationY * 0.15;
+      }
     })
     .onEnd((event) => {
       if (isAnimating.value) return;
+
+      const absX = Math.abs(translateX.value);
+      const absY = Math.abs(translateY.value);
+      const isVerticalDominant = absY > absX;
+
+      if (isVerticalDominant) {
+        const checkin =
+          translateY.value < -SWIPE_THRESHOLD ||
+          (event.velocityY < -VELOCITY_THRESHOLD && translateY.value < 0);
+        const wishlist =
+          translateY.value > SWIPE_THRESHOLD ||
+          (event.velocityY > VELOCITY_THRESHOLD && translateY.value > 0);
+
+        if (checkin) {
+          isAnimating.value = true;
+          translateY.value = withTiming(-SCREEN_HEIGHT * 1.5, { duration: 280 }, () => {
+            runOnJS(finishSwipe)('checkin');
+          });
+        } else if (wishlist) {
+          isAnimating.value = true;
+          translateY.value = withTiming(SCREEN_HEIGHT * 1.5, { duration: 280 }, () => {
+            runOnJS(finishSwipe)('wishlist');
+          });
+        } else {
+          translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
+          translateY.value = withSpring(0, { damping: 15, stiffness: 150 });
+        }
+        return;
+      }
 
       const save =
         translateX.value > SWIPE_THRESHOLD ||
@@ -169,17 +220,25 @@ function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, trigge
       }
     });
 
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: entryOpacity.value,
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: entryScale.value },
-      {
-        rotate: `${interpolate(translateX.value, [-200, 0, 200], [-15, 0, 15], Extrapolation.CLAMP)}deg`,
-      },
-    ],
-  }));
+  const cardStyle = useAnimatedStyle(() => {
+    const absX = Math.abs(translateX.value);
+    const absY = Math.abs(translateY.value);
+    const isVerticalDominant = absY > absX;
+
+    return {
+      opacity: entryOpacity.value,
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: entryScale.value },
+        {
+          rotate: isVerticalDominant
+            ? `${interpolate(translateY.value, [-200, 0, 200], [-8, 0, 8], Extrapolation.CLAMP)}deg`
+            : `${interpolate(translateX.value, [-200, 0, 200], [-15, 0, 15], Extrapolation.CLAMP)}deg`,
+        },
+      ],
+    };
+  });
 
   const saveStampStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateX.value, [0, 60, SWIPE_THRESHOLD], [0, 0.5, 1], Extrapolation.CLAMP),
@@ -187,6 +246,14 @@ function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, trigge
 
   const skipStampStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateX.value, [-SWIPE_THRESHOLD, -60, 0], [1, 0.5, 0], Extrapolation.CLAMP),
+  }));
+
+  const checkInStampStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateY.value, [0, -60, -SWIPE_THRESHOLD], [0, 0.5, 1], Extrapolation.CLAMP),
+  }));
+
+  const wishlistStampStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateY.value, [SWIPE_THRESHOLD, 60, 0], [1, 0.5, 0], Extrapolation.CLAMP),
   }));
 
   return (
@@ -246,6 +313,16 @@ function SwipeCard({ gem, distanceMeters, theme, isDark, onSwipeComplete, trigge
 
         <Reanimated.View style={[cardStyles.skipStamp, { borderColor: theme.danger }, skipStampStyle]}>
           <Text style={[cardStyles.skipStampText, { color: theme.danger }]}>SKIP</Text>
+        </Reanimated.View>
+
+        <Reanimated.View style={[cardStyles.checkInStamp, { borderColor: theme.coral }, checkInStampStyle]}>
+          <Ionicons name="compass" size={22} color={theme.coral} />
+          <Text style={[cardStyles.checkInStampText, { color: theme.coral }]}>CHECK IN</Text>
+        </Reanimated.View>
+
+        <Reanimated.View style={[cardStyles.wishlistStamp, { borderColor: theme.accent }, wishlistStampStyle]}>
+          <Ionicons name="bookmark" size={22} color={theme.accent} />
+          <Text style={[cardStyles.wishlistStampText, { color: theme.accent }]}>WISHLIST</Text>
         </Reanimated.View>
       </Reanimated.View>
     </GestureDetector>
@@ -348,6 +425,44 @@ const cardStyles = StyleSheet.create({
     fontSize: 28,
     letterSpacing: 2,
   },
+  checkInStamp: {
+    position: 'absolute',
+    bottom: 120,
+    left: 24,
+    right: 24,
+    borderWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  checkInStampText: {
+    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 22,
+    letterSpacing: 2,
+  },
+  wishlistStamp: {
+    position: 'absolute',
+    top: 48,
+    left: 24,
+    right: 24,
+    borderWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  wishlistStampText: {
+    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 22,
+    letterSpacing: 2,
+  },
 });
 
 export default function GemSwipeScreen() {
@@ -370,8 +485,12 @@ export default function GemSwipeScreen() {
   const [searchRadius, setSearchRadius] = useState<number>(25);
   const [sessionSaveCount, setSessionSaveCount] = useState(0);
   const [weeklyNewCount, setWeeklyNewCount] = useState<number | null>(null);
+  const [unlockedBadge, setUnlockedBadge] = useState<AchievementType | null>(null);
+  const [unlockCoords, setUnlockCoords] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
 
-  const swipeTriggerRef = useRef<((action: 'save' | 'skip') => void) | null>(null);
+  const swipeTriggerRef = useRef<((action: SwipeAction) => void) | null>(null);
   const swipeImageRef = useRef<View>(null);
   const swipeTitleRef = useRef<View>(null);
   const processingRef = useRef(false);
@@ -536,16 +655,81 @@ export default function GemSwipeScreen() {
   );
 
   const handleSwipeAction = useCallback(
-    async (action: 'save' | 'skip') => {
+    async (action: SwipeAction) => {
       if (processingRef.current || !userId || deck.length === 0) return;
       processingRef.current = true;
 
       const currentGem = deck[0];
+      let shouldAdvance = true;
 
       if (action === 'save') {
         hapticMedium();
-      } else {
+      } else if (action === 'skip') {
         hapticLight();
+      } else if (action === 'checkin') {
+        hapticMedium();
+        const result = await performGemCheckIn({
+          gemId: currentGem.id,
+          userId,
+          gemOwnerId: currentGem.user_id,
+          category: currentGem.category,
+          latitude: currentGem.latitude,
+          longitude: currentGem.longitude,
+          isPremium: true,
+        });
+
+        if (!result.ok) {
+          shouldAdvance = false;
+          if (result.reason === 'location_unavailable') {
+            showToast({
+              type: 'error',
+              title: 'Location needed',
+              message: 'Enable location to check in',
+            });
+          } else if (result.reason === 'upsert_failed') {
+            showToast({
+              type: 'error',
+              title: 'Check-in failed',
+              message: result.message ?? 'Could not save your visit',
+            });
+          }
+        } else {
+          hapticSuccess();
+          showToast({
+            type: 'success',
+            title: 'Checked in!',
+            message: currentGem.title,
+          });
+          if (result.newAchievements.length > 0) {
+            setUnlockedBadge(result.newAchievements[0]);
+            setUnlockCoords({
+              latitude: currentGem.latitude,
+              longitude: currentGem.longitude,
+            });
+          }
+        }
+      } else if (action === 'wishlist') {
+        hapticLight();
+        const result = await addGemToWishlist(currentGem.id, userId);
+
+        if (!result.ok) {
+          shouldAdvance = false;
+          if (result.reason === 'limit_reached') {
+            showWishlistLimitReached(router);
+          } else {
+            showToast({
+              type: 'error',
+              title: 'Could not save',
+              message: result.message ?? 'Something went wrong',
+            });
+          }
+        } else {
+          showToast({
+            type: 'success',
+            title: 'Added to wishlist',
+            message: currentGem.title,
+          });
+        }
       }
 
       if (action === 'save') {
@@ -560,7 +744,7 @@ export default function GemSwipeScreen() {
           title: 'Gem saved!',
           message: `${currentGem.title} added to your list`,
         });
-      } else {
+      } else if (action === 'skip') {
         await supabase.from('saved_gems').insert({
           user_id: userId,
           gem_id: currentGem.id,
@@ -569,11 +753,13 @@ export default function GemSwipeScreen() {
         });
       }
 
-      setDeck((prev) => prev.slice(1));
-      setHasSwiped(true);
+      if (shouldAdvance) {
+        setDeck((prev) => prev.slice(1));
+        setHasSwiped(true);
+      }
       processingRef.current = false;
     },
-    [deck, userId, showToast],
+    [deck, userId, showToast, router],
   );
 
   const retryFetchDeck = useCallback(() => {
@@ -795,6 +981,17 @@ export default function GemSwipeScreen() {
       )}
 
       {renderFilterSheet()}
+
+      <AchievementUnlockModal
+        visible={!!unlockedBadge}
+        badgeType={unlockedBadge}
+        latitude={unlockCoords?.latitude}
+        longitude={unlockCoords?.longitude}
+        onClose={() => {
+          setUnlockedBadge(null);
+          setUnlockCoords(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

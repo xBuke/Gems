@@ -81,9 +81,14 @@ type Gem = {
   custom_category_id?: string | null;
   image_url?: string | null;
   verified?: boolean;
+  share_count?: number | null;
 };
 
-type MapGem = Gem & { likeCount: number };
+type MapGem = Gem & {
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+};
 
 type SelectedCluster = {
   coordinate: { latitude: number; longitude: number };
@@ -137,6 +142,7 @@ export default function MapScreen() {
   const [mapTypeIndex, setMapTypeIndex] = useState(1);
   const [gems, setGems] = useState<Gem[]>([]);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [gemsLoading, setGemsLoading] = useState(true);
   const [currentRegion, setCurrentRegion] = useState<Region>(INITIAL_REGION);
   const [selectedCluster, setSelectedCluster] = useState<SelectedCluster | null>(null);
@@ -164,23 +170,40 @@ export default function MapScreen() {
     }
   }, [placeMode]);
 
-  const fetchLikeCounts = useCallback(async (gemList: Gem[]) => {
+  const fetchEngagementCounts = useCallback(async (gemList: Gem[]) => {
     if (gemList.length === 0) {
       setLikeCounts({});
+      setCommentCounts({});
       return;
     }
 
     const gemIds = gemList.map((gem) => gem.id);
-    const { data } = await supabase.from('gem_likes').select('gem_id').in('gem_id', gemIds);
+    const [{ data: likes }, { data: comments }] = await Promise.all([
+      supabase.from('gem_likes').select('gem_id').in('gem_id', gemIds),
+      supabase.from('comments').select('gem_id').in('gem_id', gemIds),
+    ]);
 
-    const counts: Record<string, number> = {};
-    for (const gemId of gemIds) counts[gemId] = 0;
-    if (data) {
-      for (const row of data) {
-        counts[row.gem_id] = (counts[row.gem_id] ?? 0) + 1;
+    const nextLikeCounts: Record<string, number> = {};
+    const nextCommentCounts: Record<string, number> = {};
+    for (const gemId of gemIds) {
+      nextLikeCounts[gemId] = 0;
+      nextCommentCounts[gemId] = 0;
+    }
+
+    if (likes) {
+      for (const row of likes) {
+        nextLikeCounts[row.gem_id] = (nextLikeCounts[row.gem_id] ?? 0) + 1;
       }
     }
-    setLikeCounts(counts);
+
+    if (comments) {
+      for (const row of comments) {
+        nextCommentCounts[row.gem_id] = (nextCommentCounts[row.gem_id] ?? 0) + 1;
+      }
+    }
+
+    setLikeCounts(nextLikeCounts);
+    setCommentCounts(nextCommentCounts);
   }, []);
 
   const fetchVisibleGems = useCallback(async (region: Region) => {
@@ -214,14 +237,14 @@ export default function MapScreen() {
       if (data) {
         setGems(data);
         lastFetchedRegionRef.current = region;
-        void fetchLikeCounts(data);
+        void fetchEngagementCounts(data);
       }
     } catch {
       setMapError('Could not load gems for this area.');
     } finally {
       setGemsLoading(false);
     }
-  }, [fetchLikeCounts]);
+  }, [fetchEngagementCounts]);
 
   useEffect(() => {
     const lat = focusLat ? parseFloat(focusLat) : NaN;
@@ -450,8 +473,14 @@ export default function MapScreen() {
   });
 
   const visibleGemsWithLikes = useMemo<MapGem[]>(
-    () => visibleGems.map((gem) => ({ ...gem, likeCount: likeCounts[gem.id] ?? 0 })),
-    [visibleGems, likeCounts],
+    () =>
+      visibleGems.map((gem) => ({
+        ...gem,
+        likeCount: likeCounts[gem.id] ?? 0,
+        commentCount: commentCounts[gem.id] ?? 0,
+        shareCount: gem.share_count ?? 0,
+      })),
+    [visibleGems, likeCounts, commentCounts],
   );
 
   markerGemsRef.current = visibleGemsWithLikes;

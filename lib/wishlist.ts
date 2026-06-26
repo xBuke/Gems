@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import type { Router } from 'expo-router';
+import { supabase } from './supabase';
 
 export const WISHLIST_FREE_LIMIT = 20;
 
@@ -28,4 +29,29 @@ export function showWishlistLimitReached(router: Router): void {
       { text: 'Go Premium', onPress: () => router.push('/paywall') },
     ],
   );
+}
+
+export type AddToWishlistResult =
+  | { ok: true }
+  | { ok: false; reason: 'limit_reached' | 'insert_failed'; message?: string };
+
+export async function addGemToWishlist(
+  gemId: string,
+  userId: string,
+): Promise<AddToWishlistResult> {
+  const { error } = await supabase.from('wishlist').insert({ gem_id: gemId, user_id: userId });
+
+  if (!error) {
+    return { ok: true };
+  }
+
+  if (isWishlistLimitError(error)) {
+    return { ok: false, reason: 'limit_reached' };
+  }
+
+  if (error.code === '23505') {
+    return { ok: true };
+  }
+
+  return { ok: false, reason: 'insert_failed', message: error.message };
 }

@@ -1,3 +1,4 @@
+import { shouldTrackGemShare, trackGemShare } from '@/lib/gemShareTracking';
 import { useTheme } from '@/lib/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -150,13 +151,16 @@ export default function FullScreenPhotoViewer({
     if (!gemTitle) return;
 
     try {
-      await Share.share({
+      const result = await Share.share({
         message: `Check out ${gemTitle} on Abdita Gems! 📍`,
       });
+      if (gemId && shouldTrackGemShare(result)) {
+        trackGemShare(gemId);
+      }
     } catch {
       // User dismissed share sheet
     }
-  }, [gemTitle]);
+  }, [gemId, gemTitle]);
 
   const handleBookmark = useCallback(async () => {
     if (!gemId || !currentUserId) return;
