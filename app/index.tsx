@@ -16,6 +16,7 @@ import { PENDING_PREFS_KEY } from '@/lib/onboarding';
 import { checkIsPremium } from '@/lib/paywall';
 import { useTheme } from '@/lib/ThemeContext';
 import { semantic, type Theme } from '@/lib/theme';
+import { typography } from '@/lib/typography';
 import { formatCoordinates } from '@/lib/coordinates';
 import { getDistance } from '@/lib/distance';
 import { hapticSelection } from '@/lib/haptics';
@@ -34,6 +35,7 @@ import { useAppForegroundPermissionRecheck } from '@/hooks/useAppForegroundPermi
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react';
 import {
   Animated,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -831,8 +833,9 @@ export default function DiscoverScreen() {
       };
       load();
       checkStreakBanner();
+      checkUnreadMessages();
       checkUnreadNotifications();
-    }, [refreshDiscoverData, fetchFollowingGems, checkStreakBanner, checkUnreadNotifications]),
+    }, [refreshDiscoverData, fetchFollowingGems, checkStreakBanner, checkUnreadMessages, checkUnreadNotifications]),
   );
 
   useEffect(() => {
@@ -1564,32 +1567,19 @@ export default function DiscoverScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 8 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-        {initialLoading ? (
-          <>
-            {[80, 100, 90, 85].map((width, i) => (
-              <View key={i} style={{ width, marginRight: 10 }}>
-                <SkeletonCard height={32} borderRadius={20} />
-              </View>
-            ))}
-          </>
-        ) : null}
-        {!initialLoading && (
-        <>
+        style={styles.categoryFilterScroll}
+        contentContainerStyle={styles.categoryFilterScrollContent}>
         <TouchableOpacity
-          style={{
-            paddingHorizontal: 18,
-            paddingVertical: 10,
-            borderRadius: 20,
-            marginRight: 10,
-            backgroundColor:
-              activeMainCategory === null && activeCustomCategory === null
-                ? theme.accent
-                : theme.card,
-            borderWidth: 1,
-            borderColor: theme.border,
-          }}
+          style={[
+            styles.categoryPill,
+            {
+              backgroundColor:
+                activeMainCategory === null && activeCustomCategory === null
+                  ? theme.accent
+                  : theme.card,
+              borderColor: theme.border,
+            },
+          ]}
           onPress={() => {
             hapticSelection();
             setActiveMainCategory(null);
@@ -1597,14 +1587,15 @@ export default function DiscoverScreen() {
             setActiveCustomCategory(null);
           }}>
           <Text
-            style={{
-              color:
-                activeMainCategory === null && activeCustomCategory === null
-                  ? theme.accentText
-                  : theme.text,
-              fontSize: 14,
-              fontWeight: '600',
-            }}>
+            style={[
+              styles.categoryPillText,
+              {
+                color:
+                  activeMainCategory === null && activeCustomCategory === null
+                    ? theme.accentText
+                    : theme.text,
+              },
+            ]}>
             All
           </Text>
         </TouchableOpacity>
@@ -1615,26 +1606,17 @@ export default function DiscoverScreen() {
           return (
             <TouchableOpacity
               key={cat.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: 18,
-                paddingVertical: 10,
-                borderRadius: 20,
-                marginRight: 10,
-                backgroundColor: isSelected ? cat.color : theme.card,
-                borderWidth: 1,
-                borderColor: theme.border,
-              }}
+              style={[
+                styles.categoryPill,
+                styles.categoryPillRow,
+                {
+                  backgroundColor: isSelected ? cat.color : theme.card,
+                  borderColor: theme.border,
+                },
+              ]}
               onPress={() => handleCategoryPress(cat)}>
-              <Ionicons name={cat.icon as any} size={14} color={chipTextColor} aria-hidden={true} />
-              <Text
-                style={{
-                  color: chipTextColor,
-                  fontSize: 14,
-                  fontWeight: '600',
-                }}>
+              <Ionicons name={cat.icon as any} size={13} color={chipTextColor} aria-hidden={true} />
+              <Text style={[styles.categoryPillText, { color: chipTextColor }]}>
                 {cat.name}
                 {cat.premium ? ' 💎' : ''}
               </Text>
@@ -1648,38 +1630,25 @@ export default function DiscoverScreen() {
           return (
             <TouchableOpacity
               key={cat.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: 18,
-                paddingVertical: 10,
-                borderRadius: 20,
-                marginRight: 10,
-                backgroundColor: isSelected ? cat.color : theme.card,
-                borderWidth: 1,
-                borderColor: theme.border,
-              }}
+              style={[
+                styles.categoryPill,
+                styles.categoryPillRow,
+                {
+                  backgroundColor: isSelected ? cat.color : theme.card,
+                  borderColor: theme.border,
+                },
+              ]}
               onPress={() => handleCustomCategoryPress(cat)}>
               <Ionicons
                 name={cat.icon as keyof typeof Ionicons.glyphMap}
-                size={14}
+                size={13}
                 color={chipTextColor}
                 aria-hidden={true}
               />
-              <Text
-                style={{
-                  color: chipTextColor,
-                  fontSize: 14,
-                  fontWeight: '600',
-                }}>
-                {cat.name}
-              </Text>
+              <Text style={[styles.categoryPillText, { color: chipTextColor }]}>{cat.name}</Text>
             </TouchableOpacity>
           );
         })}
-        </>
-        )}
       </ScrollView>
 
       {activeMainCategory && !activeCustomCategory && (
@@ -1760,6 +1729,7 @@ export default function DiscoverScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={styles.feedScroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
@@ -1929,6 +1899,34 @@ const createStyles = (theme: Theme) =>
     color: theme.text,
     paddingVertical: 0,
   },
+  categoryFilterScroll: {
+    marginBottom: 8,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  categoryFilterScrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    alignItems: 'flex-start',
+  },
+  categoryPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  categoryPillText: {
+    ...typography.labelS,
+    ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
+  },
   feedTabContainer: {
     flexDirection: 'row',
     alignSelf: 'center',
@@ -1939,6 +1937,8 @@ const createStyles = (theme: Theme) =>
     borderColor: theme.border,
     padding: 3,
     marginBottom: 16,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   feedTab: {
     flex: 1,
@@ -1956,6 +1956,9 @@ const createStyles = (theme: Theme) =>
   feedTabTextActive: {
     color: theme.accentText,
     fontWeight: '600',
+  },
+  feedScroll: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,

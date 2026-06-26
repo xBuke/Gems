@@ -2,6 +2,7 @@ import { getMyBlockedUsers } from '@/lib/safety';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { markConversationRead } from '@/lib/markConversationRead';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -220,11 +221,7 @@ export default function MessagesScreen() {
       if (item.hasUnread) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase
-            .from('messages')
-            .update({ read: true })
-            .eq('receiver_id', user.id)
-            .eq('sender_id', item.otherUserId);
+          await markConversationRead(user.id, item.otherUserId);
 
           setConversations((prev) =>
             prev.map((conversation) =>

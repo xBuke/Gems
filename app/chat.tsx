@@ -3,6 +3,7 @@ import { blockUser, isUserMuted, muteUser, unmuteUser } from '@/lib/safety';
 import { hapticLight } from '@/lib/haptics';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
+import { markConversationRead } from '@/lib/markConversationRead';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/ToastContext';
 import ReportSheet from '@/components/ReportSheet';
@@ -152,33 +153,50 @@ export default function ChatScreen() {
 
     setMyId(user.id);
 
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('avatar_url')
-      .eq('id', userId)
-      .single();
+    const markReadPromise = markConversationRead(user.id, userId);
+
+    const [{ data: profileData }, { data }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', userId)
+        .single(),
+      supabase
+        .from('messages')
+        .select('*, sender:profiles!messages_sender_id_fkey(username)')
+        .or(
+          `and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`,
+        )
+        .order('created_at', { ascending: true }),
+      markReadPromise,
+    ]);
 
     setOtherAvatarUrl(profileData?.avatar_url ?? null);
-
-    const { data } = await supabase
-      .from('messages')
-      .select('*, sender:profiles!messages_sender_id_fkey(username)')
-      .or(
-        `and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`,
-      )
-      .order('created_at', { ascending: true });
 
     if (data) {
       setMessages(data as Message[]);
     }
 
-    await supabase
-      .from('messages')
-      .update({ read: true })
-      .eq('receiver_id', user.id)
-      .eq('sender_id', userId);
-
     setMessagesLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    let cancelled = false;
+
+    const markReadOnMount = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      setMyId(user.id);
+      await markConversationRead(user.id, userId);
+    };
+
+    void markReadOnMount();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   useEffect(() => {
@@ -222,11 +240,7 @@ export default function ChatScreen() {
                 return [...prev, newMessage];
               });
               if (newMessage.sender_id === userId) {
-                void supabase
-                  .from('messages')
-                  .update({ read: true })
-                  .eq('receiver_id', myId)
-                  .eq('sender_id', userId);
+                void markConversationRead(myId, userId);
               }
             }
           },
