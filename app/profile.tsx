@@ -26,6 +26,7 @@ import type { Theme } from '@/lib/theme';
 import { useToast } from '@/lib/ToastContext';
 import { sendPushNotification } from '@/lib/sendPushNotification';
 import { supabase } from '@/lib/supabase';
+import { AchievementBadge } from '@/components/AchievementBadge';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import { BillingFailureCard } from '@/components/BillingFailureCard';
 import { EmptyState } from '@/components/EmptyState';
@@ -1626,8 +1627,6 @@ export default function ProfileScreen() {
               contentContainerStyle={styles.achievementsPreviewRow}>
               {ACHIEVEMENTS.map((achievement) => {
                 const isUnlocked = unlockedAchievementTypes.includes(achievement.type);
-                const badgeColor =
-                  achievement.type === 'seven_day_streak' ? theme.coral : theme.accent;
                 return (
                   <TouchableOpacity
                     key={achievement.type}
@@ -1641,23 +1640,7 @@ export default function ProfileScreen() {
                       )
                     }
                     activeOpacity={0.7}>
-                    <View
-                      style={[
-                        styles.achievementPreviewCircle,
-                        isUnlocked
-                          ? {
-                              backgroundColor: badgeColor + '1F',
-                              borderWidth: 1.5,
-                              borderColor: badgeColor,
-                            }
-                          : styles.achievementPreviewCircleLocked,
-                      ]}>
-                      <Ionicons
-                        name={achievement.icon as keyof typeof Ionicons.glyphMap}
-                        size={16}
-                        color={isUnlocked ? badgeColor : theme.textTertiary}
-                      />
-                    </View>
+                    <AchievementBadge type={achievement.type} locked={!isUnlocked} size={38} />
                   </TouchableOpacity>
                 );
               })}
@@ -1901,24 +1884,7 @@ export default function ProfileScreen() {
                   const isUnlocked = unlockedAchievementTypes.includes(achievement.type);
                   return (
                     <View key={achievement.type} style={styles.achievementItem}>
-                      <View
-                        style={[
-                          styles.achievementIconCircle,
-                          isUnlocked
-                            ? styles.achievementIconCircleUnlocked
-                            : styles.achievementIconCircleLocked,
-                        ]}>
-                        <Ionicons
-                          name={achievement.icon as keyof typeof Ionicons.glyphMap}
-                          size={22}
-                          color={isUnlocked ? theme.accent : theme.textTertiary}
-                        />
-                        {!isUnlocked && (
-                          <View style={styles.achievementLockOverlay}>
-                            <Ionicons name="lock-closed" size={14} color={theme.textTertiary} />
-                          </View>
-                        )}
-                      </View>
+                      <AchievementBadge type={achievement.type} locked={!isUnlocked} size={52} />
                       <Text
                         style={[
                           styles.achievementName,

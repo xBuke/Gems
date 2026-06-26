@@ -45,25 +45,61 @@ export const getNextMasteryTier = (visits: number) => {
   return MASTERY_TIERS.find((tier) => tier.minVisits > visits) || null;
 };
 
-export const ACHIEVEMENTS = [
-  { type: 'first_gem', name: 'First Gem', description: 'Dropped your first gem', icon: 'location' },
-  { type: 'five_gems', name: 'Getting Started', description: 'Dropped 5 gems', icon: 'location' },
-  { type: 'ten_visits', name: 'Verified Explorer', description: '10 verified visits', icon: 'checkmark-circle' },
-  { type: 'first_follower', name: 'Making Friends', description: 'Got your first follower', icon: 'people' },
-  { type: 'five_categories', name: 'Well Rounded', description: 'Added gems in 5 different categories', icon: 'grid' },
-  { type: 'first_like_received', name: 'Crowd Pleaser', description: 'Received your first like', icon: 'heart' },
-  { type: 'seven_day_streak', name: 'Committed', description: '7 day streak', icon: 'flame' },
-  { type: 'first_to_discover', name: 'Pioneer', description: 'First to discover a spot in your area', icon: 'star' },
+export type AchievementType =
+  | 'pioneer'
+  | 'navigator'
+  | 'pathfinder'
+  | 'trailblazer'
+  | 'local_legend'
+  | 'founding_member'
+  | 'secret_finder'
+  | 'connector';
+
+export const ACHIEVEMENTS: {
+  type: AchievementType;
+  name: string;
+  description: string;
+}[] = [
+  { type: 'pioneer', name: 'Pioneer', description: 'First gem dropped' },
+  { type: 'navigator', name: 'Navigator', description: '10 check-ins' },
+  { type: 'pathfinder', name: 'Pathfinder', description: '50 check-ins' },
+  { type: 'trailblazer', name: 'Trailblazer', description: '25 gems dropped' },
+  { type: 'local_legend', name: 'Local Legend', description: '5 gems in one area' },
+  { type: 'founding_member', name: 'Founding Member', description: 'Early supporter' },
+  { type: 'secret_finder', name: 'Secret Finder', description: 'Gem with <3 visitors' },
+  { type: 'connector', name: 'Connector', description: 'Joined 3 communities' },
 ];
+
+const SECRET_FINDER_MIN_AGE_DAYS = 30;
+
+const hasLocalLegendCity = (gems: { city_name: string | null }[] | null) => {
+  const cityCounts = new Map<string, number>();
+  for (const gem of gems ?? []) {
+    const city = gem.city_name?.trim();
+    if (!city) continue;
+    const cityKey = city.toLowerCase();
+    cityCounts.set(cityKey, (cityCounts.get(cityKey) ?? 0) + 1);
+  }
+  return [...cityCounts.values()].some((count) => count >= 5);
+};
+
+const hasSecretGem = (
+  gems: { id: string; created_at: string }[] | null,
+  visitCounts: Map<string, number>,
+) => {
+  const cutoff = Date.now() - SECRET_FINDER_MIN_AGE_DAYS * 24 * 60 * 60 * 1000;
+  return (gems ?? []).some(
+    (gem) => new Date(gem.created_at).getTime() < cutoff && (visitCounts.get(gem.id) ?? 0) < 3,
+  );
+};
 
 export const checkAndUnlockAchievements = async (userId: string) => {
   const { supabase } = await import('./supabase');
 
   const { data: existing } = await supabase.from('achievements').select('badge_type').eq('user_id', userId);
   const unlockedTypes = existing?.map((a: { badge_type: string }) => a.badge_type) || [];
-  console.log('Already unlocked:', unlockedTypes);
 
-  const tryUnlock = async (type: string) => {
+  const tryUnlock = async (type: AchievementType) => {
     if (!unlockedTypes.includes(type)) {
       await supabase.from('achievements').insert({ user_id: userId, badge_type: type });
       const badge = ACHIEVEMENTS.find((a) => a.type === type);
@@ -79,61 +115,65 @@ export const checkAndUnlockAchievements = async (userId: string) => {
     return false;
   };
 
-  const newlyUnlocked: string[] = [];
+  const newlyUnlocked: AchievementType[] = [];
 
   const { count: gemCount } = await supabase
     .from('gems')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId);
-  if ((gemCount || 0) >= 1 && (await tryUnlock('first_gem'))) newlyUnlocked.push('first_gem');
-  if ((gemCount || 0) >= 5 && (await tryUnlock('five_gems'))) newlyUnlocked.push('five_gems');
+  if ((gemCount || 0) >= 1 && (await tryUnlock('pioneer'))) newlyUnlocked.push('pioneer');
+  if ((gemCount || 0) >= 25 && (await tryUnlock('trailblazer'))) newlyUnlocked.push('trailblazer');
 
   const { count: visitCount } = await supabase
     .from('gem_visits')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId);
-  if ((visitCount || 0) >= 10 && (await tryUnlock('ten_visits'))) newlyUnlocked.push('ten_visits');
+  if ((visitCount || 0) >= 10 && (await tryUnlock('navigator'))) newlyUnlocked.push('navigator');
+  if ((visitCount || 0) >= 50 && (await tryUnlock('pathfinder'))) newlyUnlocked.push('pathfinder');
 
-  const { count: followerCount } = await supabase
-    .from('follows')
-    .select('*', { count: 'exact', head: true })
-    .eq('following_id', userId)
-    .eq('status', 'accepted');
-  if ((followerCount || 0) >= 1 && (await tryUnlock('first_follower'))) newlyUnlocked.push('first_follower');
-
-  const { data: userGems } = await supabase.from('gems').select('category').eq('user_id', userId);
-  const uniqueCategories = new Set(userGems?.map((g: { category: string }) => g.category?.toLowerCase()));
-  if (uniqueCategories.size >= 5 && (await tryUnlock('five_categories'))) newlyUnlocked.push('five_categories');
-
-  const { data: gemIds } = await supabase.from('gems').select('id').eq('user_id', userId);
-  let likesReceived: number | null = null;
-  if (gemIds && gemIds.length > 0) {
-    const { count } = await supabase
-      .from('gem_likes')
-      .select('*', { count: 'exact', head: true })
-      .in('gem_id', gemIds.map((g: { id: string }) => g.id));
-    likesReceived = count;
-    if ((likesReceived || 0) >= 1 && (await tryUnlock('first_like_received'))) newlyUnlocked.push('first_like_received');
+  const { data: cityGems } = await supabase
+    .from('gems')
+    .select('city_name')
+    .eq('user_id', userId)
+    .not('city_name', 'is', null);
+  if (hasLocalLegendCity(cityGems) && (await tryUnlock('local_legend'))) {
+    newlyUnlocked.push('local_legend');
   }
 
-  const { data: profile } = await supabase.from('profiles').select('current_streak').eq('id', userId).single();
-  if ((profile?.current_streak || 0) >= 7 && (await tryUnlock('seven_day_streak'))) newlyUnlocked.push('seven_day_streak');
+  const { data: isFoundingMember, error: foundingError } = await supabase.rpc('is_founding_member', {
+    user_id: userId,
+  });
+  if (!foundingError && isFoundingMember === true && (await tryUnlock('founding_member'))) {
+    newlyUnlocked.push('founding_member');
+  }
 
-  const { count: firstDiscoveries } = await supabase
+  const { data: userGems } = await supabase
     .from('gems')
+    .select('id, created_at')
+    .eq('user_id', userId);
+  if (userGems && userGems.length > 0) {
+    const { data: visits } = await supabase
+      .from('gem_visits')
+      .select('gem_id')
+      .in(
+        'gem_id',
+        userGems.map((g: { id: string }) => g.id),
+      );
+    const visitCounts = new Map<string, number>();
+    visits?.forEach((v: { gem_id: string }) => {
+      visitCounts.set(v.gem_id, (visitCounts.get(v.gem_id) ?? 0) + 1);
+    });
+    if (hasSecretGem(userGems, visitCounts) && (await tryUnlock('secret_finder'))) {
+      newlyUnlocked.push('secret_finder');
+    }
+  }
+
+  const { count: communityCount } = await supabase
+    .from('community_members')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .eq('is_first_in_area', true);
-  if ((firstDiscoveries || 0) >= 1 && (await tryUnlock('first_to_discover'))) newlyUnlocked.push('first_to_discover');
-
-  console.log('gemCount:', gemCount);
-  console.log('visitCount:', visitCount);
-  console.log('followerCount:', followerCount);
-  console.log('uniqueCategories.size:', uniqueCategories.size);
-  console.log('likesReceived:', likesReceived);
-  console.log('current_streak:', profile?.current_streak);
-  console.log('firstDiscoveries:', firstDiscoveries);
-  console.log('Newly unlocked this call:', newlyUnlocked);
+    .eq('status', 'accepted');
+  if ((communityCount || 0) >= 3 && (await tryUnlock('connector'))) newlyUnlocked.push('connector');
 
   return newlyUnlocked;
 };

@@ -1,6 +1,6 @@
+import { AchievementBadge, getAchievementAccentColor } from '@/components/AchievementBadge';
 import { formatCoordinates } from '@/lib/coordinates';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,7 +10,7 @@ import Animated, {
 import { useEffect } from 'react';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '@/lib/ThemeContext';
-import { ACHIEVEMENTS } from '@/lib/gamification';
+import { ACHIEVEMENTS, type AchievementType } from '@/lib/gamification';
 import { hapticSuccess } from '@/lib/haptics';
 
 type Props = {
@@ -45,6 +45,7 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose, latitude, 
 
   if (!achievement) return null;
 
+  const accentColor = getAchievementAccentColor(achievement.type as AchievementType);
   const coordLabel =
     latitude != null && longitude != null ? formatCoordinates(latitude, longitude) : null;
 
@@ -95,8 +96,8 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose, latitude, 
               <Svg width={240} height={240}>
                 <Defs>
                   <RadialGradient id="achievementGlow" cx="50%" cy="50%" r="50%">
-                    <Stop offset="0%" stopColor={theme.accent} stopOpacity={0.18} />
-                    <Stop offset="65%" stopColor={theme.accent} stopOpacity={0} />
+                    <Stop offset="0%" stopColor={accentColor} stopOpacity={0.18} />
+                    <Stop offset="65%" stopColor={accentColor} stopOpacity={0} />
                   </RadialGradient>
                 </Defs>
                 <Rect x="0" y="0" width="240" height="240" fill="url(#achievementGlow)" />
@@ -112,7 +113,7 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose, latitude, 
                   borderRadius: 62,
                   top: -18,
                   left: -18,
-                  backgroundColor: theme.accent + '0A',
+                  backgroundColor: accentColor + '0A',
                 }}
               />
               <View
@@ -124,24 +125,11 @@ export const AchievementUnlockModal = ({ visible, badgeType, onClose, latitude, 
                   borderRadius: 54,
                   top: -10,
                   left: -10,
-                  backgroundColor: theme.accent + '14',
+                  backgroundColor: accentColor + '14',
                 }}
               />
-              <Animated.View
-                style={[
-                  {
-                    width: 88,
-                    height: 88,
-                    borderRadius: 44,
-                    backgroundColor: theme.accent + '1F',
-                    borderWidth: 2,
-                    borderColor: theme.accent,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  },
-                  animatedStyle,
-                ]}>
-                <Ionicons name={achievement.icon as any} size={38} color={theme.accent} />
+              <Animated.View style={animatedStyle}>
+                <AchievementBadge type={achievement.type} size={72} />
               </Animated.View>
             </View>
           </View>
