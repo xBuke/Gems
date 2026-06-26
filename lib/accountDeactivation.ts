@@ -8,6 +8,7 @@ export const PERMANENT_DELETION_TABLES = [
   'community_members (by community_id for owned communities)',
   'communities (creator_id)',
   'saved_gems',
+  'wishlist',
   'gem_likes',
   'gem_visits',
   'comment_likes',

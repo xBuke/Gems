@@ -1561,6 +1561,16 @@ export default function ProfileScreen() {
               <Text style={styles.leaderboardLinkText}>View Leaderboard</Text>
               <Text style={styles.leaderboardChevron}>›</Text>
             </TouchableOpacity>
+            {isOwnProfile ? (
+              <TouchableOpacity
+                style={[styles.leaderboardLink, styles.profileNavLinkSecondary]}
+                onPress={() => router.push('/wishlist')}
+                activeOpacity={0.7}>
+                <Ionicons name="bookmark-outline" size={14} color={theme.accent} />
+                <Text style={styles.leaderboardLinkText}>Wishlist</Text>
+                <Text style={styles.leaderboardChevron}>›</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
           <Text style={styles.bio}>Explorer & gem hunter 🌍</Text>
         </View>
@@ -2322,6 +2332,11 @@ const createStyles = (theme: Theme) =>
   leaderboardChevron: {
     fontSize: 16,
     color: theme.textTertiary,
+  },
+  profileNavLinkSecondary: {
+    borderTopWidth: 0,
+    marginTop: 4,
+    paddingTop: 0,
   },
   achievementsPreview: {
     marginHorizontal: 20,

@@ -10,6 +10,7 @@ import GemPhotoGallery from '@/components/GemPhotoGallery';
 import { deleteGem } from '@/lib/deleteGem';
 import { fetchGemPhotos, type GemPhoto } from '@/lib/gemPhotos';
 import { checkIsPremium } from '@/lib/paywall';
+import { isWishlistLimitError, showWishlistLimitReached } from '@/lib/wishlist';
 import { blockUser, getMyBlockedUsers, isUserMuted, muteUser, unmuteUser } from '@/lib/safety';
 import { useTheme } from '@/lib/ThemeContext';
 import type { Theme } from '@/lib/theme';
@@ -131,6 +132,7 @@ export default function GemDetailScreen() {
   const [visitCount, setVisitCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [isWishlisted, setIsWishlisted] = useState(false);
   const [commentLikes, setCommentLikes] = useState<Record<string, CommentLikeState>>({});
   const [isOwner, setIsOwner] = useState(false);
   const [locationName, setLocationName] = useState<string | null>(null);
@@ -337,6 +339,25 @@ export default function GemDetailScreen() {
     }
   }, [gemId]);
 
+  const fetchWishlistStatus = useCallback(async () => {
+    if (!gemId) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setIsWishlisted(false);
+      return;
+    }
+
+    const { data: existing } = await supabase
+      .from('wishlist')
+      .select('id')
+      .eq('gem_id', gemId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    setIsWishlisted(!!existing);
+  }, [gemId]);
+
   useEffect(() => {
     setDescriptionExpanded(false);
   }, [gemId]);
@@ -351,8 +372,9 @@ export default function GemDetailScreen() {
       fetchGem();
       fetchVisitCount();
       fetchLikes();
+      fetchWishlistStatus();
       checkIsPremium().then(setIsPremium);
-    }, [fetchBlockedUsers, fetchGem, fetchLikes]),
+    }, [fetchBlockedUsers, fetchGem, fetchLikes, fetchWishlistStatus]),
   );
 
   useEffect(() => {
@@ -505,6 +527,48 @@ export default function GemDetailScreen() {
         checkAndUnlockAchievements(gem.user_id);
       }
     }
+  };
+
+  const handleToggleWishlist = async () => {
+    if (!gem || !gemId) return;
+
+    const proceed = await requireAuth(`/gem/${gemId}`);
+    if (!proceed) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    hapticLight();
+
+    if (isWishlisted) {
+      const { error } = await supabase
+        .from('wishlist')
+        .delete()
+        .eq('gem_id', gemId)
+        .eq('user_id', user.id);
+
+      if (!error) {
+        setIsWishlisted(false);
+      }
+      return;
+    }
+
+    const { error } = await supabase.from('wishlist').insert({ gem_id: gemId, user_id: user.id });
+
+    if (error) {
+      if (isWishlistLimitError(error)) {
+        showWishlistLimitReached(router);
+        return;
+      }
+      showToast({
+        type: 'error',
+        title: 'Could not save',
+        message: error.message,
+      });
+      return;
+    }
+
+    setIsWishlisted(true);
   };
 
   const handleToggleCommentLike = async (commentId: string) => {
@@ -1133,6 +1197,17 @@ export default function GemDetailScreen() {
               <Ionicons name="trash-outline" size={18} color={theme.danger} />
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => void handleToggleWishlist()}
+            activeOpacity={0.8}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons
+              name={isWishlisted ? 'bookmark' : 'bookmark-outline'}
+              size={18}
+              color={isWishlisted ? theme.accent : theme.text}
+            />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={handleShare}
