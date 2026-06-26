@@ -583,16 +583,20 @@ export default function GemDetailScreen() {
     if (!user) return;
 
     const location = await Location.getCurrentPositionAsync({});
-    const distance = getDistance(
-      location.coords.latitude,
-      location.coords.longitude,
-      gem.latitude,
-      gem.longitude,
-    );
+    const isPremiumUser = await checkIsPremium();
 
-    if (distance > 1000) {
-      Alert.alert('You need to be within 1km to verify your visit');
-      return;
+    if (!isPremiumUser) {
+      const distance = getDistance(
+        location.coords.latitude,
+        location.coords.longitude,
+        gem.latitude,
+        gem.longitude,
+      );
+
+      if (distance > 1000) {
+        Alert.alert('You need to be within 1km to verify your visit');
+        return;
+      }
     }
 
     const resolvedGemId = Array.isArray(id) ? id[0] : id;
@@ -1040,37 +1044,42 @@ export default function GemDetailScreen() {
             </View>
           ) : null}
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.navigateButton} onPress={openMaps} activeOpacity={0.8}>
-              <Ionicons name="navigate" size={18} color={theme.accent} />
-              <Text style={styles.navigateButtonText}>Navigate</Text>
-            </TouchableOpacity>
-            <Pressable
-              style={({ pressed }) => [
-                styles.beenHereButton,
-                visitVerified && styles.beenHereButtonVerified,
-                pressed && !visitVerified && Platform.OS !== 'android' && { opacity: 0.8 },
-              ]}
-              onPress={handleBeenHere}
-              disabled={visitVerified}
-              android_ripple={
-                visitVerified
-                  ? undefined
-                  : { color: theme.accentSub, borderless: false }
-              }>
-              <Ionicons
-                name={visitVerified ? 'checkmark-circle' : 'location'}
-                size={18}
-                color={theme.accentText}
-              />
-              <Text
-                style={[
-                  styles.beenHereButtonText,
-                  visitVerified && styles.beenHereButtonTextVerified,
-                ]}>
-                {visitVerified ? 'Check In ✓' : 'Check In'}
-              </Text>
-            </Pressable>
+          <View style={styles.actionSection}>
+            <View style={styles.actionRow}>
+              <TouchableOpacity style={styles.navigateButton} onPress={openMaps} activeOpacity={0.8}>
+                <Ionicons name="navigate" size={18} color={theme.accent} />
+                <Text style={styles.navigateButtonText}>Navigate</Text>
+              </TouchableOpacity>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.beenHereButton,
+                  visitVerified && styles.beenHereButtonVerified,
+                  pressed && !visitVerified && Platform.OS !== 'android' && { opacity: 0.8 },
+                ]}
+                onPress={handleBeenHere}
+                disabled={visitVerified}
+                android_ripple={
+                  visitVerified
+                    ? undefined
+                    : { color: theme.accentSub, borderless: false }
+                }>
+                <Ionicons
+                  name={visitVerified ? 'checkmark-circle' : 'location'}
+                  size={18}
+                  color={theme.accentText}
+                />
+                <Text
+                  style={[
+                    styles.beenHereButtonText,
+                    visitVerified && styles.beenHereButtonTextVerified,
+                  ]}>
+                  {visitVerified ? 'Check In ✓' : 'Check In'}
+                </Text>
+              </Pressable>
+            </View>
+            {isPremium && !visitVerified ? (
+              <Text style={styles.premiumCheckInHint}>✓ Premium: check in from anywhere</Text>
+            ) : null}
           </View>
 
           <Text style={styles.commentsTitle}>Comments ({comments.length})</Text>
@@ -1560,10 +1569,18 @@ const createStyles = (theme: Theme) =>
     fontWeight: '600',
     marginTop: 4,
   },
+  actionSection: {
+    marginBottom: 24,
+  },
   actionRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+  },
+  premiumCheckInHint: {
+    color: theme.textSecondary,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 6,
   },
   navigateButton: {
     flex: 1,
